@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:   #0a0a0a;
+  --white:   #f5f3ee;
+  --cream:   #ede9e0;
+  --accent:  #c8f53e;
+  --accent2: #ff5c35;
+  --gray:    #8a8880;
+  --border:  #2a2a2a;
+  --card-bg: #131313;
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+}
+
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: var(--font-body);
+  font-weight: 300;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+a { text-decoration: none; color: inherit; }
+
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 48px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+}
+.navbar-logo { font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; }
+.navbar-logo span { color: var(--accent); }
+.navbar-links { display: flex; gap: 32px; list-style: none; }
+.navbar-links a { font-size: 0.85rem; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray); transition: color 0.2s; }
+.navbar-links a:hover { color: var(--white); }
+.nav-cta { background: var(--accent) !important; color: var(--black) !important; padding: 8px 20px; border-radius: 100px; font-weight: 500 !important; }
+
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 32px; border-radius: 100px; font-family: var(--font-body); font-size: 0.9rem; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; }
+.btn-primary { background: var(--accent); color: var(--black); }
+.btn-primary:hover { transform: translateY(-2px); }
+.btn-secondary { background: transparent; color: var(--white); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--white); }
+
+.tag { display: inline-block; padding: 4px 14px; border-radius: 100px; font-size: 0.75rem; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+.tag-accent { background: rgba(200,245,62,0.15); color: var(--accent); border: 1px solid rgba(200,245,62,0.3); }
+.tag-orange { background: rgba(255,92,53,0.15); color: var(--accent2); border: 1px solid rgba(255,92,53,0.3); }

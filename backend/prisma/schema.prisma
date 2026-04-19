@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Inscription {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(255)
+  email     String    @db.VarChar(255)
+  phone     String    @db.VarChar(50)
+  createdAt DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model Client {
+  id        Int        @id @default(autoincrement())
+  name      String     @db.VarChar(255)
+  email     String     @unique @db.VarChar(255)
+  createdAt DateTime?  @default(now()) @db.Timestamp(6)
+  campagnes Campagne[]
+  contacts  Contact[]
+  segments  Segment[]
+  users     User[]
+}
+
+model Campagne {
+  id            Int            @id @default(autoincrement())
+  title         String         @db.VarChar(255)
+  type          String         @db.VarChar(100)
+  status        String?        @default("draft") @db.VarChar(50)
+  clientId      Int?
+  createdAt     DateTime?      @default(now()) @db.Timestamp(6)
+  dateScheduled DateTime?      @db.Timestamp(6)
+  sentAt        DateTime?      @db.Timestamp(6)
+  client        Client?        @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  stats         CampagneStats?
+}
+
+model Contact {
+  id        Int              @id @default(autoincrement())
+  name      String           @db.VarChar(255)
+  email     String           @db.VarChar(255)
+  phone     String           @db.VarChar(50)
+  clientId  Int?
+  createdAt DateTime?        @default(now()) @db.Timestamp(6)
+  client    Client?          @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  segments  ContactSegment[]
+}
+
+model User {
+  id               Int                @id @default(autoincrement())
+  name             String             @db.VarChar(255)
+  email            String             @unique @db.VarChar(255)
+  password         String             @db.VarChar(255)
+  role             String?            @default("user") @db.VarChar(50)
+  createdAt        DateTime?          @default(now()) @db.Timestamp(6)
+  clientId         Int?
+  PushSubscription PushSubscription[]
+  client           Client?            @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model Segment {
+  id        Int              @id @default(autoincrement())
+  name      String
+  criteria  String
+  clientId  Int?
+  createdAt DateTime?        @default(now()) @db.Timestamp(6)
+  contacts  ContactSegment[]
+  client    Client?          @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model ContactSegment {
+  id        Int      @id @default(autoincrement())
+  contactId Int?
+  segmentId Int?
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  segment   Segment? @relation(fields: [segmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model CampagneStats {
+  id          Int       @id @default(autoincrement())
+  campagneId  Int?      @unique
+  emailsSent  Int?      @default(0)
+  opens       Int?      @default(0)
+  clicks      Int?      @default(0)
+  conversions Int?      @default(0)
+  createdAt   DateTime? @default(now()) @db.Timestamp(6)
+  updatedAt   DateTime? @default(now()) @updatedAt @db.Timestamp(6)
+  campagne    Campagne? @relation(fields: [campagneId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model PushSubscription {
+  id        Int       @id @default(autoincrement())
+  endpoint  String
+  p256dh    String
+  auth      String
+  userId    Int?
+  createdAt DateTime? @default(now()) @db.Timestamp(6)
+  User      User?     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}

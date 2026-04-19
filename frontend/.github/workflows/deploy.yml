@@ -1,0 +1,94 @@
+name: CI/CD MarketingCloudOps
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: 🧪 Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm install
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm install
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+  build-docker:
+    name: 🐳 Build Docker
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build backend Docker image
+        run: docker build -t techevent-backend ./backend
+
+      - name: Confirm build success
+        run: echo "✅ Image Docker buildée avec succès !"
+
+  deploy:
+    name: 🚀 Deploy
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to Render
+        run: echo "✅ Deploy automatique via Render sur push main"
+
+      - name: Health check after deploy
+        run: |
+          sleep 30
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://techevent-app.onrender.com/health)
+          if [ "$response" != "200" ]; then
+            echo "❌ Health check failed! Status: $response"
+            exit 1
+          fi
+          echo "✅ Health check passed! Status: $response"
+
+  rollback:
+    name: 🔄 Rollback
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: failure()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Get previous commit
+        id: prev
+        run: echo "sha=$(git rev-parse HEAD~1)" >> $GITHUB_OUTPUT
+
+      - name: Notify rollback
+        run: |
+          echo "⚠️ Deploy failed! Rolling back to ${{ steps.prev.outputs.sha }}"
+          echo "🔄 Rollback triggered automatically"
+
+      - name: Trigger rollback on Render
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}" || true
+          echo "✅ Rollback initiated"

@@ -1,0 +1,7 @@
+﻿node_modules/
+.env
+.env.production
+.env.development
+.env.test
+npm-debug.log
+.env.*
