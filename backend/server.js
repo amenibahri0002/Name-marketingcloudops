@@ -1,6 +1,5 @@
 const express = require('express')
 const cors = require('cors')
-const { authMiddleware: authenticate }= require('@prisma/client')
 const client = require('prom-client')
 const  authenticate  = require('./middleware/auth')
 const axios = require('axios')
