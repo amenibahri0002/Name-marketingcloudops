@@ -44,28 +44,28 @@ function App() {
             <PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>
           } />
           <Route path="/clients" element={
-            <PrivateRoute roles={['ADMIN', 'MARKETER']}><Layout><Clients /></Layout></PrivateRoute>
+            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}><Layout><Clients /></Layout></PrivateRoute>
           } />
           <Route path="/users" element={
             <PrivateRoute roles={['ADMIN']}><Layout><Users /></Layout></PrivateRoute>
           } />
           <Route path="/campagnes" element={
-            <PrivateRoute roles={['ADMIN', 'MARKETER']}><Layout><Campagnes /></Layout></PrivateRoute>
+            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}><Layout><Campagnes /></Layout></PrivateRoute>
           } />
           <Route path="/contacts" element={
-            <PrivateRoute roles={['ADMIN', 'MARKETER']}><Layout><Contacts /></Layout></PrivateRoute>
+            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}><Layout><Contacts /></Layout></PrivateRoute>
           } />
           <Route path="/segments" element={
-            <PrivateRoute roles={['ADMIN', 'MARKETER']}><Layout><Segments /></Layout></PrivateRoute>
+            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}><Layout><Segments /></Layout></PrivateRoute>
           } />
           <Route path="/reporting" element={
-            <PrivateRoute roles={['ADMIN', 'MARKETER']}><Layout><Reporting /></Layout></PrivateRoute>
+            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}><Layout><Reporting /></Layout></PrivateRoute>
           } />
           <Route path="/monitoring" element={
             <PrivateRoute roles={['ADMIN']}><Layout><Monitoring /></Layout></PrivateRoute>
           } />
           <Route path="/analytics" element={
-            <PrivateRoute roles={['ADMIN', 'MARKETER']}><Layout><Analytics /></Layout></PrivateRoute>
+            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}><Layout><Analytics /></Layout></PrivateRoute>
           } />
           <Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>

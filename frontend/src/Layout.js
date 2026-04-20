@@ -43,7 +43,11 @@ function Layout({ children }) {
     }
   }, [location]);
 
-  const menuItems = userRole === 'ADMIN' ? adminMenu : marketingMenu;
+const menuItems = userRole === 'ADMIN' 
+  ? adminMenu 
+  : userRole === 'RESPONSABLE_MARKETING' 
+    ? marketingMenu 
+    : clientMenu
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -53,7 +57,7 @@ function Layout({ children }) {
 
   const getRoleInfo = () => {
     if (userRole === 'ADMIN') return { label: 'Administrateur', color: '#dc2626', bg: '#fee2e2' };
-    if (userRole === 'MARKETER') return { label: 'Responsable Marketing', color: '#0891b2', bg: '#e0f2fe' };
+    if (userRole === 'RESPONSABLE_MARKETING') return { label: 'Responsable Marketing', color: '#0891b2', bg: '#e0f2fe' }
     return { label: 'Utilisateur', color: '#6b7280', bg: '#f3f4f6' };
   };
 
