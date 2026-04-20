@@ -61,7 +61,7 @@ function Layout({ children }) {
 
   const getRoleInfo = () => {
     if (userRole === 'ADMIN') return { label: 'Admin', color: '#7c3aed', bg: '#f5f3ff' };
-    if (userRole === 'RESPONSABLE_MARKETING') return { label: 'Marketing', color: '#0891b2', bg: '#f0f9ff' };
+    if (userRole === 'RESPONSABLE_MARKETING') return { label: 'RESPONSABLE_MARKETING', color: '#0891b2', bg: '#f0f9ff' };
     return { label: 'Client', color: '#059669', bg: '#f0fdf4' };
   };
 
