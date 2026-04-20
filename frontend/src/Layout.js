@@ -18,6 +18,9 @@ const marketingMenu = [
   { path: '/reporting', icon: '📊', label: 'Suivi campagnes' },
   { path: '/analytics', icon: '📈', label: 'Analytics KPIs' },
 ];
+const clientMenu = [
+  { path: '/dashboard', icon: '🏠', label: 'Dashboard' },
+];
 
 function Layout({ children }) {
   const location = useLocation();
