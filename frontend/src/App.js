@@ -68,6 +68,7 @@ function App() {
             <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}><Layout><Analytics /></Layout></PrivateRoute>
           } />
           <Route path="*" element={<Navigate to="/dashboard" />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

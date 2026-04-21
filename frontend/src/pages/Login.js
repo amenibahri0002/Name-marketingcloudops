@@ -12,10 +12,10 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError(err.response?.data?.message || "Erreur serveur");
 
     try {
-      const res = await api.post('/api/auth/login', {
+      const res = await api.post('/auth/login', {
         email,
         password,
       });
