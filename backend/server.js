@@ -20,7 +20,7 @@ app.use(globalLimiter)
 app.use(compression())
 
 const authRoutes = require('./routes/auth')
-app.use('/api/auth', authRoutes)
+app.use('/auth', authRoutes)
 
 const clientRoutes = require('./routes/clients')
 app.use('/api/clients', authenticate, clientRoutes)

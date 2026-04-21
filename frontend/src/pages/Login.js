@@ -12,8 +12,7 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(err.response?.data?.message || "Erreur serveur");
-
+    setError('');
     try {
       const res = await api.post('/auth/login', {
         email,
@@ -41,7 +40,8 @@ function Login() {
       setError(
         err?.response?.data?.message || 'Erreur de connexion'
       );
-    } finally {
+    }
+     finally {
       setLoading(false);
     }
   };

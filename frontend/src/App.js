@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PrivateRoute from './components/PrivateRoute';
 import Layout from './Layout';
+import NotFound from './pages/NotFound';
 
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -38,36 +39,91 @@ function App() {
     <BrowserRouter>
       <Suspense fallback={<Loading />}>
         <Routes>
+          <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/access-denied" element={<AccessDenied />} />
-          <Route path="/dashboard" element={
-            <PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>
-          } />
-          <Route path="/clients" element={
-            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}><Layout><Clients /></Layout></PrivateRoute>
-          } />
-          <Route path="/users" element={
-            <PrivateRoute roles={['ADMIN']}><Layout><Users /></Layout></PrivateRoute>
-          } />
-          <Route path="/campagnes" element={
-            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}><Layout><Campagnes /></Layout></PrivateRoute>
-          } />
-          <Route path="/contacts" element={
-            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}><Layout><Contacts /></Layout></PrivateRoute>
-          } />
-          <Route path="/segments" element={
-            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}><Layout><Segments /></Layout></PrivateRoute>
-          } />
-          <Route path="/reporting" element={
-            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}><Layout><Reporting /></Layout></PrivateRoute>
-          } />
-          <Route path="/monitoring" element={
-            <PrivateRoute roles={['ADMIN']}><Layout><Monitoring /></Layout></PrivateRoute>
-          } />
-          <Route path="/analytics" element={
-            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}><Layout><Analytics /></Layout></PrivateRoute>
-          } />
-          <Route path="*" element={<Navigate to="/dashboard" />} />
+
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <Layout><Dashboard /></Layout>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/clients"
+            element={
+              <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
+                <Layout><Clients /></Layout>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/users"
+            element={
+              <PrivateRoute roles={['ADMIN']}>
+                <Layout><Users /></Layout>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/campagnes"
+            element={
+              <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
+                <Layout><Campagnes /></Layout>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/contacts"
+            element={
+              <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
+                <Layout><Contacts /></Layout>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/segments"
+            element={
+              <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
+                <Layout><Segments /></Layout>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/reporting"
+            element={
+              <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
+                <Layout><Reporting /></Layout>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/monitoring"
+            element={
+              <PrivateRoute roles={['ADMIN']}>
+                <Layout><Monitoring /></Layout>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/analytics"
+            element={
+              <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
+                <Layout><Analytics /></Layout>
+              </PrivateRoute>
+            }
+          />
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
