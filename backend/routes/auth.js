@@ -31,17 +31,35 @@ router.post('/register', registerLimiter, validateRegister, checkValidation, asy
 
 router.post('/login', loginLimiter, validateLogin, checkValidation, async (req, res) => {
   try {
-    const { email, password } = req.body
-    const user = await prisma.user.findUnique({ where: { email } })
-    if (!user) return res.status(400).json({ message: 'Utilisateur non trouvé' })
-    const valid = await bcrypt.compare(password, user.password)
-    if (!valid) return res.status(400).json({ message: 'Mot de passe incorrect' })
-    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET)
-    res.json({ message: 'Connexion reussie', token })
+    const { email, password } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    const valid = await bcrypt.compare(password, user.password);
+
+    if (!valid) {
+      return res.status(400).json({ message: 'Mot de passe incorrect' });
+    }
+
+    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET);
+
+    res.json({
+      message: 'Connexion reussie',
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur', error: err.message })
+    res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
-})
+});
 
 router.get('/me', async (req, res) => {
   try {

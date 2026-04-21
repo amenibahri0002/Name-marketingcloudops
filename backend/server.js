@@ -1,24 +1,23 @@
+require('dotenv').config({ override: true })
 const express = require('express')
 const cors = require('cors')
 const { PrismaClient } = require('@prisma/client')
 const client = require('prom-client')
 const { authMiddleware: authenticate } = require('./middleware/auth')
-const axios = require('axios')
-const {
-  helmetMiddleware,
-  globalLimiter,
-} = require('./middleware/security')
+const { helmetMiddleware, globalLimiter } = require('./middleware/security')
+const compression = require('compression')
+
 const app = express()
 const prisma = new PrismaClient()
-console.log("SERVER STARTING...")
-app.use(cors({
-   origin: '*',
-  credentials: true
-}))
+
+console.log('SERVER STARTING...')
+
+app.use(cors({ origin: '*', credentials: true }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(helmetMiddleware)
 app.use(globalLimiter)
+app.use(compression())
 
 const authRoutes = require('./routes/auth')
 app.use('/api/auth', authRoutes)
@@ -49,130 +48,28 @@ app.use('/api/alertes', authenticate, alertesRoutes)
 
 const notifRoutes = require('./routes/notifications')
 app.use('/api/notifications', authenticate, notifRoutes)
+
 const smsRoutes = require('./routes/sms')
 app.use('/api/sms', authenticate, smsRoutes)
+
 const analyticsRoutes = require('./routes/analytics')
 app.use('/api/analytics', authenticate, analyticsRoutes)
 
+const exportRoutes = require('./routes/export')
+app.use('/api/export', authenticate, exportRoutes)
+
 client.collectDefaultMetrics({ timeout: 5000 })
 
-const inscriptionsTotal = new client.Counter({
-  name: 'techevent_inscriptions_total',
-  help: 'Nombre total inscriptions'
-})
+app.get('/health', (req, res) => res.json({ status: 'ok' }))
 
-async function pushMetricsToGrafana() {
-  try {
-    const metrics = await client.register.metrics()
-    const lines = metrics.split('\n').filter(function(l) {
-      return !l.startsWith('#') && l.trim() !== ''
-    })
-
-    const data = lines.map(function(line) {
-      const parts = line.trim().split(' ')
-      const name = parts[0].split('{')[0]
-      const value = parseFloat(parts[parts.length - 1])
-      if (!isNaN(value)) {
-        return name + ' ' + value
-      }
-      return null
-    }).filter(Boolean).join('\n')
-
-    await axios.post(
-      'https://prometheus-prod-58-prod-eu-central-0.grafana.net/api/prom/push',
-      data,
-      {
-        headers: { 'Content-Type': 'text/plain' },
-        auth: {
-          username: 'admin',
-          password: 'admin'
-        }
-      }
-    )
-    console.log('Grafana push success')
-  } catch (err) {
-    console.log('Grafana push error:', err.response ? err.response.status : err.message)
-  }
-}
-
-//setInterval(pushMetricsToGrafana, 15000)
-
-app.get('/health', function(req, res) {
-  res.json({ status: 'ok' })
-})
-
-app.get('/metrics', async function(req, res) {
+app.get('/metrics', async (req, res) => {
   res.set('Content-Type', client.register.contentType)
   res.end(await client.register.metrics())
 })
 
-app.post('/api/register', async (req, res) => {
-  try {
-    const { name, email, phone } = req.body
-    
-    // Créer inscription
-    const inscription = await prisma.inscription.create({
-      data: { name, email, phone }
-    })
-    inscriptionsTotal.inc()
-
-    // Ajouter automatiquement comme contact dans MarketingCloudOps
-    try {
-      const clientTechEvent = await prisma.client.findFirst({
-        where: { name: 'TechEventCo' }
-      })
-      
-      if (clientTechEvent) {
-        const existingContact = await prisma.contact.findFirst({
-          where: { email }
-        })
-        
-        if (!existingContact) {
-          await prisma.contact.create({
-            data: {
-              name,
-              email,
-              phone,
-              clientId: clientTechEvent.id
-            }
-          })
-          console.log('Contact ajouté automatiquement:', email)
-        }
-      }
-    } catch (err) {
-      console.log('Erreur ajout contact:', err.message)
-    }
-
-    res.json({ message: 'Inscription reussie !', data: inscription })
-  } catch (err) {
-    console.error('Erreur:', err)
-    res.status(500).json({ message: 'Erreur serveur', error: err.message })
-  }
-})
-
-app.get('/api/inscriptions', async function(req, res) {
-  try {
-    const inscriptions = await prisma.inscription.findMany({
-      orderBy: { createdAt: 'desc' }
-    })
-    res.json(inscriptions)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
+app.get('/', (req, res) => res.send('MarketingCloudOps API OK'))
 
 const PORT = process.env.PORT || 5000
-app.get('/api', (req, res) => {
-  res.json({
-    message: "MarketingCloudOps API active",
-    endpoints: [
-      "/api/auth",
-      "/api/clients",
-      "/api/campagnes",
-      "/api/contacts"
-    ]
-  })
-})
-app.listen(PORT, '0.0.0.0', function() {
+app.listen(PORT, '0.0.0.0', () => {
   console.log('Backend sur http://localhost:' + PORT)
 })
