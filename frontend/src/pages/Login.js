@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
@@ -8,6 +8,11 @@ function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  
+  useEffect(() => {
+  // Réveille le serveur dès que la page login s'ouvre
+  api.get('/health')
+}, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -256,7 +261,7 @@ function Login() {
                 transition: 'background 0.2s',
               }}
             >
-              {loading ? 'Connexion...' : 'Se connecter'}
+              {loading ? '⏳ Démarrage du serveur...' : 'Se connecter'}
             </button>
           </form>
 
