@@ -4,6 +4,8 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
+const { authMiddleware } = require('../middleware/auth')
+
 const {
   loginLimiter,
   registerLimiter,
@@ -60,18 +62,15 @@ router.post('/login', loginLimiter, validateLogin, checkValidation, async (req, 
     res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
 });
-
-router.get('/me', async (req, res) => {
+  router.get('/me', authMiddleware, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization
-    if (!authHeader) return res.status(401).json({ message: 'Token manquant' })
-    const token = authHeader.split(' ')[1]
-    const decoded = jwt.verify(token, JWT_SECRET)
-    const user = await prisma.user.findUnique({ where: { id: decoded.id } })
-    res.json({ id: user.id, name: user.name, email: user.email, role: user.role })
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, name: true, email: true, role: true }
+    })
+    res.json(user)
   } catch (err) {
-    res.status(401).json({ message: 'Token invalide' })
+    res.status(500).json({ message: 'Erreur serveur' })
   }
 })
-
 module.exports = router

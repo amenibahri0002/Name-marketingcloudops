@@ -5,9 +5,10 @@ services:
     container_name: backend
     ports:
       - "5000:5000"
+    env_file:
+      - ./backend/.env
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://admin:admin@techevent-postgres:5432/techevent
     networks:
       - monitoring
 
@@ -35,7 +36,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3001:3000"
+      - "3002:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin123
