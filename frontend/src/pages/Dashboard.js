@@ -12,7 +12,7 @@ function Dashboard() {
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
 
-    api.get('/api/auth/me').then(res => setUser(res.data)).catch(() => { localStorage.removeItem('token'); navigate('/login'); });
+api.get('/auth/me').then(res => setUser(res.data)).catch(() => { localStorage.removeItem('token'); navigate('/login'); });
 
     Promise.all([
       api.get('/api/clients'),
