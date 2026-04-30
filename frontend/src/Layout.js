@@ -1,79 +1,68 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { MENUS } from './config/menuConfig';
-import SidebarMenuItem from './components/SidebarMenuItem';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+
+const adminMenu = [
+  { section: 'Principal', items: [
+    { path: '/dashboard', icon: '⬛', label: 'Dashboard' },
+    { path: '/users', icon: '👤', label: 'Utilisateurs' },
+  ]},
+  { section: 'Monitoring', items: [
+    { path: '/monitoring', icon: '◎', label: 'Monitoring' },
+    { path: '/reporting', icon: '📊', label: 'Reporting' },
+    { path: '/analytics', icon: '📈', label: 'Analytics KPIs' },
+  ]},
+];
+
+const marketingMenu = [
+  { section: 'Campagnes', items: [
+    { path: '/dashboard', icon: '⬛', label: 'Dashboard' },
+    { path: '/campagnes', icon: '📧', label: 'Campagnes' },
+  ]},
+  { section: 'Gestion', items: [
+    { path: '/contacts', icon: '👥', label: 'Contacts' },
+    { path: '/clients', icon: '🏢', label: 'Clients' },
+    { path: '/segments', icon: '🗺️', label: 'Segments' },
+  ]},
+  { section: 'Analytics', items: [
+    { path: '/reporting', icon: '📊', label: 'Suivi campagnes' },
+    { path: '/analytics', icon: '📈', label: 'Analytics KPIs' },
+  ]},
+];
+
+const clientMenu = [
+  { section: 'Menu', items: [
+    { path: '/dashboard', icon: '⬛', label: 'Dashboard' },
+  ]},
+];
 
 function Layout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
-
-  const [collapsed, setCollapsed] = useState(false);
   const [userRole, setUserRole] = useState('USER');
   const [userName, setUserName] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        setUserRole(payload.role || 'USER');
-      } catch (error) {
-        setUserRole('USER');
-      }
+        setUserRole(payload.role);
+      } catch (err) {}
     }
-
+    const user = localStorage.getItem('user');
     if (user) {
       try {
-        const parsedUser = JSON.parse(user);
-        setUserName(parsedUser.name || '');
-      } catch (error) {
-        setUserName('');
-      }
+        const u = JSON.parse(user);
+        setUserName(u.name || '');
+      } catch (err) {}
     }
   }, [location]);
 
-  const menuItems = MENUS[userRole] || MENUS.USER;
-
-  const roleInfo = useMemo(() => {
-    if (userRole === 'ADMIN') {
-      return {
-        label: 'Admin',
-        color: '#7c3aed',
-        bg: '#f5f3ff',
-        border: '#ddd6fe',
-      };
-    }
-
-    if (userRole === 'RESPONSABLE_MARKETING') {
-      return {
-        label: 'Responsable Marketing',
-        color: '#0891b2',
-        bg: '#ecfeff',
-        border: '#bae6fd',
-      };
-    }
-
-    return {
-      label: 'Client',
-      color: '#059669',
-      bg: '#ecfdf5',
-      border: '#a7f3d0',
-    };
-  }, [userRole]);
-
-  const initials = userName
-    ? userName
-        .split(' ')
-        .map((part) => part[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    : 'U';
-
-  const currentPage =
-    menuItems.find((item) => item.path === location.pathname)?.label || 'Dashboard';
+  const menuGroups = userRole === 'ADMIN'
+    ? adminMenu
+    : userRole === 'RESPONSABLE_MARKETING'
+      ? marketingMenu
+      : clientMenu;
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -81,323 +70,203 @@ function Layout({ children }) {
     navigate('/login');
   };
 
-  return (
-    <div
-      style={{
-        display: 'flex',
-        minHeight: '100vh',
-        background: '#f8fafc',
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-      }}
-    >
-      <aside
-        style={{
-          width: collapsed ? 76 : 260,
-          background: '#ffffff',
-          borderRight: '1px solid #e5e7eb',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          height: '100vh',
-          zIndex: 100,
-          transition: 'all 0.25s ease',
-          boxShadow: '0 0 20px rgba(15, 23, 42, 0.04)',
-        }}
-      >
-        <div
-          style={{
-            padding: collapsed ? '18px 14px' : '18px 18px',
-            borderBottom: '1px solid #f1f5f9',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'space-between',
-            minHeight: 72,
-          }}
-        >
-          {!collapsed ? (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 12,
-                    background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 800,
-                    fontSize: 14,
-                    boxShadow: '0 8px 18px rgba(124, 58, 237, 0.18)',
-                  }}
-                >
-                  M
-                </div>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
-                    MarketingCloudOps
-                  </div>
-                  <div style={{ fontSize: 11, color: '#94a3b8' }}>
-                    Cloud Marketing Platform
-                  </div>
-                </div>
-              </div>
+  const getRoleInfo = () => {
+    if (userRole === 'ADMIN') return { label: 'Administrateur', short: 'AD' };
+    if (userRole === 'RESPONSABLE_MARKETING') return { label: 'Resp. Marketing', short: 'RM' };
+    return { label: 'Client', short: 'CL' };
+  };
 
-              <button
-                onClick={() => setCollapsed(true)}
-                style={{
-                  border: '1px solid #e5e7eb',
-                  background: '#fff',
-                  borderRadius: 10,
-                  width: 32,
-                  height: 32,
-                  cursor: 'pointer',
-                  color: '#64748b',
-                }}
-              >
-                ←
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setCollapsed(false)}
-              style={{
-                border: 'none',
-                background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                color: '#fff',
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                cursor: 'pointer',
-                fontWeight: 700,
-                boxShadow: '0 8px 18px rgba(124, 58, 237, 0.18)',
-              }}
-            >
-              M
-            </button>
-          )}
+  const roleInfo = getRoleInfo();
+  const initials = userName ? userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : roleInfo.short;
+  const currentLabel = menuGroups.flatMap(g => g.items).find(m => m.path === location.pathname)?.label || 'Dashboard';
+
+  const gold = '#f5a623';
+  const dark = '#16120d';
+  const dark2 = '#1e1810';
+
+  return (
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'Open Sans', sans-serif", background: '#f6f3ee' }}>
+
+      {/* SIDEBAR */}
+      <aside style={{
+        width: 240, flexShrink: 0,
+        background: dark,
+        display: 'flex', flexDirection: 'column',
+        position: 'relative', overflow: 'hidden'
+      }}>
+        {/* Glow effect */}
+        <div style={{
+          position: 'absolute', bottom: -80, left: -80,
+          width: 260, height: 260, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 70%)',
+          pointerEvents: 'none'
+        }} />
+
+        {/* Logo */}
+        <div style={{
+          padding: '1.5rem 1.4rem 1.2rem',
+          display: 'flex', alignItems: 'center', gap: 10,
+          borderBottom: '1px solid rgba(255,255,255,0.06)'
+        }}>
+          <div style={{ width: 34, height: 34, position: 'relative', flexShrink: 0 }}>
+            <div style={{
+              position: 'absolute', top: 0, left: 0,
+              width: 20, height: 20, background: gold, borderRadius: 4
+            }} />
+            <div style={{
+              position: 'absolute', bottom: 0, right: 0,
+              width: 16, height: 16,
+              background: 'rgba(245,166,35,0.35)', borderRadius: 3
+            }} />
+          </div>
+          <div style={{
+            fontFamily: "'Montserrat', sans-serif",
+            fontSize: '1.1rem', fontWeight: 800, color: 'white'
+          }}>
+            Digi<span style={{ color: gold }}>Pip</span>
+          </div>
         </div>
 
-        {!collapsed && (
-          <div style={{ padding: '14px 18px 8px' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '6px 12px',
-                borderRadius: 999,
-                background: roleInfo.bg,
-                color: roleInfo.color,
-                border: `1px solid ${roleInfo.border}`,
-                fontSize: 12,
-                fontWeight: 700,
-              }}
-            >
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: roleInfo.color,
-                }}
-              />
-              {roleInfo.label}
+        {/* Navigation */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0' }}>
+          {menuGroups.map(group => (
+            <div key={group.section}>
+              <div style={{
+                padding: '1.2rem 1rem 0.3rem',
+                fontSize: '0.58rem', fontWeight: 700,
+                color: 'rgba(255,255,255,0.25)',
+                textTransform: 'uppercase', letterSpacing: 2,
+                fontFamily: "'Montserrat', sans-serif"
+              }}>
+                {group.section}
+              </div>
+              <ul style={{ listStyle: 'none', padding: '0 0.6rem' }}>
+                {group.items.map(item => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <li key={item.path} style={{ marginBottom: 2 }}>
+                      <Link to={item.path} style={{ textDecoration: 'none' }}>
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '0.6rem 0.9rem', borderRadius: 8,
+                          fontSize: '0.82rem', fontWeight: 500,
+                          color: isActive ? gold : 'rgba(255,255,255,0.45)',
+                          background: isActive ? 'rgba(245,166,35,0.18)' : 'transparent',
+                          border: isActive ? '1px solid rgba(245,166,35,0.2)' : '1px solid transparent',
+                          transition: 'all 0.18s', cursor: 'pointer'
+                        }}>
+                          <span style={{ fontSize: '0.9rem', width: 18, textAlign: 'center' }}>
+                            {item.icon}
+                          </span>
+                          <span>{item.label}</span>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* User footer */}
+        <div style={{
+          marginTop: 'auto', padding: '1.2rem',
+          borderTop: '1px solid rgba(255,255,255,0.06)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: '50%',
+              background: gold, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: "'Montserrat', sans-serif", fontSize: '0.72rem', fontWeight: 800,
+              color: dark, flexShrink: 0
+            }}>
+              {initials}
+            </div>
+            <div>
+              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'white' }}>{userName}</div>
+              <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{roleInfo.label}</div>
             </div>
           </div>
-        )}
-
-        <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px 16px' }}>
-          {!collapsed && (
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: '#94a3b8',
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                padding: '10px 10px 12px',
-              }}
-            >
-              Navigation
-            </div>
-          )}
-
-          {menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
-
-            return (
-              <SidebarMenuItem
-                key={item.path}
-                item={item}
-                isActive={isActive}
-                collapsed={collapsed}
-              />
-            );
-          })}
-        </div>
-
-        <div
-          style={{
-            padding: '14px 12px',
-            borderTop: '1px solid #f1f5f9',
-            background: '#fff',
-          }}
-        >
-          {!collapsed && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: 12,
-                borderRadius: 16,
-                background: '#f8fafc',
-                border: '1px solid #e5e7eb',
-                marginBottom: 10,
-              }}
-            >
-              <div
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: '50%',
-                  background: roleInfo.bg,
-                  color: roleInfo.color,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 800,
-                  fontSize: 12,
-                  flexShrink: 0,
-                }}
-              >
-                {initials}
-              </div>
-
-              <div style={{ minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: '#0f172a',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {userName || 'Utilisateur'}
-                </div>
-                <div style={{ fontSize: 11, color: '#94a3b8' }}>{roleInfo.label}</div>
-              </div>
-            </div>
-          )}
-
-          <button
-            onClick={logout}
-            style={{
-              width: '100%',
-              border: '1px solid #fecaca',
-              background: '#fff5f5',
-              color: '#dc2626',
-              borderRadius: 12,
-              padding: collapsed ? '10px' : '10px 14px',
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: 13,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: collapsed ? 'center' : 'flex-start',
-              gap: 8,
-            }}
-          >
-            <span>⎋</span>
-            {!collapsed && <span>Déconnexion</span>}
+          <button onClick={logout} style={{
+            width: '100%', padding: '0.5rem',
+            background: 'rgba(239,68,68,0.1)',
+            border: '1px solid rgba(239,68,68,0.2)',
+            borderRadius: 8, color: '#ef4444',
+            fontSize: '0.75rem', fontWeight: 600,
+            cursor: 'pointer', fontFamily: "'Montserrat', sans-serif"
+          }}>
+            Déconnexion
           </button>
         </div>
       </aside>
 
-      <main
-        style={{
-          marginLeft: collapsed ? 76 : 260,
-          width: '100%',
-          transition: 'all 0.25s ease',
-          minHeight: '100vh',
-        }}
-      >
-        <header
-          style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 90,
-            background: 'rgba(255,255,255,0.92)',
-            backdropFilter: 'blur(8px)',
-            borderBottom: '1px solid #e5e7eb',
-            height: 68,
-            padding: '0 28px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+      {/* MAIN */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+        {/* TOPBAR */}
+        <div style={{
+          height: 60, background: 'white',
+          borderBottom: '1px solid #ede8df',
+          display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 1.8rem', flexShrink: 0
+        }}>
           <div>
-            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 2 }}>
-              MarketingCloudOps / Espace {roleInfo.label}
+            <div style={{
+              fontFamily: "'Montserrat', sans-serif",
+              fontSize: '1rem', fontWeight: 800, color: '#1a160e'
+            }}>
+              {currentLabel}
             </div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>
-              {currentPage}
+            <div style={{ fontSize: '0.68rem', color: '#9c8f7a', marginTop: 1 }}>
+               DigiPip — {roleInfo.label}
             </div>
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div
-              style={{
-                padding: '6px 12px',
-                borderRadius: 999,
-                background: '#f5f3ff',
-                color: '#7c3aed',
-                border: '1px solid #ddd6fe',
-                fontSize: 12,
-                fontWeight: 700,
-              }}
-            >
-              v2.0
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: '#f6f3ee', border: '1px solid #ede8df',
+              borderRadius: 8, padding: '0.4rem 0.9rem',
+              fontSize: '0.78rem', color: '#9c8f7a'
+            }}>
+              🔍 Rechercher...
             </div>
-
-            <div
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: '50%',
-                background: roleInfo.bg,
-                color: roleInfo.color,
-                border: `1px solid ${roleInfo.border}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-                fontSize: 12,
-              }}
-            >
+            <div style={{ position: 'relative' }}>
+              <div style={{
+                width: 34, height: 34, borderRadius: 8,
+                border: '1px solid #ede8df', background: 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', fontSize: '0.85rem', color: '#9c8f7a'
+              }}>🔔</div>
+              <div style={{
+                position: 'absolute', top: -3, right: -3,
+                background: gold, color: dark,
+                fontSize: '0.5rem', fontWeight: 800,
+                width: 14, height: 14, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: "'Montserrat', sans-serif"
+              }}>3</div>
+            </div>
+            <div style={{
+              width: 34, height: 34, borderRadius: '50%',
+              background: gold, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: "'Montserrat', sans-serif", fontSize: '0.72rem', fontWeight: 800,
+              color: dark, border: '2px solid rgba(245,166,35,0.3)', cursor: 'pointer'
+            }}>
               {initials}
             </div>
           </div>
-        </header>
+        </div>
 
-        <section style={{ padding: 28 }}>
-          <div
-            style={{
-              maxWidth: 1440,
-              margin: '0 auto',
-            }}
-          >
-            {children}
-          </div>
-        </section>
-      </main>
+        {/* CONTENT */}
+        <div style={{
+          flex: 1, overflowY: 'auto', padding: '1.4rem 1.8rem',
+          scrollbarWidth: 'thin', scrollbarColor: '#ede8df transparent'
+        }}>
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
