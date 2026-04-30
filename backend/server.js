@@ -8,6 +8,8 @@ const { helmetMiddleware, globalLimiter } = require('./middleware/security')
 const compression = require('compression')
 
 const app = express()
+app.set('trust proxy', 1)
+
 const prisma = new PrismaClient()
 
 console.log('SERVER STARTING...')
