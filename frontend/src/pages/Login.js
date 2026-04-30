@@ -26,7 +26,8 @@ export default function Login() {
     setError('');
     try {
       const res = await axios.post(
-        `${process.env.REACT_APP_API_URL || 'https://marketingcloudops-backend.onrender.com'}/api/auth/login`,
+        `${process.env.REACT_APP_API_URL || 'https://marketingcloudops-backend.onrender.com'}/auth/login`,
+
         { email, password }
       );
       localStorage.setItem('token', res.data.token);
@@ -124,7 +125,7 @@ export default function Login() {
             </h2>
             <p style={{ color: DP.muted, fontSize: 13, margin: 0 }}>
               Accédez à votre espace DigiPip
-        
+              
             </p>
           </div>
 
