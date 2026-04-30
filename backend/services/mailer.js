@@ -60,7 +60,7 @@ async function sendConfirmationEmail(to, name) {
 
             <!-- CTA -->
             <div style="text-align:center;margin:0 0 24px;">
-              <a href="https://techevent-frontend.vercel.app" 
+              <a href="https://digipip.vercel.app/login"  
                 style="display:inline-block;background:#c8f53e;color:#0a0a0a;padding:14px 32px;border-radius:100px;text-decoration:none;font-weight:600;font-size:0.95rem;">
                 Voir mon inscription
               </a>
@@ -74,7 +74,7 @@ async function sendConfirmationEmail(to, name) {
           <!-- Footer -->
           <div style="padding:20px 40px;border-top:1px solid #2a2a2a;text-align:center;">
             <p style="color:#555;font-size:0.78rem;margin:0;">
-              MarketingCloudOps — TechEventCo © 2026
+               DigiPip — DigiLab Solutions © 2026
             </p>
           </div>
 
