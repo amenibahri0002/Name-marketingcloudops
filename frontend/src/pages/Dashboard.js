@@ -214,9 +214,13 @@ const emailData = [8200, 12400, 9800, 15600, 11200, 18400, 14200];
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
 
-    api.get('/api/auth/me')
-      .then(res => setUser(res.data))
-      .catch(() => { localStorage.removeItem('token'); navigate('/login'); });
+  const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    } else {
+      localStorage.removeItem('token');
+      navigate('/login');
+    }
 
     fetchData();
 
