@@ -44,14 +44,15 @@ function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/access-denied" element={<AccessDenied />} />
-          <Route path="/profile"  element={<Layout><Profile  /></Layout>} />
-          <Route path="/settings" element={<Layout><Settings /></Layout>} />
+         
 
           <Route
             path="/dashboard"
             element={
               <PrivateRoute>
                 <Layout><Dashboard /></Layout>
+                <Route path="/profile"  element={<Layout><Profile  /></Layout>} />
+                <Route path="/settings" element={<Layout><Settings /></Layout>} />
               </PrivateRoute>
             }
           />
