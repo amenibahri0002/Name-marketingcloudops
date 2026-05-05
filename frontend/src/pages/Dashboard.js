@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
@@ -187,34 +187,51 @@ export default function Dashboard() {
   const [hoveredCard,    setHoveredCard]    = useState(null);
   const [hoveredRow,     setHoveredRow]     = useState(null);
 
-  const emailData = [8200, 12400, 9800, 15600, 11200, 18400, 14200];
+const emailData = [8200, 12400, 9800, 15600, 11200, 18400, 14200];
   const smsData   = [3200, 4100,  2900, 5600,  3800,  6200,  4900];
   const pushData  = [1800, 3400,  2200, 4800,  3100,  5900,  4100];
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [clients, campagnes, contacts, segments] = await Promise.all([
+        api.get('/api/clients'),
+        api.get('/api/campagnes'),
+        api.get('/api/contacts'),
+        api.get('/api/segments'),
+      ]);
+      const camp = Array.isArray(campagnes.data) ? campagnes.data : campagnes.data.data || [];
+      setStats({
+        clients:   Array.isArray(clients.data)  ? clients.data.length  : (clients.data.data  || []).length,
+        campagnes: camp.length,
+        contacts:  Array.isArray(contacts.data) ? contacts.data.length : (contacts.data.data || []).length,
+        segments:  Array.isArray(segments.data) ? segments.data.length : (segments.data.data || []).length,
+      });
+      setRecentCampagnes(camp.slice(0, 5));
+    } catch(err) { console.error(err); }
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
 
-    api.get('/auth/me')
+    api.get('/api/auth/me')
       .then(res => setUser(res.data))
       .catch(() => { localStorage.removeItem('token'); navigate('/login'); });
 
-    Promise.all([
-      api.get('/api/auth/me'),
-      api.get('/api/clients'),
-      api.get('/api/campagnes'),
-      api.get('/api/contacts'),
-      api.get('/api/segments')
-    ]).then(([clients, campagnes, contacts, segments]) => {
-      setStats({
-        clients:   clients.data.length,
-        campagnes: campagnes.data.length,
-        contacts:  contacts.data.length,
-        segments:  segments.data.length,
-      });
-      setRecentCampagnes(campagnes.data.slice(0, 5));
-    }).catch(console.error);
-  }, [navigate]);
+    fetchData();
+
+    // Refresh auto toutes les 30 secondes
+    const interval = setInterval(fetchData, 30000);
+
+    // Refresh quand la fenêtre reprend le focus
+    const onFocus = () => fetchData();
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [navigate, fetchData]);
 
   const sparkData = {
     clients:   [4, 6, 5, 8, 7, 9,  stats.clients],

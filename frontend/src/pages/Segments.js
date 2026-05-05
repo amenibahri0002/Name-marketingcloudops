@@ -1,509 +1,209 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 
-const VILLES_TUNISIE = [
-  'Tunis', 'Sfax', 'Sousse', 'Kairouan', 'Bizerte', 'Gabès',
-  'Ariana', 'Gafsa', 'Monastir', 'Ben Arous', 'Kasserine', 'Médenine',
-  'Nabeul', 'Tataouine', 'Beja', 'Jendouba', 'El Kef', 'Mahdia',
-  'Sidi Bouzid', 'Tozeur', 'Siliana', 'Zaghouan', 'Kebili', 'Manouba'
-]
+const DP = {
+  gold:'#f5a623', goldGlow:'rgba(245,166,35,0.12)',
+  dark:'#16120d', bg:'#f6f3ee', card:'#ffffff',
+  border:'#ede8df', text:'#1a160e', muted:'#9c8f7a',
+  blue:'#3b82f6', green:'#22c55e', red:'#ef4444',
+  font:"'Montserrat','Open Sans',sans-serif",
+};
 
-const CRITERES_PREDEFINIS = [
-  { id: 'age_18_25', label: 'Âge 18–25 ans', category: 'Démographie', icon: '👤' },
-  { id: 'age_25_35', label: 'Âge 25–35 ans', category: 'Démographie', icon: '👤' },
-  { id: 'age_35_plus', label: 'Âge 35+ ans', category: 'Démographie', icon: '👤' },
-  { id: 'hist_3_ouvertures', label: 'A ouvert 3+ campagnes', category: 'Historique', icon: '📧' },
-  { id: 'hist_inscrit_recent', label: 'Inscrit récemment', category: 'Historique', icon: '🕐' },
-  { id: 'hist_actif', label: 'Utilisateur actif', category: 'Historique', icon: '⚡' },
-  { id: 'int_hightech', label: 'Intérêt : High-Tech', category: 'Intérêt', icon: '💡' },
-  { id: 'int_ia', label: 'Intérêt : Intelligence Artificielle', category: 'Intérêt', icon: '🤖' },
-  { id: 'int_startup', label: 'Intérêt : Startups', category: 'Intérêt', icon: '🚀' },
-  { id: 'int_marketing', label: 'Intérêt : Marketing', category: 'Intérêt', icon: '📢' },
-]
+const CRIT_LABELS = {
+  email:    { label:'A un email',    icon:'📧', color:DP.blue  },
+  phone:    { label:'A un tél.',     icon:'📱', color:DP.green },
+  clientId: { label:'Par client',    icon:'🏢', color:'#8b5cf6'},
+  all:      { label:'Tous',          icon:'👥', color:DP.gold  },
+};
 
-const CATEGORIES = ['Démographie', 'Localisation', 'Historique', 'Intérêt']
-
-function Segments() {
-  const [segments, setSegments] = useState([]);
-  const [clients, setClients] = useState([]);
-  const [contacts, setContacts] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [clientId, setClientId] = useState('');
-  const [selectedCriteres, setSelectedCriteres] = useState([]);
-  const [selectedVilles, setSelectedVilles] = useState([]);
-  const [autreInteret, setAutreInteret] = useState('');
-  const [autresInterets, setAutresInterets] = useState([]);
-  const [selectedSegment, setSelectedSegment] = useState(null);
-  const [contactId, setContactId] = useState('');
-  const [activeCategory, setActiveCategory] = useState('Démographie');
+export default function Segments() {
+  const [segments,   setSegments]   = useState([]);
+  const [clients,    setClients]    = useState([]);
+  const [showForm,   setShowForm]   = useState(false);
+  const [hoveredRow, setHoveredRow] = useState(null);
+  const [form, setForm] = useState({ name:'', criteria:'all', clientId:'' });
 
   const fetchAll = async () => {
-    const [s, cl, co] = await Promise.all([
-      api.get('/api/segments'),
-      api.get('/api/clients'),
-      api.get('/api/contacts')
-    ]);
-    setSegments(s.data);
-    setClients(cl.data);
-    setContacts(co.data);
+    try {
+      const [s, cl] = await Promise.all([api.get('/api/segments'), api.get('/api/clients')]);
+      setSegments(Array.isArray(s.data) ? s.data : s.data.data || []);
+      setClients(cl.data);
+    } catch(err) { console.error(err); }
   };
 
   useEffect(() => { fetchAll(); }, []);
 
-  const toggleCritere = (critere) => {
-    setSelectedCriteres(prev =>
-      prev.find(c => c.id === critere.id)
-        ? prev.filter(c => c.id !== critere.id)
-        : [...prev, critere]
-    )
-  }
-
-  const toggleVille = (ville) => {
-    const critere = { id: 'loc_' + ville, label: 'Localisation : ' + ville, category: 'Localisation', icon: '📍' }
-    setSelectedVilles(prev =>
-      prev.includes(ville) ? prev.filter(v => v !== ville) : [...prev, ville]
-    )
-    toggleCritere(critere)
-  }
-
   const handleAdd = async (e) => {
     e.preventDefault();
-    const criteria = selectedCriteres.map(c => c.label).join(' | ')
-    await api.post('/api/segments', { name, criteria, clientId });
-    setName(''); setClientId(''); setSelectedCriteres([]);
-    setSelectedVilles([]); setAutresInterets([]); setShowForm(false);
-    fetchAll();
-  };
-
-  const handleAddContact = async (e) => {
-    e.preventDefault();
-    await api.post(`/api/segments/${selectedSegment}/contacts`, { contactId });
-    setContactId('');
-    fetchAll();
+    try {
+      await api.post('/api/segments', form);
+      setForm({ name:'', criteria:'all', clientId:'' });
+      setShowForm(false); fetchAll();
+    } catch(err) { alert('Erreur: ' + err.message); }
   };
 
   const handleDelete = async (id) => {
-    await api.delete(`/api/segments/${id}`);
-    fetchAll();
+    if (!window.confirm('Supprimer ce segment ?')) return;
+    try { await api.delete(`/api/segments/${id}`); fetchAll(); }
+    catch(err) { alert('Erreur suppression'); }
   };
 
-  const addAutreInteret = () => {
-    if (autreInteret.trim()) {
-      const newCritere = {
-        id: 'int_custom_' + Date.now(),
-        label: 'Intérêt : ' + autreInteret.trim(),
-        category: 'Intérêt',
-        icon: '⭐'
-      }
-      setAutresInterets(prev => [...prev, newCritere])
-      toggleCritere(newCritere)
-      setAutreInteret('')
-    }
-  }
-
   return (
-    <div>
+    <div style={{ fontFamily:DP.font, color:DP.text }}>
+
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1f2937', margin: 0 }}>Segments</h1>
-          <p style={{ color: '#6b7280', marginTop: 4, fontSize: 14 }}>
-            Groupez vos contacts selon des critères communs pour cibler vos campagnes
-          </p>
+          <h1 style={{ fontSize:20, fontWeight:900, margin:'0 0 4px' }}>Segments</h1>
+          <p style={{ color:DP.muted, fontSize:12, margin:0 }}>Créez des groupes de contacts ciblés</p>
         </div>
         <button onClick={() => setShowForm(!showForm)} style={{
-          background: '#4f46e5', color: 'white', border: 'none',
-          padding: '10px 20px', borderRadius: 8, fontSize: 14,
-          fontWeight: 600, cursor: 'pointer'
+          background:DP.gold, color:DP.dark, border:'none',
+          padding:'9px 18px', borderRadius:9, fontSize:12,
+          fontWeight:800, cursor:'pointer', fontFamily:DP.font
         }}>
           + Nouveau segment
         </button>
       </div>
 
-      {/* Formulaire création */}
-      {showForm && (
-        <div style={{
-          background: 'white', border: '1px solid #e8e8f0',
-          borderRadius: 12, padding: 28, marginBottom: 32
-        }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: '#1f2937', margin: '0 0 24px' }}>
-            Créer un segment
-          </h2>
-          <form onSubmit={handleAdd}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
-                  Nom du segment
-                </label>
-                <input
-                  placeholder="Ex: Jeunes technophiles Tunis"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  required
-                  style={{
-                    width: '100%', padding: '10px 14px',
-                    border: '1px solid #e5e7eb', borderRadius: 8,
-                    fontSize: 14, boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
-                  Client
-                </label>
-                <select
-                  value={clientId}
-                  onChange={e => setClientId(e.target.value)}
-                  required
-                  style={{
-                    width: '100%', padding: '10px 14px',
-                    border: '1px solid #e5e7eb', borderRadius: 8,
-                    fontSize: 14, boxSizing: 'border-box', background: 'white'
-                  }}
-                >
-                  <option value="">-- Sélectionner un client --</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-            </div>
-
-            {/* Critères */}
-            <div>
-              <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 12 }}>
-                Critères de segmentation
-              </label>
-
-              {/* Categories tabs */}
-              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                {CATEGORIES.map(cat => (
-                  <button key={cat} type="button" onClick={() => setActiveCategory(cat)} style={{
-                    padding: '6px 16px', borderRadius: 20, fontSize: 13,
-                    border: '1px solid',
-                    borderColor: activeCategory === cat ? '#4f46e5' : '#e5e7eb',
-                    background: activeCategory === cat ? '#eef2ff' : 'white',
-                    color: activeCategory === cat ? '#4f46e5' : '#6b7280',
-                    cursor: 'pointer', fontWeight: activeCategory === cat ? 600 : 400
-                  }}>
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              {/* Démographie */}
-              {activeCategory === 'Démographie' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                  {CRITERES_PREDEFINIS.filter(c => c.category === 'Démographie').map(critere => {
-                    const selected = selectedCriteres.find(c => c.id === critere.id)
-                    return (
-                      <div key={critere.id} onClick={() => toggleCritere(critere)} style={{
-                        padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
-                        border: '1px solid', borderColor: selected ? '#4f46e5' : '#e5e7eb',
-                        background: selected ? '#eef2ff' : 'white',
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        fontSize: 13, color: selected ? '#4f46e5' : '#374151',
-                        fontWeight: selected ? 500 : 400
-                      }}>
-                        <span>{critere.icon}</span>
-                        <span>{critere.label}</span>
-                        {selected && <span style={{ marginLeft: 'auto' }}>✓</span>}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* Localisation */}
-{activeCategory === 'Localisation' && (
-  <div>
-    <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 10 }}>
-      Sélectionne une ou plusieurs villes de Tunisie :
-    </div>
-    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
-      <select
-        onChange={e => {
-          const ville = e.target.value
-          if (ville && !selectedVilles.includes(ville)) {
-            toggleVille(ville)
-          }
-          e.target.value = ''
-        }}
-        style={{
-          flex: 1, padding: '10px 14px',
-          border: '1px solid #e5e7eb', borderRadius: 8,
-          fontSize: 14, background: 'white', cursor: 'pointer'
-        }}
-      >
-        <option value="">-- Sélectionner une ville --</option>
-        {VILLES_TUNISIE.filter(v => !selectedVilles.includes(v)).map(ville => (
-          <option key={ville} value={ville}>📍 {ville}</option>
-        ))}
-      </select>
-    </div>
-
-    {/* Villes sélectionnées */}
-    {selectedVilles.length > 0 && (
-      <div style={{
-        background: '#f8f9ff', border: '1px solid #e8e8f0',
-        borderRadius: 8, padding: 12
-      }}>
-        <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
-          Villes sélectionnées ({selectedVilles.length}) :
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {selectedVilles.map(ville => (
-            <span key={ville} style={{
-              background: '#4f46e5', color: 'white',
-              padding: '4px 10px', borderRadius: 20, fontSize: 12,
-              display: 'flex', alignItems: 'center', gap: 4
-            }}>
-              📍 {ville}
-              <span
-                onClick={() => toggleVille(ville)}
-                style={{ cursor: 'pointer', marginLeft: 4, fontWeight: 700 }}
-              >×</span>
-            </span>
-          ))}
-        </div>
-      </div>
-    )}
-  </div>
-)}
-
-              {/* Historique */}
-              {activeCategory === 'Historique' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                  {CRITERES_PREDEFINIS.filter(c => c.category === 'Historique').map(critere => {
-                    const selected = selectedCriteres.find(c => c.id === critere.id)
-                    return (
-                      <div key={critere.id} onClick={() => toggleCritere(critere)} style={{
-                        padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
-                        border: '1px solid', borderColor: selected ? '#4f46e5' : '#e5e7eb',
-                        background: selected ? '#eef2ff' : 'white',
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        fontSize: 13, color: selected ? '#4f46e5' : '#374151',
-                        fontWeight: selected ? 500 : 400
-                      }}>
-                        <span>{critere.icon}</span>
-                        <span>{critere.label}</span>
-                        {selected && <span style={{ marginLeft: 'auto' }}>✓</span>}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* Intérêt */}
-              {activeCategory === 'Intérêt' && (
-                <div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
-                    {[...CRITERES_PREDEFINIS.filter(c => c.category === 'Intérêt'), ...autresInterets].map(critere => {
-                      const selected = selectedCriteres.find(c => c.id === critere.id)
-                      return (
-                        <div key={critere.id} onClick={() => toggleCritere(critere)} style={{
-                          padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
-                          border: '1px solid', borderColor: selected ? '#4f46e5' : '#e5e7eb',
-                          background: selected ? '#eef2ff' : 'white',
-                          display: 'flex', alignItems: 'center', gap: 8,
-                          fontSize: 13, color: selected ? '#4f46e5' : '#374151',
-                          fontWeight: selected ? 500 : 400
-                        }}>
-                          <span>{critere.icon}</span>
-                          <span>{critere.label}</span>
-                          {selected && <span style={{ marginLeft: 'auto' }}>✓</span>}
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* Ajouter autre intérêt */}
-                  <div style={{
-                    background: '#f8f9ff', border: '1px dashed #c7d2fe',
-                    borderRadius: 8, padding: 16
-                  }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: '#4f46e5', marginBottom: 10 }}>
-                      + Ajouter un intérêt personnalisé
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input
-                        type="text"
-                        placeholder="Ex: Photographie, Cuisine, Finance..."
-                        value={autreInteret}
-                        onChange={e => setAutreInteret(e.target.value)}
-                        onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), addAutreInteret())}
-                        style={{
-                          flex: 1, padding: '8px 14px',
-                          border: '1px solid #c7d2fe', borderRadius: 8,
-                          fontSize: 13, outline: 'none'
-                        }}
-                      />
-                      <button type="button" onClick={addAutreInteret} style={{
-                        background: '#4f46e5', color: 'white', border: 'none',
-                        padding: '8px 16px', borderRadius: 8, fontSize: 13,
-                        cursor: 'pointer', fontWeight: 500
-                      }}>
-                        Ajouter
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Selected criteria */}
-              {selectedCriteres.length > 0 && (
-                <div style={{
-                  background: '#f8f9ff', border: '1px solid #e8e8f0',
-                  borderRadius: 8, padding: 12, marginTop: 16
-                }}>
-                  <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
-                    Critères sélectionnés ({selectedCriteres.length}) :
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {selectedCriteres.map(c => (
-                      <span key={c.id} style={{
-                        background: '#4f46e5', color: 'white',
-                        padding: '4px 10px', borderRadius: 20, fontSize: 12,
-                        display: 'flex', alignItems: 'center', gap: 4
-                      }}>
-                        {c.icon} {c.label}
-                        <span onClick={(e) => { e.stopPropagation(); toggleCritere(c) }}
-                          style={{ cursor: 'pointer', marginLeft: 4 }}>×</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-              <button type="submit" style={{
-                background: '#4f46e5', color: 'white', border: 'none',
-                padding: '10px 24px', borderRadius: 8, fontSize: 14,
-                fontWeight: 600, cursor: 'pointer'
-              }}>
-                Créer le segment
-              </button>
-              <button type="button" onClick={() => setShowForm(false)} style={{
-                background: 'white', color: '#6b7280',
-                border: '1px solid #e5e7eb',
-                padding: '10px 24px', borderRadius: 8, fontSize: 14,
-                cursor: 'pointer'
-              }}>
-                Annuler
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Ajouter contact à segment */}
-      {selectedSegment && (
-        <div style={{
-          background: '#fffbeb', border: '1px solid #fcd34d',
-          borderRadius: 12, padding: 20, marginBottom: 24
-        }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#92400e', margin: '0 0 12px' }}>
-            Ajouter un contact au segment #{selectedSegment}
-          </h3>
-          <form onSubmit={handleAddContact} style={{ display: 'flex', gap: 12 }}>
-            <select value={contactId} onChange={e => setContactId(e.target.value)} required
-              style={{ padding: '8px 14px', border: '1px solid #fcd34d', borderRadius: 8, fontSize: 14, flex: 1 }}>
-              <option value="">-- Sélectionner un contact --</option>
-              {contacts.map(c => <option key={c.id} value={c.id}>{c.name} ({c.email})</option>)}
-            </select>
-            <button type="submit" style={{
-              background: '#d97706', color: 'white', border: 'none',
-              padding: '8px 20px', borderRadius: 8, fontSize: 14, cursor: 'pointer'
-            }}>Ajouter</button>
-            <button type="button" onClick={() => setSelectedSegment(null)} style={{
-              background: 'white', color: '#6b7280', border: '1px solid #e5e7eb',
-              padding: '8px 16px', borderRadius: 8, fontSize: 14, cursor: 'pointer'
-            }}>Annuler</button>
-          </form>
-        </div>
-      )}
-
-      {/* Liste segments */}
-      {segments.length === 0 ? (
-        <div style={{
-          background: 'white', border: '1px solid #e8e8f0',
-          borderRadius: 12, padding: 60, textAlign: 'center'
-        }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🎯</div>
-          <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1f2937', margin: '0 0 8px' }}>
-            Aucun segment créé
-          </h3>
-          <p style={{ color: '#6b7280', marginBottom: 24 }}>
-            Créez votre premier segment pour cibler vos campagnes
-          </p>
-          <button onClick={() => setShowForm(true)} style={{
-            background: '#4f46e5', color: 'white', border: 'none',
-            padding: '10px 24px', borderRadius: 8, fontSize: 14,
-            fontWeight: 600, cursor: 'pointer'
+      {/* Stats */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:18 }}>
+        {[
+          { label:'Total segments', value:segments.length,                                                    color:DP.gold,  bg:DP.goldGlow },
+          { label:'Contacts couverts', value:segments.reduce((a,s)=>a+(s.contactCount||0),0),                color:DP.blue,  bg:'rgba(59,130,246,0.1)' },
+          { label:'Ce mois',        value:segments.filter(s=>new Date(s.createdAt).getMonth()===new Date().getMonth()).length, color:DP.green, bg:'rgba(34,197,94,0.1)' },
+        ].map(s => (
+          <div key={s.label} style={{
+            background:DP.card, border:`1px solid ${DP.border}`,
+            borderLeft:`3px solid ${s.color}`,
+            borderRadius:12, padding:'14px 16px',
           }}>
-            Créer un segment
-          </button>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-          {segments.map(s => (
-            <div key={s.id} style={{
-              background: 'white', border: '1px solid #e8e8f0',
-              borderRadius: 12, padding: 24
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 16 }}>
-                <div>
-                  <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1f2937', margin: '0 0 4px' }}>
-                    {s.name}
-                  </h3>
-                  <div style={{ fontSize: 13, color: '#6b7280' }}>{s.client?.name}</div>
-                </div>
-                <div style={{
-                  background: '#eef2ff', color: '#4f46e5',
-                  padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600
-                }}>
-                  {s.contacts?.length || 0} contacts
-                </div>
-              </div>
+            <div style={{ fontSize:10, fontWeight:700, color:DP.muted, textTransform:'uppercase', letterSpacing:'1px', marginBottom:6 }}>{s.label}</div>
+            <div style={{ fontSize:26, fontWeight:900, color:s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
 
-              {s.criteria && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 8 }}>CRITÈRES</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {s.criteria.split(' | ').map((c, i) => (
-                      <span key={i} style={{
-                        background: '#f3f4f6', color: '#374151',
-                        padding: '3px 10px', borderRadius: 20, fontSize: 12
-                      }}>
-                        {c}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setSelectedSegment(s.id)} style={{
-                  flex: 1, padding: '8px', background: '#f8f9ff',
-                  border: '1px solid #e8e8f0', borderRadius: 8,
-                  fontSize: 13, color: '#4f46e5', cursor: 'pointer', fontWeight: 500
-                }}>
-                  + Ajouter contact
-                </button>
-                <button onClick={() => handleDelete(s.id)} style={{
-                  padding: '8px 16px', background: 'white',
-                  border: '1px solid #fecaca', borderRadius: 8,
-                  fontSize: 13, color: '#ef4444', cursor: 'pointer'
-                }}>
-                  Supprimer
-                </button>
-              </div>
+      {/* Formulaire */}
+      {showForm && (
+        <div style={{ background:DP.card, border:`1px solid ${DP.border}`, borderRadius:14, padding:22, marginBottom:18 }}>
+          <h3 style={{ fontSize:14, fontWeight:800, margin:'0 0 16px' }}>Nouveau segment</h3>
+          <form onSubmit={handleAdd} style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12 }}>
+            <div>
+              <label style={{ fontSize:10, fontWeight:700, color:DP.muted, textTransform:'uppercase', letterSpacing:'1px', display:'block', marginBottom:5 }}>Nom du segment</label>
+              <input value={form.name} onChange={e => setForm({...form, name:e.target.value})} required
+                placeholder="Ex: Contacts VIP"
+                style={{ width:'100%', padding:'10px 12px', border:`1px solid ${DP.border}`, borderRadius:8, fontSize:13, boxSizing:'border-box', fontFamily:DP.font, background:'white' }} />
             </div>
-          ))}
+            <div>
+              <label style={{ fontSize:10, fontWeight:700, color:DP.muted, textTransform:'uppercase', letterSpacing:'1px', display:'block', marginBottom:5 }}>Critère</label>
+              <select value={form.criteria} onChange={e => setForm({...form, criteria:e.target.value})}
+                style={{ width:'100%', padding:'10px 12px', border:`1px solid ${DP.border}`, borderRadius:8, fontSize:13, boxSizing:'border-box', fontFamily:DP.font, background:'white' }}>
+                <option value="all">👥 Tous les contacts</option>
+                <option value="email">📧 A un email</option>
+                <option value="phone">📱 A un téléphone</option>
+                <option value="clientId">🏢 Par client</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize:10, fontWeight:700, color:DP.muted, textTransform:'uppercase', letterSpacing:'1px', display:'block', marginBottom:5 }}>Client (optionnel)</label>
+              <select value={form.clientId} onChange={e => setForm({...form, clientId:e.target.value})}
+                style={{ width:'100%', padding:'10px 12px', border:`1px solid ${DP.border}`, borderRadius:8, fontSize:13, boxSizing:'border-box', fontFamily:DP.font, background:'white' }}>
+                <option value="">-- Tous les clients --</option>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div style={{ gridColumn:'1/-1', display:'flex', gap:10 }}>
+              <button type="submit" style={{
+                background:DP.gold, color:DP.dark, border:'none',
+                padding:'10px 22px', borderRadius:8, fontSize:12, fontWeight:800,
+                cursor:'pointer', fontFamily:DP.font
+              }}>Créer le segment</button>
+              <button type="button" onClick={() => setShowForm(false)} style={{
+                background:'transparent', color:DP.muted, border:`1px solid ${DP.border}`,
+                padding:'10px 18px', borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:DP.font
+              }}>Annuler</button>
+            </div>
+          </form>
         </div>
       )}
+
+      {/* Table */}
+      <div style={{ background:DP.card, border:`1px solid ${DP.border}`, borderRadius:14, overflow:'hidden' }}>
+        <div style={{ padding:'12px 16px', borderBottom:`1px solid ${DP.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span style={{ fontSize:13, fontWeight:800, color:DP.text }}>Liste des segments</span>
+          <span style={{ fontSize:11, color:DP.muted }}>{segments.length} segment(s)</span>
+        </div>
+
+        {segments.length === 0 ? (
+          <div style={{ padding:'40px', textAlign:'center', color:DP.muted }}>
+            <div style={{ fontSize:32, marginBottom:8 }}>🎯</div>
+            <p style={{ fontSize:13 }}>Aucun segment — créez votre premier !</p>
+          </div>
+        ) : (
+          <table style={{ width:'100%', borderCollapse:'collapse' }}>
+            <thead>
+              <tr>
+                {['Nom','Critère','Client','Contacts','Créé le','Actions'].map(h => (
+                  <th key={h} style={{ padding:'8px 14px', textAlign:'left', fontSize:10, color:DP.muted, fontWeight:700, textTransform:'uppercase', letterSpacing:'1.5px', borderBottom:`1px solid ${DP.border}` }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {segments.map(s => {
+                const crit = CRIT_LABELS[s.criteria] || CRIT_LABELS.all;
+                return (
+                  <tr key={s.id}
+                    onMouseEnter={() => setHoveredRow(s.id)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    style={{ borderBottom:'1px solid #f6f3ee', background:hoveredRow===s.id?'#faf8f4':'transparent', transition:'background 0.15s' }}>
+                    <td style={{ padding:'11px 14px' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                        <div style={{
+                          width:28, height:28, borderRadius:7,
+                          background:DP.goldGlow, border:`1px solid rgba(245,166,35,0.25)`,
+                          display:'flex', alignItems:'center', justifyContent:'center', fontSize:13
+                        }}>🎯</div>
+                        <span style={{ fontSize:13, fontWeight:700, color:DP.text }}>{s.name}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding:'11px 14px' }}>
+                      <span style={{
+                        background:`${crit.color}18`, color:crit.color,
+                        padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700
+                      }}>
+                        {crit.icon} {crit.label}
+                      </span>
+                    </td>
+                    <td style={{ padding:'11px 14px', fontSize:12, color:DP.muted }}>
+                      {s.client?.name || '—'}
+                    </td>
+                    <td style={{ padding:'11px 14px' }}>
+                      <span style={{
+                        background:'rgba(59,130,246,0.1)', color:DP.blue,
+                        padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700
+                      }}>
+                        {s.contactCount || 0} contacts
+                      </span>
+                    </td>
+                    <td style={{ padding:'11px 14px', fontSize:11, color:DP.muted }}>
+                      {new Date(s.createdAt).toLocaleDateString('fr-FR')}
+                    </td>
+                    <td style={{ padding:'11px 14px' }}>
+                      <button onClick={() => handleDelete(s.id)} style={{
+                        background:'rgba(239,68,68,0.08)', color:DP.red,
+                        border:'1px solid rgba(239,68,68,0.2)',
+                        padding:'5px 10px', borderRadius:6, fontSize:11,
+                        fontWeight:700, cursor:'pointer', fontFamily:DP.font
+                      }}>Supprimer</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
-
-export default Segments;
