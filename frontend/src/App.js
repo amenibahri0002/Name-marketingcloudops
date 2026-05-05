@@ -51,8 +51,23 @@ function App() {
             element={
               <PrivateRoute>
                 <Layout><Dashboard /></Layout>
-                <Route path="/profile"  element={<Layout><Profile  /></Layout>} />
-                <Route path="/settings" element={<Layout><Settings /></Layout>} />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <PrivateRoute>
+                <Layout><Profile /></Layout>
+              </PrivateRoute>
+            }
+          />
+          
+          <Route
+            path="/settings"
+            element={
+              <PrivateRoute>
+                <Layout><Settings /></Layout>
               </PrivateRoute>
             }
           />
