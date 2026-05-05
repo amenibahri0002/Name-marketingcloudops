@@ -326,12 +326,13 @@ function Layout({ children }) {
                   </div>
                   {/* Actions */}
                   {[
-                    { icon:'👤', label:'Mon profil' },
-                    { icon:'⚙️', label:'Paramètres' },
+                    { icon:'👤', label:'Mon profil',  path:'/profile'  },
+                    { icon:'⚙️', label:'Paramètres',  path:'/settings' },
                   ].map(a => (
                     <div key={a.label} style={{ padding:'10px 16px', display:'flex', alignItems:'center', gap:10, fontSize:'0.8rem', color:'#1a160e', cursor:'pointer', transition:'background 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.background='#f6f3ee'}
-                      onMouseLeave={e => e.currentTarget.style.background='white'}>
+                      onMouseLeave={e => e.currentTarget.style.background='white'}
+                      onMouseDown={() => { navigate(a.path); setShowProfile(false); }}>
                       <span>{a.icon}</span><span>{a.label}</span>
                     </div>
                   ))}

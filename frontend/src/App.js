@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PrivateRoute from './components/PrivateRoute';
 import Layout from './Layout';
 import NotFound from './pages/NotFound';
+import Profile  from './pages/Profile';
+import Settings from './pages/Settings';
 
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -42,6 +44,8 @@ function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/access-denied" element={<AccessDenied />} />
+          <Route path="/profile"  element={<Layout><Profile  /></Layout>} />
+          <Route path="/settings" element={<Layout><Settings /></Layout>} />
 
           <Route
             path="/dashboard"
