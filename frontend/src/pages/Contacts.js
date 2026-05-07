@@ -15,6 +15,7 @@ export default function Contacts() {
   const [showForm,   setShowForm]   = useState(false);
   const [search,     setSearch]     = useState('');
   const [hoveredRow, setHoveredRow] = useState(null);
+  const [hoveredCard, setHoveredCard] = useState(null);
   const [form, setForm] = useState({ name:'', email:'', phone:'', clientId:'' });
 
   const fetchAll = async () => {
@@ -48,112 +49,117 @@ export default function Contacts() {
   );
 
   const initials = (name) => name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) : '??';
-  const avatarColor = (name) => {
-    const colors = [DP.gold, DP.blue, DP.green, '#8b5cf6', '#ec4899'];
-    return colors[(name?.charCodeAt(0) || 0) % colors.length];
-  };
+  const avatarColors = [DP.gold, DP.blue, DP.green, '#8b5cf6', '#ec4899'];
+  const avatarColor = (name) => avatarColors[(name?.charCodeAt(0) || 0) % avatarColors.length];
 
   return (
     <div style={{ fontFamily:DP.font, color:DP.text }}>
 
       {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:24 }}>
         <div>
-          <h1 style={{ fontSize:20, fontWeight:900, margin:'0 0 4px' }}>Contacts</h1>
-          <p style={{ color:DP.muted, fontSize:12, margin:0 }}>Gérez votre base de contacts</p>
+          <h1 style={{ fontSize:24, fontWeight:900, margin:'0 0 6px' }}>Contacts</h1>
+          <p style={{ color:DP.muted, fontSize:13, margin:0 }}>Gérez votre base de contacts</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} style={{
-          background:DP.gold, color:DP.dark, border:'none',
-          padding:'9px 18px', borderRadius:9, fontSize:12,
-          fontWeight:800, cursor:'pointer', fontFamily:DP.font
-        }}>
+        <button 
+          onClick={() => setShowForm(true)} 
+          style={{
+            background:DP.gold, 
+            color:DP.dark, 
+            border:'none',
+            padding:'11px 22px', 
+            borderRadius:10, 
+            fontSize:13,
+            fontWeight:800, 
+            cursor:'pointer', 
+            fontFamily:DP.font,
+            boxShadow: '0 4px 14px rgba(245,166,35,0.25)',
+            transition: 'all 0.2s'
+          }}
+          onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
+          onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+        >
           + Ajouter contact
         </button>
       </div>
 
-      {/* Stats */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:18 }}>
+      {/* Stats Cards Améliorées */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', gap:16, marginBottom:24 }}>
         {[
-          { label:'Total contacts',  value:contacts.length,                           color:DP.gold,  bg:DP.goldGlow },
-          { label:'Avec email',      value:contacts.filter(c=>c.email).length,        color:DP.blue,  bg:'rgba(59,130,246,0.1)' },
-          { label:'Avec téléphone',  value:contacts.filter(c=>c.phone).length,        color:DP.green, bg:'rgba(34,197,94,0.1)' },
-        ].map(s => (
-          <div key={s.label} style={{
-            background:DP.card, border:`1px solid ${DP.border}`,
-            borderLeft:`3px solid ${s.color}`,
-            borderRadius:12, padding:'14px 16px',
-          }}>
-            <div style={{ fontSize:10, fontWeight:700, color:DP.muted, textTransform:'uppercase', letterSpacing:'1px', marginBottom:6 }}>{s.label}</div>
-            <div style={{ fontSize:26, fontWeight:900, color:s.color }}>{s.value}</div>
+          { label:'Total contacts',  value:contacts.length, color:DP.gold,  icon:'👥' },
+          { label:'Avec email',      value:contacts.filter(c=>c.email).length, color:DP.blue,  icon:'✉️' },
+          { label:'Avec téléphone',  value:contacts.filter(c=>c.phone).length, color:DP.green, icon:'📱' },
+        ].map((s, i) => (
+          <div 
+            key={i}
+            onMouseEnter={() => setHoveredCard(i)}
+            onMouseLeave={() => setHoveredCard(null)}
+            style={{
+              background:DP.card, 
+              border:`1px solid ${DP.border}`,
+              borderLeft:`4px solid ${s.color}`,
+              borderRadius:14, 
+              padding:'1.4rem 1.5rem',
+              transition: 'all 0.3s',
+              transform: hoveredCard === i ? 'translateY(-5px)' : 'none',
+              boxShadow: hoveredCard === i ? '0 12px 25px rgba(0,0,0,0.08)' : 'none'
+            }}
+          >
+            <div style={{ fontSize:11, fontWeight:700, color:DP.muted, textTransform:'uppercase', letterSpacing:'1px', marginBottom:8 }}>
+              {s.label}
+            </div>
+            <div style={{ fontSize:32, fontWeight:900, color:s.color }}>{s.value}</div>
           </div>
         ))}
       </div>
 
-      {/* Formulaire */}
-      {showForm && (
-        <div style={{ background:DP.card, border:`1px solid ${DP.border}`, borderRadius:14, padding:22, marginBottom:18 }}>
-          <h3 style={{ fontSize:14, fontWeight:800, margin:'0 0 16px' }}>Nouveau contact</h3>
-          <form onSubmit={handleAdd} style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12 }}>
-            {[
-              { label:'Nom complet', key:'name',  type:'text',  placeholder:'Ex: Ahmed Ben Ali' },
-              { label:'Email',       key:'email', type:'email', placeholder:'email@exemple.com' },
-              { label:'Téléphone',   key:'phone', type:'tel',   placeholder:'+216 XX XXX XXX' },
-            ].map(f => (
-              <div key={f.key}>
-                <label style={{ fontSize:10, fontWeight:700, color:DP.muted, textTransform:'uppercase', letterSpacing:'1px', display:'block', marginBottom:5 }}>{f.label}</label>
-                <input
-                  type={f.type} value={form[f.key]} placeholder={f.placeholder}
-                  onChange={e => setForm({...form, [f.key]:e.target.value})}
-                  required={f.key !== 'phone'}
-                  style={{ width:'100%', padding:'10px 12px', border:`1px solid ${DP.border}`, borderRadius:8, fontSize:13, boxSizing:'border-box', fontFamily:DP.font, background:'white' }}
-                />
-              </div>
-            ))}
-            <div>
-              <label style={{ fontSize:10, fontWeight:700, color:DP.muted, textTransform:'uppercase', letterSpacing:'1px', display:'block', marginBottom:5 }}>Client</label>
-              <select value={form.clientId} onChange={e => setForm({...form, clientId:e.target.value})}
-                style={{ width:'100%', padding:'10px 12px', border:`1px solid ${DP.border}`, borderRadius:8, fontSize:13, boxSizing:'border-box', fontFamily:DP.font, background:'white' }}>
-                <option value="">-- Sélectionner --</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div style={{ gridColumn:'1/-1', display:'flex', gap:10 }}>
-              <button type="submit" style={{
-                background:DP.gold, color:DP.dark, border:'none',
-                padding:'10px 22px', borderRadius:8, fontSize:12, fontWeight:800,
-                cursor:'pointer', fontFamily:DP.font
-              }}>Ajouter</button>
-              <button type="button" onClick={() => setShowForm(false)} style={{
-                background:'transparent', color:DP.muted, border:`1px solid ${DP.border}`,
-                padding:'10px 18px', borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:DP.font
-              }}>Annuler</button>
-            </div>
-          </form>
-        </div>
-      )}
+      {/* Search */}
+      <div style={{ marginBottom:20 }}>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="🔍 Rechercher un contact ou email..."
+          style={{
+            width: '100%',
+            maxWidth: 460,
+            padding: '11px 14px 11px 42px',
+            border: `1.5px solid ${DP.border}`,
+            borderRadius: 10,
+            fontSize: 13.5,
+            outline: 'none',
+            transition: 'border-color 0.2s'
+          }}
+          onFocus={e => e.target.style.borderColor = DP.gold}
+          onBlur={e => e.target.style.borderColor = DP.border}
+        />
+      </div>
 
-      {/* Search + Table */}
+      {/* Table */}
       <div style={{ background:DP.card, border:`1px solid ${DP.border}`, borderRadius:14, overflow:'hidden' }}>
-        <div style={{ padding:'12px 16px', borderBottom:`1px solid ${DP.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <span style={{ fontSize:13, fontWeight:800, color:DP.text }}>Liste des contacts ({filtered.length})</span>
-          <input
-            value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="🔍 Rechercher..."
-            style={{ padding:'7px 12px', border:`1px solid ${DP.border}`, borderRadius:8, fontSize:12, fontFamily:DP.font, outline:'none', width:200 }}
-          />
+        <div style={{ padding:'14px 18px', borderBottom:`1px solid ${DP.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span style={{ fontSize:14, fontWeight:800, color:DP.text }}>Liste des contacts ({filtered.length})</span>
         </div>
 
         {filtered.length === 0 ? (
-          <div style={{ padding:'40px', textAlign:'center', color:DP.muted }}>
-            <div style={{ fontSize:32, marginBottom:8 }}>👥</div>
-            <p style={{ fontSize:13 }}>Aucun contact trouvé</p>
+          <div style={{ padding:'60px', textAlign:'center', color:DP.muted }}>
+            <div style={{ fontSize:42, marginBottom:12 }}>👥</div>
+            <p>Aucun contact trouvé</p>
           </div>
         ) : (
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead>
               <tr>
                 {['Contact','Email','Téléphone','Client','Actions'].map(h => (
-                  <th key={h} style={{ padding:'8px 14px', textAlign:'left', fontSize:10, color:DP.muted, fontWeight:700, textTransform:'uppercase', letterSpacing:'1.5px', borderBottom:`1px solid ${DP.border}` }}>{h}</th>
+                  <th key={h} style={{ 
+                    padding:'12px 16px', 
+                    textAlign:'left', 
+                    fontSize:10.5, 
+                    color:DP.muted, 
+                    fontWeight:700, 
+                    textTransform:'uppercase', 
+                    letterSpacing:'1.1px',
+                    borderBottom:`1px solid ${DP.border}` 
+                  }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -164,36 +170,49 @@ export default function Contacts() {
                   <tr key={c.id}
                     onMouseEnter={() => setHoveredRow(c.id)}
                     onMouseLeave={() => setHoveredRow(null)}
-                    style={{ borderBottom:`1px solid #f6f3ee`, background:hoveredRow===c.id?'#faf8f4':'transparent', transition:'background 0.15s' }}>
-                    <td style={{ padding:'11px 14px' }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    style={{ 
+                      borderBottom:`1px solid #f6f3ee`, 
+                      background:hoveredRow===c.id ? '#faf8f4' : 'transparent', 
+                      transition:'background 0.2s' 
+                    }}>
+                    <td style={{ padding:'14px 16px' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                         <div style={{
-                          width:32, height:32, borderRadius:'50%',
-                          background:`${color}20`, border:`1px solid ${color}40`,
+                          width:42, height:42, borderRadius:12,
+                          background:`${color}18`, border:`1px solid ${color}35`,
                           display:'flex', alignItems:'center', justifyContent:'center',
-                          fontSize:11, fontWeight:800, color, flexShrink:0
+                          fontSize:13, fontWeight:800, color, flexShrink:0
                         }}>
                           {initials(c.name)}
                         </div>
-                        <span style={{ fontSize:13, fontWeight:600, color:DP.text }}>{c.name}</span>
+                        <div style={{ fontSize:14, fontWeight:600 }}>{c.name}</div>
                       </div>
                     </td>
-                    <td style={{ padding:'11px 14px', fontSize:12, color:DP.muted }}>{c.email}</td>
-                    <td style={{ padding:'11px 14px', fontSize:12, color:DP.muted }}>{c.phone || '—'}</td>
-                    <td style={{ padding:'11px 14px' }}>
+                    <td style={{ padding:'14px 16px', fontSize:13, color:DP.muted }}>{c.email || '—'}</td>
+                    <td style={{ padding:'14px 16px', fontSize:13, color:DP.muted }}>{c.phone || '—'}</td>
+                    <td style={{ padding:'14px 16px' }}>
                       {c.client ? (
-                        <span style={{ background:DP.goldGlow, color:'#d97706', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700 }}>
+                        <span style={{ background:DP.goldGlow, color:'#d97706', padding:'4px 11px', borderRadius:20, fontSize:11.5, fontWeight:700 }}>
                           {c.client.name}
                         </span>
                       ) : '—'}
                     </td>
-                    <td style={{ padding:'11px 14px' }}>
-                      <button onClick={() => handleDelete(c.id)} style={{
-                        background:'rgba(239,68,68,0.08)', color:DP.red,
-                        border:'1px solid rgba(239,68,68,0.2)',
-                        padding:'5px 10px', borderRadius:6, fontSize:11,
-                        fontWeight:700, cursor:'pointer', fontFamily:DP.font
-                      }}>Supprimer</button>
+                    <td style={{ padding:'14px 16px' }}>
+                      <button 
+                        onClick={() => handleDelete(c.id)}
+                        style={{
+                          background:'rgba(239,68,68,0.08)', 
+                          color:DP.red,
+                          border:'1px solid rgba(239,68,68,0.2)',
+                          padding:'6px 13px', 
+                          borderRadius:7, 
+                          fontSize:12,
+                          fontWeight:700, 
+                          cursor:'pointer'
+                        }}
+                      >
+                        Supprimer
+                      </button>
                     </td>
                   </tr>
                 );

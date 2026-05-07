@@ -87,12 +87,10 @@ export default function Reporting() {
   return (
     <div style={{ fontFamily:DP.font, color:DP.text }}>
 
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
-        <div>
-          <h1 style={{ fontSize:20, fontWeight:900, margin:'0 0 4px' }}>Reporting</h1>
-          <p style={{ color:DP.muted, fontSize:12, margin:0 }}>Vue globale de vos performances marketing</p>
-        </div>
+      {/* Le titre "Reporting" est affiché par la Topbar (Layout.jsx) — pas besoin de le répéter ici */}
+
+      {/* Filtre par canal — aligné à droite */}
+      <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:20 }}>
         <div style={{ display:'flex', gap:6 }}>
           {[
             { value:'all',   label:'Tous' },
@@ -166,7 +164,7 @@ export default function Reporting() {
           </div>
         </div>
 
-        {/* Par type */}
+        {/* Par canal */}
         <div style={{ background:DP.card, border:`1px solid ${DP.border}`, borderRadius:14, padding:20 }}>
           <div style={{ fontSize:13, fontWeight:800, color:DP.text, marginBottom:16 }}>📊 Par canal</div>
           <div style={{ display:'flex', flexDirection:'column', gap:14 }}>

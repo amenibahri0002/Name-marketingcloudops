@@ -133,7 +133,6 @@ export default function Monitoring() {
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
         <div>
-          <h1 style={{ fontSize:20, fontWeight:900, margin:'0 0 4px' }}>Monitoring</h1>
           <p style={{ color:DP.muted, fontSize:12, margin:0 }}>
             État des services en temps réel
             {lastPing && (

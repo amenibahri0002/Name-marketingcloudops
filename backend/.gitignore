@@ -5,3 +5,4 @@
 .env.test
 npm-debug.log
 .env.*
+serviceAccountKey.json

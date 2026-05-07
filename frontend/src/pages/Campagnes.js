@@ -16,7 +16,7 @@ const STATUS_STYLE = {
 };
 
 const TYPE_STYLE = {
-  email: { background:'rgba(59,130,246,0.1)',  color:DP.blue,   label:'📧 Email' },
+  email: { background:'rgba(59,130,246,0.1)',  color:'#3b82f6', label:'📧 Email' },
   sms:   { background:'rgba(34,197,94,0.1)',   color:'#16a34a', label:'📱 SMS'   },
   push:  { background:'rgba(245,166,35,0.12)', color:'#d97706', label:'🔔 Push'  },
 };
@@ -49,14 +49,16 @@ const inputStyle = {
 };
 
 export default function Campagnes() {
-  const [campagnes,  setCampagnes]  = useState([]);
-  const [clients,    setClients]    = useState([]);
-  const [showForm,   setShowForm]   = useState(false);
-  const [loading,    setLoading]    = useState(false);
-  const [hoveredRow, setHoveredRow] = useState(null);
-  const [filter,     setFilter]     = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [search,     setSearch]     = useState('');
+  const [campagnes,     setCampagnes]     = useState([]);
+  const [clients,       setClients]       = useState([]);
+  const [showForm,      setShowForm]      = useState(false);
+  const [loading,       setLoading]       = useState(false);
+  const [hoveredRow,    setHoveredRow]    = useState(null);
+  const [filter,        setFilter]        = useState('all');
+  const [typeFilter,    setTypeFilter]    = useState('all');
+  const [search,        setSearch]        = useState('');
+  const [scheduleModal, setScheduleModal] = useState(null); // { id, date }
+  const [actionLoading, setActionLoading] = useState(null);
   const [form, setForm] = useState({ title:'', type:'email', clientId:'', dateScheduled:'' });
 
   const fetchAll = async () => {
@@ -69,6 +71,7 @@ export default function Campagnes() {
 
   useEffect(() => { fetchAll(); }, []);
 
+  // ── Créer une campagne ──
   const handleAdd = async (e) => {
     e.preventDefault(); setLoading(true);
     try {
@@ -79,18 +82,51 @@ export default function Campagnes() {
     setLoading(false);
   };
 
+  // ── Envoyer immédiatement ──
   const handleSend = async (id) => {
-    try { await api.post(`/api/emails/send/${id}`); fetchAll(); }
-    catch { alert('Erreur envoi'); }
+    if (!window.confirm('Envoyer cette campagne maintenant ?')) return;
+    setActionLoading(id);
+    try {
+      await api.post(`/api/emails/send/${id}`);
+      fetchAll();
+    } catch { alert("Erreur lors de l'envoi"); }
+    setActionLoading(null);
   };
 
+  // ── Confirmer planification ──
+  const handleSchedule = async () => {
+    if (!scheduleModal?.date) return alert('Choisissez une date');
+    setActionLoading(scheduleModal.id);
+    try {
+      await api.patch(`/api/campagnes/${scheduleModal.id}`, {
+        status: 'scheduled',
+        dateScheduled: scheduleModal.date,
+      });
+      setScheduleModal(null);
+      fetchAll();
+    } catch { alert('Erreur planification'); }
+    setActionLoading(null);
+  };
+
+  // ── Repasser en brouillon ──
+  const handleToDraft = async (id) => {
+    if (!window.confirm('Remettre cette campagne en brouillon ?')) return;
+    setActionLoading(id);
+    try {
+      await api.patch(`/api/campagnes/${id}`, { status: 'draft', dateScheduled: null });
+      fetchAll();
+    } catch { alert('Erreur'); }
+    setActionLoading(null);
+  };
+
+  // ── Supprimer ──
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer cette campagne ?')) return;
     try { await api.delete(`/api/campagnes/${id}`); fetchAll(); }
     catch { alert('Erreur suppression'); }
   };
 
-  // Filtered list
+  // ── Filtres ──
   const filtered = campagnes.filter(c => {
     const matchStatus = filter === 'all'     || c.status === filter;
     const matchType   = typeFilter === 'all' || c.type?.toLowerCase() === typeFilter;
@@ -129,10 +165,10 @@ export default function Campagnes() {
       {/* ── KPI Cards ── */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:18 }}>
         {[
-          { label:'Total',      value:campagnes.length, accent:DP.gold,  bg:DP.goldGlow,                   icon:'📢' },
-          { label:'Envoyées',   value:sent,             accent:DP.green, bg:'rgba(34,197,94,0.1)',          icon:'✅' },
-          { label:'Planifiées', value:scheduled,        accent:DP.blue,  bg:'rgba(59,130,246,0.1)',         icon:'🕐' },
-          { label:'Brouillons', value:draft,            accent:DP.muted, bg:'rgba(156,143,122,0.08)',       icon:'📝' },
+          { label:'Total',      value:campagnes.length, accent:DP.gold,  bg:DP.goldGlow,                  icon:'📢' },
+          { label:'Envoyées',   value:sent,             accent:DP.green, bg:'rgba(34,197,94,0.1)',         icon:'✅' },
+          { label:'Planifiées', value:scheduled,        accent:DP.blue,  bg:'rgba(59,130,246,0.1)',        icon:'🕐' },
+          { label:'Brouillons', value:draft,            accent:DP.muted, bg:'rgba(156,143,122,0.08)',      icon:'📝' },
         ].map(s => (
           <div key={s.label} style={{ background:DP.card, border:`1px solid ${DP.border}`, borderLeft:`3px solid ${s.accent}`, borderRadius:12, padding:'14px 16px' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
@@ -146,7 +182,6 @@ export default function Campagnes() {
 
       {/* ── Filters & Search ── */}
       <div style={{ background:DP.card, border:`1px solid ${DP.border}`, borderRadius:12, padding:'12px 16px', marginBottom:14, display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
-        {/* Search */}
         <div style={{ position:'relative', flex:'1', minWidth:180 }}>
           <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', fontSize:13, opacity:0.4 }}>🔍</span>
           <input
@@ -157,8 +192,6 @@ export default function Campagnes() {
             onBlur={e => e.target.style.borderColor=DP.border}
           />
         </div>
-
-        {/* Status filter */}
         <div style={{ display:'flex', gap:6 }}>
           {[['all','Tous'],['sent','Envoyées'],['scheduled','Planifiées'],['draft','Brouillons']].map(([val, lbl]) => (
             <button key={val} onClick={() => setFilter(val)} style={{
@@ -170,8 +203,6 @@ export default function Campagnes() {
             }}>{lbl}</button>
           ))}
         </div>
-
-        {/* Type filter */}
         <div style={{ display:'flex', gap:6 }}>
           {[['all','Tous types'],['email','📧 Email'],['sms','📱 SMS'],['push','🔔 Push']].map(([val, lbl]) => (
             <button key={val} onClick={() => setTypeFilter(val)} style={{
@@ -211,8 +242,9 @@ export default function Campagnes() {
             </thead>
             <tbody>
               {filtered.map(c => {
-                const sc  = STATUS_STYLE[c.status] || STATUS_STYLE.draft;
-                const tc  = TYPE_STYLE[c.type?.toLowerCase()];
+                const sc = STATUS_STYLE[c.status] || STATUS_STYLE.draft;
+                const tc = TYPE_STYLE[c.type?.toLowerCase()];
+                const isLoading = actionLoading === c.id;
                 return (
                   <tr key={c.id}
                     onMouseEnter={() => setHoveredRow(c.id)}
@@ -239,28 +271,77 @@ export default function Campagnes() {
                         : '—'}
                     </td>
 
+                    {/* ── Actions ── */}
                     <td style={{ padding:'11px 14px' }}>
-                      <div style={{ display:'flex', gap:6 }}>
+                      <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+
+                        {/* ▶ Envoyer — draft ou scheduled */}
                         {c.status !== 'sent' && (
-                          <button onClick={() => handleSend(c.id)} style={{
-                            background:DP.goldGlow, color:'#d97706',
-                            border:'1px solid rgba(245,166,35,0.3)',
+                          <button
+                            onClick={() => handleSend(c.id)}
+                            disabled={isLoading}
+                            style={{
+                              background:'rgba(245,166,35,0.1)', color:'#d97706',
+                              border:'1px solid rgba(245,166,35,0.3)',
+                              padding:'5px 11px', borderRadius:7, fontSize:11, fontWeight:700,
+                              cursor: isLoading ? 'not-allowed' : 'pointer',
+                              fontFamily:DP.font, transition:'all 0.15s',
+                              opacity: isLoading ? 0.5 : 1,
+                            }}
+                            onMouseEnter={e => !isLoading && (e.currentTarget.style.background='rgba(245,166,35,0.2)')}
+                            onMouseLeave={e => (e.currentTarget.style.background='rgba(245,166,35,0.1)')}
+                          >▶ Envoyer</button>
+                        )}
+
+                        {/* 🕐 Planifier — draft seulement */}
+                        {c.status === 'draft' && (
+                          <button
+                            onClick={() => setScheduleModal({ id: c.id, date: c.dateScheduled || '' })}
+                            disabled={isLoading}
+                            style={{
+                              background:'rgba(59,130,246,0.08)', color:DP.blue,
+                              border:'1px solid rgba(59,130,246,0.25)',
+                              padding:'5px 11px', borderRadius:7, fontSize:11, fontWeight:700,
+                              cursor: isLoading ? 'not-allowed' : 'pointer',
+                              fontFamily:DP.font, transition:'all 0.15s',
+                              opacity: isLoading ? 0.5 : 1,
+                            }}
+                            onMouseEnter={e => !isLoading && (e.currentTarget.style.background='rgba(59,130,246,0.15)')}
+                            onMouseLeave={e => (e.currentTarget.style.background='rgba(59,130,246,0.08)')}
+                          >🕐 Planifier</button>
+                        )}
+
+                        {/* 📝 Brouillon — scheduled ou sent */}
+                        {(c.status === 'scheduled' || c.status === 'sent') && (
+                          <button
+                            onClick={() => handleToDraft(c.id)}
+                            disabled={isLoading}
+                            style={{
+                              background:'rgba(156,143,122,0.08)', color:DP.muted,
+                              border:`1px solid ${DP.border}`,
+                              padding:'5px 11px', borderRadius:7, fontSize:11, fontWeight:700,
+                              cursor: isLoading ? 'not-allowed' : 'pointer',
+                              fontFamily:DP.font, transition:'all 0.15s',
+                              opacity: isLoading ? 0.5 : 1,
+                            }}
+                            onMouseEnter={e => !isLoading && (e.currentTarget.style.background='rgba(156,143,122,0.15)')}
+                            onMouseLeave={e => (e.currentTarget.style.background='rgba(156,143,122,0.08)')}
+                          >📝 Brouillon</button>
+                        )}
+
+                        {/* 🗑 Supprimer */}
+                        <button
+                          onClick={() => handleDelete(c.id)}
+                          style={{
+                            background:'rgba(239,68,68,0.07)', color:DP.red,
+                            border:'1px solid rgba(239,68,68,0.18)',
                             padding:'5px 11px', borderRadius:7, fontSize:11, fontWeight:700,
                             cursor:'pointer', fontFamily:DP.font, transition:'all 0.15s',
                           }}
-                          onMouseEnter={e => e.currentTarget.style.background='rgba(245,166,35,0.2)'}
-                          onMouseLeave={e => e.currentTarget.style.background=DP.goldGlow}
-                          >▶ Envoyer</button>
-                        )}
-                        <button onClick={() => handleDelete(c.id)} style={{
-                          background:'rgba(239,68,68,0.07)', color:DP.red,
-                          border:'1px solid rgba(239,68,68,0.18)',
-                          padding:'5px 11px', borderRadius:7, fontSize:11, fontWeight:700,
-                          cursor:'pointer', fontFamily:DP.font, transition:'all 0.15s',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.14)'}
-                        onMouseLeave={e => e.currentTarget.style.background='rgba(239,68,68,0.07)'}
+                          onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.14)'}
+                          onMouseLeave={e => e.currentTarget.style.background='rgba(239,68,68,0.07)'}
                         >🗑 Supprimer</button>
+
                       </div>
                     </td>
                   </tr>
@@ -271,22 +352,19 @@ export default function Campagnes() {
         )}
       </div>
 
-      {/* ── Modal Form ── */}
+      {/* ── Modal Créer campagne ── */}
       {showForm && (
         <div style={{
           position:'fixed', inset:0, zIndex:1000,
           background:'rgba(22,18,13,0.55)', backdropFilter:'blur(4px)',
-          display:'flex', alignItems:'center', justifyContent:'center',
-          padding:24,
+          display:'flex', alignItems:'center', justifyContent:'center', padding:24,
         }} onClick={e => e.target===e.currentTarget && setShowForm(false)}>
 
           <div style={{
             background:DP.card, borderRadius:18, width:'100%', maxWidth:520,
             border:`1px solid ${DP.border}`,
-            boxShadow:'0 24px 60px rgba(0,0,0,0.18)',
-            overflow:'hidden',
+            boxShadow:'0 24px 60px rgba(0,0,0,0.18)', overflow:'hidden',
           }}>
-            {/* Modal header */}
             <div style={{ background:DP.dark, padding:'18px 22px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <div>
                 <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
@@ -303,7 +381,6 @@ export default function Campagnes() {
               }}>✕</button>
             </div>
 
-            {/* Modal body */}
             <form onSubmit={handleAdd} style={{ padding:22, display:'flex', flexDirection:'column', gap:14 }}>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
                 <InputField label="Titre de la campagne">
@@ -314,7 +391,6 @@ export default function Campagnes() {
                     onBlur={e => e.target.style.borderColor=DP.border}
                   />
                 </InputField>
-
                 <InputField label="Type de canal">
                   <select value={form.type} onChange={e => setForm({...form,type:e.target.value})}
                     style={inputStyle}
@@ -339,7 +415,6 @@ export default function Campagnes() {
                     {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </InputField>
-
                 <InputField label="Date planifiée">
                   <input type="datetime-local" value={form.dateScheduled} onChange={e => setForm({...form,dateScheduled:e.target.value})}
                     style={inputStyle}
@@ -349,7 +424,6 @@ export default function Campagnes() {
                 </InputField>
               </div>
 
-              {/* Canal preview pills */}
               <div style={{ background:DP.bg, borderRadius:10, padding:'12px 14px', border:`1px solid ${DP.border}` }}>
                 <div style={{ fontSize:10, fontWeight:700, color:DP.muted, textTransform:'uppercase', letterSpacing:'1px', marginBottom:8 }}>Aperçu du canal sélectionné</div>
                 <div style={{ display:'flex', gap:8 }}>
@@ -366,7 +440,6 @@ export default function Campagnes() {
                 </div>
               </div>
 
-              {/* Actions */}
               <div style={{ display:'flex', gap:10, paddingTop:4 }}>
                 <button type="submit" disabled={loading} style={{
                   flex:1, background:DP.gold, color:DP.dark, border:'none',
@@ -390,9 +463,92 @@ export default function Campagnes() {
         </div>
       )}
 
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+      {/* ── Modal Planifier ── */}
+      {scheduleModal && (
+        <div style={{
+          position:'fixed', inset:0, zIndex:1000,
+          background:'rgba(22,18,13,0.55)', backdropFilter:'blur(4px)',
+          display:'flex', alignItems:'center', justifyContent:'center', padding:24,
+        }} onClick={e => e.target===e.currentTarget && setScheduleModal(null)}>
+
+          <div style={{
+            background:DP.card, borderRadius:18, width:'100%', maxWidth:420,
+            border:`1px solid ${DP.border}`,
+            boxShadow:'0 24px 60px rgba(0,0,0,0.18)', overflow:'hidden',
+          }}>
+            {/* Header */}
+            <div style={{ background:DP.dark, padding:'18px 22px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
+                  <span style={{ width:16, height:2, background:DP.blue, display:'inline-block' }} />
+                  <span style={{ fontSize:10, fontWeight:700, color:DP.blue, textTransform:'uppercase', letterSpacing:'2px' }}>Planification</span>
+                </div>
+                <div style={{ fontSize:16, fontWeight:900, color:'#fff' }}>Choisir une date d'envoi</div>
+              </div>
+              <button onClick={() => setScheduleModal(null)} style={{
+                width:30, height:30, borderRadius:8,
+                background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.1)',
+                color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:14,
+                display:'flex', alignItems:'center', justifyContent:'center',
+              }}>✕</button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding:22, display:'flex', flexDirection:'column', gap:16 }}>
+              <InputField label="Date et heure d'envoi">
+                <input
+                  type="datetime-local"
+                  value={scheduleModal.date}
+                  min={new Date().toISOString().slice(0,16)}
+                  onChange={e => setScheduleModal({ ...scheduleModal, date: e.target.value })}
+                  style={inputStyle}
+                  onFocus={e => e.target.style.borderColor=DP.blue}
+                  onBlur={e => e.target.style.borderColor=DP.border}
+                />
+              </InputField>
+
+              {/* Aperçu date */}
+              {scheduleModal.date && (
+                <div style={{ background:'rgba(59,130,246,0.06)', border:'1px solid rgba(59,130,246,0.2)', borderRadius:9, padding:'10px 14px' }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:DP.blue, textTransform:'uppercase', letterSpacing:'1px', marginBottom:4 }}>Envoi prévu le</div>
+                  <div style={{ fontSize:14, fontWeight:800, color:DP.text }}>
+                    {new Date(scheduleModal.date).toLocaleString('fr-FR', { dateStyle:'full', timeStyle:'short' })}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display:'flex', gap:10 }}>
+                <button
+                  onClick={handleSchedule}
+                  disabled={!scheduleModal.date || actionLoading === scheduleModal.id}
+                  style={{
+                    flex:1, background:DP.blue, color:'white', border:'none',
+                    padding:'11px', borderRadius:9, fontSize:13, fontWeight:800,
+                    cursor: (!scheduleModal.date || actionLoading === scheduleModal.id) ? 'not-allowed' : 'pointer',
+                    opacity: (!scheduleModal.date || actionLoading === scheduleModal.id) ? 0.5 : 1,
+                    fontFamily:DP.font, transition:'all 0.2s',
+                    display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                  }}
+                >
+                  {actionLoading === scheduleModal.id ? <>
+                    <span style={{ width:12, height:12, border:'2px solid white', borderTop:'2px solid transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite', display:'inline-block' }} />
+                    Planification...
+                  </> : '🕐 Confirmer la planification'}
+                </button>
+                <button
+                  onClick={() => setScheduleModal(null)}
+                  style={{
+                    background:'transparent', color:DP.muted, border:`1px solid ${DP.border}`,
+                    padding:'11px 16px', borderRadius:9, fontSize:12, cursor:'pointer', fontFamily:DP.font,
+                  }}
+                >Annuler</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

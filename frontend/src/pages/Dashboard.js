@@ -214,19 +214,20 @@ const emailData = [8200, 12400, 9800, 15600, 11200, 18400, 14200];
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
 
-    // Utiliser directement le localStorage — pas besoin d'appel API
-    const userData = localStorage.getItem('user');
+  const userData = localStorage.getItem('user');
     if (userData) {
       setUser(JSON.parse(userData));
     } else {
       localStorage.removeItem('token');
       navigate('/login');
-      return;
-    }
+  }
 
     fetchData();
 
+    // Refresh auto toutes les 30 secondes
     const interval = setInterval(fetchData, 30000);
+
+    // Refresh quand la fenêtre reprend le focus
     const onFocus = () => fetchData();
     window.addEventListener('focus', onFocus);
 
