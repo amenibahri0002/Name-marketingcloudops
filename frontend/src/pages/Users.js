@@ -9,10 +9,17 @@ const DP = {
   font:"'Montserrat','Open Sans',sans-serif",
 };
 
+// ✅ Rôles alignés avec le backend
+const ROLES = {
+  ADMIN:                 'ADMIN',
+  RESPONSABLE_MARKETING: 'RESPONSABLE_MARKETING',
+  CLIENT:                'CLIENT',
+};
+
 const ROLE_STYLE = {
-  admin:   { bg:'rgba(245,166,35,0.12)',  color:'#d97706', icon:'👑' },
-  manager: { bg:'rgba(59,130,246,0.1)',   color:'#2563eb', icon:'🎯' },
-  user:    { bg:'rgba(34,197,94,0.1)',    color:'#16a34a', icon:'👤' },
+  ADMIN:                 { bg:'rgba(245,166,35,0.12)', color:'#d97706', icon:'👑', label:'Admin' },
+  RESPONSABLE_MARKETING: { bg:'rgba(59,130,246,0.1)',  color:'#2563eb', icon:'🎯', label:'Marketing' },
+  CLIENT:                { bg:'rgba(34,197,94,0.1)',   color:'#16a34a', icon:'👤', label:'Client' },
 };
 
 const AVATAR_COLORS = ['#f5a623','#3b82f6','#22c55e','#8b5cf6','#ec4899','#14b8a6'];
@@ -25,7 +32,7 @@ export default function Users() {
   const [search,     setSearch]     = useState('');
   const [hoveredRow, setHoveredRow] = useState(null);
   const [loading,    setLoading]    = useState(false);
-  const [form, setForm] = useState({ name:'', email:'', password:'', role:'user' });
+  const [form, setForm] = useState({ name:'', email:'', password:'', role: ROLES.CLIENT });
 
   const fetchAll = async () => {
     try {
@@ -40,7 +47,7 @@ export default function Users() {
     e.preventDefault(); setLoading(true);
     try {
       await api.post('/api/users', form);
-      setForm({ name:'', email:'', password:'', role:'user' });
+      setForm({ name:'', email:'', password:'', role: ROLES.CLIENT });
       setShowForm(false); fetchAll();
     } catch(err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
     setLoading(false);
@@ -57,9 +64,9 @@ export default function Users() {
     u.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const admins   = users.filter(u => u.role === 'admin').length;
-  const managers = users.filter(u => u.role === 'manager').length;
-  const standard = users.filter(u => u.role === 'user').length;
+  const admins   = users.filter(u => u.role === ROLES.ADMIN).length;
+  const managers = users.filter(u => u.role === ROLES.RESPONSABLE_MARKETING).length;
+  const clients  = users.filter(u => u.role === ROLES.CLIENT).length;
 
   return (
     <div style={{ fontFamily:DP.font, color:DP.text }}>
@@ -67,7 +74,6 @@ export default function Users() {
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
         <div>
-          <h1 style={{ fontSize:20, fontWeight:900, margin:'0 0 4px' }}>Utilisateurs</h1>
           <p style={{ color:DP.muted, fontSize:12, margin:0 }}>Gérez les accès et rôles de la plateforme</p>
         </div>
         <button onClick={() => setShowForm(!showForm)} style={{
@@ -82,10 +88,10 @@ export default function Users() {
       {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:18 }}>
         {[
-          { label:'Total',    value:users.length, color:DP.gold,  bg:DP.goldGlow,                  icon:'👥' },
-          { label:'Admins',   value:admins,        color:'#d97706', bg:'rgba(245,166,35,0.12)',     icon:'👑' },
-          { label:'Managers', value:managers,      color:DP.blue,  bg:'rgba(59,130,246,0.1)',       icon:'🎯' },
-          { label:'Users',    value:standard,      color:DP.green, bg:'rgba(34,197,94,0.1)',        icon:'👤' },
+          { label:'Total',     value:users.length, color:DP.gold,   bg:DP.goldGlow,              icon:'👥' },
+          { label:'Admins',    value:admins,        color:'#d97706', bg:'rgba(245,166,35,0.12)',   icon:'👑' },
+          { label:'Managers',  value:managers,      color:DP.blue,   bg:'rgba(59,130,246,0.1)',    icon:'🎯' },
+          { label:'Clients',   value:clients,       color:DP.green,  bg:'rgba(34,197,94,0.1)',     icon:'👤' },
         ].map(s => (
           <div key={s.label} style={{
             background:DP.card, border:`1px solid ${DP.border}`,
@@ -108,9 +114,9 @@ export default function Users() {
           <h3 style={{ fontSize:14, fontWeight:800, margin:'0 0 16px' }}>Nouvel utilisateur</h3>
           <form onSubmit={handleAdd} style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12 }}>
             {[
-              { label:'Nom complet', key:'name',     type:'text',     placeholder:'Ex: Ahmed Ben Ali' },
-              { label:'Email',       key:'email',    type:'email',    placeholder:'email@exemple.com' },
-              { label:'Mot de passe',key:'password', type:'password', placeholder:'••••••••' },
+              { label:'Nom complet',  key:'name',     type:'text',     placeholder:'Ex: Ahmed Ben Ali' },
+              { label:'Email',        key:'email',    type:'email',    placeholder:'email@exemple.com' },
+              { label:'Mot de passe', key:'password', type:'password', placeholder:'••••••••' },
             ].map(f => (
               <div key={f.key}>
                 <label style={{ fontSize:10, fontWeight:700, color:DP.muted, textTransform:'uppercase', letterSpacing:'1px', display:'block', marginBottom:5 }}>{f.label}</label>
@@ -121,15 +127,18 @@ export default function Users() {
                 />
               </div>
             ))}
+
+            {/* ✅ Dropdown avec les vrais rôles backend */}
             <div>
               <label style={{ fontSize:10, fontWeight:700, color:DP.muted, textTransform:'uppercase', letterSpacing:'1px', display:'block', marginBottom:5 }}>Rôle</label>
               <select value={form.role} onChange={e => setForm({...form, role:e.target.value})}
                 style={{ width:'100%', padding:'10px 12px', border:`1px solid ${DP.border}`, borderRadius:8, fontSize:13, boxSizing:'border-box', fontFamily:DP.font, background:'white' }}>
-                <option value="user">👤 User</option>
-                <option value="manager">🎯 Manager</option>
-                <option value="admin">👑 Admin</option>
+                <option value={ROLES.CLIENT}>👤 Client</option>
+                <option value={ROLES.RESPONSABLE_MARKETING}>🎯 Responsable Marketing</option>
+                <option value={ROLES.ADMIN}>👑 Admin</option>
               </select>
             </div>
+
             <div style={{ gridColumn:'1/-1', display:'flex', gap:10 }}>
               <button type="submit" disabled={loading} style={{
                 background:DP.gold, color:DP.dark, border:'none',
@@ -170,7 +179,7 @@ export default function Users() {
             </thead>
             <tbody>
               {filtered.map(u => {
-                const role = ROLE_STYLE[u.role] || ROLE_STYLE.user;
+                const role = ROLE_STYLE[u.role] || ROLE_STYLE.CLIENT;
                 const col  = avatarColor(u.name);
                 return (
                   <tr key={u.id}
@@ -196,7 +205,7 @@ export default function Users() {
                     <td style={{ padding:'12px 14px', fontSize:12, color:DP.muted }}>{u.email}</td>
                     <td style={{ padding:'12px 14px' }}>
                       <span style={{ background:role.bg, color:role.color, padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700 }}>
-                        {role.icon} {u.role}
+                        {role.icon} {role.label}
                       </span>
                     </td>
                     <td style={{ padding:'12px 14px', fontSize:11, color:DP.muted }}>

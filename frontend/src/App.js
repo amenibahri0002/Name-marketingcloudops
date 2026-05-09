@@ -5,6 +5,8 @@ import Layout from './Layout';
 import NotFound from './pages/NotFound';
 import Profile  from './pages/Profile';
 import Settings from './pages/Settings';
+import HomePage from './pages/HomePage';
+
 
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -44,7 +46,8 @@ function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/access-denied" element={<AccessDenied />} />
-         
+          <Route path="/" element={<HomePage />} />   {/* ← route publique */}
+          <Route path="/login" element={<Login />} />
 
           <Route
             path="/dashboard"
