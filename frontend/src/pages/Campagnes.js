@@ -1,347 +1,658 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 
-const DP = {
-  gold:    '#f5a623', goldDark:'#d4881a', goldGlow:'rgba(245,166,35,0.12)',
-  dark:    '#16120d', bg:'#f6f3ee', card:'#ffffff',
-  border:  '#ede8df', text:'#1a160e', muted:'#9c8f7a',
-  blue:    '#3b82f6', green:'#22c55e', red:'#ef4444',
-  font:    "'Montserrat','Open Sans',sans-serif",
+/* ─── Palette DigiLab ────────────────────────────────────────── */
+const C = {
+  bg:         '#f4f6fb',
+  card:       '#ffffff',
+  navy:       '#16120d',
+  gold:       '#f5a623',
+  goldDark:   '#c8831a',
+  goldDim:    'rgba(245,166,35,0.10)',
+  goldBorder: 'rgba(245,166,35,0.28)',
+  border:     '#e5e9f2',
+  text:       '#1a1f3c',
+  textMuted:  '#6b7280',
+  blue:       '#3b82f6',
+  blueDim:    'rgba(59,130,246,0.10)',
+  green:      '#22c55e',
+  greenDim:   'rgba(34,197,94,0.10)',
+  red:        '#ef4444',
+  redDim:     'rgba(239,68,68,0.10)',
+  purple:     '#8b5cf6',
+  purpleDim:  'rgba(139,92,246,0.10)',
+  shadow:     '0 1px 8px rgba(10,14,42,0.07)',
+  shadowMd:   '0 4px 20px rgba(10,14,42,0.12)',
 };
 
-const STATUS_STYLE = {
-  sent:      { background:'rgba(34,197,94,0.1)',   color:'#16a34a', label:'Envoyée'   },
-  scheduled: { background:'rgba(59,130,246,0.1)',  color:'#2563eb', label:'Planifiée' },
-  draft:     { background:'rgba(245,166,35,0.12)', color:'#d97706', label:'Brouillon' },
+/* ─── Status & Type configs ───────────────────────────────────── */
+const STATUS = {
+  sent:      { label: 'Envoyée',   color: '#16a34a', bg: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.25)'   },
+  scheduled: { label: 'Planifiée', color: '#2563eb', bg: 'rgba(59,130,246,0.10)',  border: 'rgba(59,130,246,0.25)'  },
+  draft:     { label: 'Brouillon', color: '#d97706', bg: 'rgba(245,166,35,0.10)',  border: 'rgba(245,166,35,0.25)'  },
 };
 
-const TYPE_STYLE = {
-  email: { background:'rgba(59,130,246,0.1)',  color:'#3b82f6', label:'📧 Email' },
-  sms:   { background:'rgba(34,197,94,0.1)',   color:'#16a34a', label:'📱 SMS'   },
-  push:  { background:'rgba(245,166,35,0.12)', color:'#d97706', label:'🔔 Push'  },
+const TYPE = {
+  email: { label: 'Email', icon: '📧', color: '#3b82f6', bg: 'rgba(59,130,246,0.10)',  border: 'rgba(59,130,246,0.25)'  },
+  sms:   { label: 'SMS',   icon: '📱', color: '#22c55e', bg: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.25)'   },
+  push:  { label: 'Push',  icon: '🔔', color: '#f5a623', bg: 'rgba(245,166,35,0.10)',  border: 'rgba(245,166,35,0.25)'  },
 };
 
-function Pill({ text, style }) {
+/* ─── CSS ────────────────────────────────────────────────────── */
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(12px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes shimmer {
+    0%   { background-position:-500px 0; }
+    100% { background-position: 500px 0; }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .dl-stat { transition:all 0.22s ease!important; cursor:default; }
+  .dl-stat:hover { transform:translateY(-3px)!important; box-shadow:0 8px 28px rgba(245,166,35,0.15)!important; border-color:#f5a623!important; }
+  .dl-row { transition:background .15s; }
+  .dl-row:hover td { background:#fafbff!important; }
+  .dl-btn { transition:all 0.15s!important; }
+  .dl-btn:hover { opacity:0.85!important; transform:translateY(-1px)!important; }
+  .dl-btn-add { transition:all 0.2s!important; }
+  .dl-btn-add:hover { transform:translateY(-2px)!important; box-shadow:0 8px 22px rgba(245,166,35,0.35)!important; }
+  .dl-input:focus { border-color:#f5a623!important; box-shadow:0 0 0 3px rgba(245,166,35,0.12)!important; outline:none; }
+  .dl-input-blue:focus { border-color:#3b82f6!important; box-shadow:0 0 0 3px rgba(59,130,246,0.12)!important; outline:none; }
+  .dl-filter { transition:all 0.18s!important; cursor:pointer; }
+  .dl-channel-pick { transition:all 0.18s!important; cursor:pointer; }
+  .dl-channel-pick:hover { transform:translateY(-2px)!important; }
+`;
+
+/* ─── Helpers ─────────────────────────────────────────────────── */
+function Skel({ w = '100%', h = 16, r = 6 }) {
   return (
-    <span style={{ ...style, padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700, display:'inline-block' }}>
-      {text}
-    </span>
+    <div style={{
+      width: w, height: h, borderRadius: r,
+      background: 'linear-gradient(90deg,#eef1f8 25%,#f6f8fd 50%,#eef1f8 75%)',
+      backgroundSize: '500px 100%',
+      animation: 'shimmer 1.4s infinite linear',
+      flexShrink: 0,
+    }} />
   );
 }
 
-function InputField({ label, children }) {
+function Pill({ label, color, bg, border }) {
   return (
-    <div>
-      <label style={{ fontSize:10, fontWeight:700, color:DP.muted, textTransform:'uppercase', letterSpacing:'1.5px', display:'block', marginBottom:6 }}>
-        {label}
-      </label>
-      {children}
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      padding: '4px 11px', borderRadius: 20,
+      fontSize: 11.5, fontWeight: 700, color,
+      background: bg, border: `1px solid ${border}`,
+      whiteSpace: 'nowrap',
+    }}>{label}</span>
+  );
+}
+
+function FieldLabel({ children }) {
+  return (
+    <label style={{
+      fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
+      color: C.text, display: 'block', marginBottom: 7,
+    }}>{children}</label>
+  );
+}
+
+const inputBase = {
+  width: '100%', padding: '11px 14px',
+  border: `1.5px solid ${C.border}`, borderRadius: 10,
+  fontSize: 13.5, color: C.text, background: '#fafbfd',
+  boxSizing: 'border-box', fontFamily: 'inherit',
+  transition: 'border-color .2s, box-shadow .2s',
+};
+
+/* ─── Modal créer campagne ────────────────────────────────────── */
+function CreateModal({ clients, onClose, onSave }) {
+  const [form, setForm]     = useState({ title: '', type: 'email', clientId: '', dateScheduled: '' });
+  const [saving, setSaving] = useState(false);
+
+  const handle = async e => {
+    e.preventDefault();
+    if (!form.title.trim() || !form.clientId) return;
+    setSaving(true);
+    try { await api.post('/api/campagnes', form); onSave(); onClose(); }
+    catch (err) { alert('Erreur: ' + err.message); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'rgba(10,14,42,0.6)', backdropFilter: 'blur(5px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      animation: 'fadeUp 0.2s ease',
+    }} onClick={e => e.target === e.currentTarget && onClose()}>
+
+      <div style={{
+        background: C.card, borderRadius: 20,
+        width: '100%', maxWidth: 540,
+        border: `1.5px solid ${C.border}`,
+        boxShadow: '0 28px 70px rgba(10,14,42,0.22)', overflow: 'hidden',
+      }}>
+        {/* modal header navy */}
+        <div style={{
+          background: C.navy, padding: '20px 26px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <div style={{ width: 18, height: 2, background: C.gold, borderRadius: 2 }} />
+              <span style={{ fontSize: 10, fontWeight: 800, color: C.gold, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                Nouvelle Campagne
+              </span>
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>Créer une campagne</div>
+          </div>
+          <button onClick={onClose} style={{
+            width: 32, height: 32, borderRadius: 9,
+            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+            color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 16,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>✕</button>
+        </div>
+
+        <form onSubmit={handle} style={{ padding: '24px 26px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {/* Titre + type */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <FieldLabel>Titre de la campagne *</FieldLabel>
+              <input className="dl-input" value={form.title}
+                onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+                placeholder="Ex: Promo Ramadan 2026"
+                required style={inputBase} />
+            </div>
+            <div>
+              <FieldLabel>Client *</FieldLabel>
+              <select className="dl-input" value={form.clientId}
+                onChange={e => setForm(p => ({ ...p, clientId: e.target.value }))}
+                required style={inputBase}>
+                <option value="">— Sélectionner —</option>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Canal selector */}
+          <div>
+            <FieldLabel>Canal d'envoi</FieldLabel>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {Object.entries(TYPE).map(([key, t]) => (
+                <div key={key} className="dl-channel-pick"
+                  onClick={() => setForm(p => ({ ...p, type: key }))}
+                  style={{
+                    flex: 1, padding: '12px 8px', borderRadius: 12, textAlign: 'center',
+                    border: `1.5px solid ${form.type === key ? t.color : C.border}`,
+                    background: form.type === key ? t.bg : '#fafbfd',
+                    boxShadow: form.type === key ? `0 4px 14px ${t.bg}` : 'none',
+                  }}>
+                  <div style={{ fontSize: 20, marginBottom: 5 }}>{t.icon}</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: form.type === key ? t.color : C.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Date planifiée */}
+          <div>
+            <FieldLabel>Date planifiée <span style={{ color: C.textMuted, fontWeight: 500 }}>(optionnelle)</span></FieldLabel>
+            <input className="dl-input" type="datetime-local"
+              value={form.dateScheduled}
+              onChange={e => setForm(p => ({ ...p, dateScheduled: e.target.value }))}
+              style={inputBase} />
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
+            <button type="button" onClick={onClose} style={{
+              flex: 1, padding: '11px', borderRadius: 10,
+              border: `1.5px solid ${C.border}`, background: 'none',
+              fontSize: 13, fontWeight: 700, color: C.textMuted, cursor: 'pointer',
+            }}>Annuler</button>
+            <button className="dl-btn-add" type="submit" disabled={saving} style={{
+              flex: 2, padding: '11px', borderRadius: 10,
+              border: 'none', background: C.gold,
+              fontSize: 13, fontWeight: 800, color: C.navy,
+              cursor: saving ? 'not-allowed' : 'pointer',
+              boxShadow: '0 4px 14px rgba(245,166,35,0.25)',
+              opacity: saving ? 0.7 : 1,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}>
+              {saving
+                ? <><span style={{ width: 13, height: 13, border: `2px solid ${C.navy}`, borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} /> Création...</>
+                : '✓ Créer la campagne'
+              }
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
 
-const inputStyle = {
-  width:'100%', padding:'10px 13px',
-  border:`1.5px solid ${DP.border}`, borderRadius:9,
-  fontSize:13, boxSizing:'border-box',
-  fontFamily:DP.font, background:'white', color:DP.text,
-  outline:'none', transition:'border-color 0.2s',
-};
+/* ─── Modal planifier ─────────────────────────────────────────── */
+function ScheduleModal({ modal, onClose, onConfirm, loading }) {
+  const [date, setDate] = useState(modal.date || '');
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'rgba(10,14,42,0.6)', backdropFilter: 'blur(5px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      animation: 'fadeUp 0.2s ease',
+    }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{
+        background: C.card, borderRadius: 20,
+        width: '100%', maxWidth: 420,
+        border: `1.5px solid ${C.border}`,
+        boxShadow: '0 28px 70px rgba(10,14,42,0.22)', overflow: 'hidden',
+      }}>
+        <div style={{
+          background: C.navy, padding: '20px 26px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <div style={{ width: 18, height: 2, background: C.blue, borderRadius: 2 }} />
+              <span style={{ fontSize: 10, fontWeight: 800, color: C.blue, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Planification</span>
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>Choisir une date d'envoi</div>
+          </div>
+          <button onClick={onClose} style={{
+            width: 32, height: 32, borderRadius: 9,
+            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+            color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 16,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>✕</button>
+        </div>
 
+        <div style={{ padding: '24px 26px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div>
+            <FieldLabel>Date et heure d'envoi</FieldLabel>
+            <input className="dl-input-blue" type="datetime-local"
+              value={date} min={new Date().toISOString().slice(0, 16)}
+              onChange={e => setDate(e.target.value)}
+              style={inputBase} />
+          </div>
+
+          {date && (
+            <div style={{
+              background: C.blueDim, border: '1px solid rgba(59,130,246,0.22)',
+              borderRadius: 10, padding: '12px 16px',
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.blue, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>Envoi prévu le</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>
+                {new Date(date).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' })}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={onClose} style={{
+              flex: 1, padding: '11px', borderRadius: 10,
+              border: `1.5px solid ${C.border}`, background: 'none',
+              fontSize: 13, fontWeight: 700, color: C.textMuted, cursor: 'pointer',
+            }}>Annuler</button>
+            <button className="dl-btn" onClick={() => onConfirm(modal.id, date)}
+              disabled={!date || loading}
+              style={{
+                flex: 2, padding: '11px', borderRadius: 10,
+                border: 'none', background: C.blue,
+                fontSize: 13, fontWeight: 800, color: '#fff',
+                cursor: (!date || loading) ? 'not-allowed' : 'pointer',
+                opacity: (!date || loading) ? 0.6 : 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}>
+              {loading
+                ? <><span style={{ width: 13, height: 13, border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} /> Planification...</>
+                : '🕐 Confirmer'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
 export default function Campagnes() {
   const [campagnes,     setCampagnes]     = useState([]);
   const [clients,       setClients]       = useState([]);
-  const [showForm,      setShowForm]      = useState(false);
-  const [loading,       setLoading]       = useState(false);
-  const [hoveredRow,    setHoveredRow]    = useState(null);
+  const [loading,       setLoading]       = useState(true);
+  const [showCreate,    setShowCreate]    = useState(false);
+  const [scheduleModal, setScheduleModal] = useState(null);
+  const [actionId,      setActionId]      = useState(null);
   const [filter,        setFilter]        = useState('all');
   const [typeFilter,    setTypeFilter]    = useState('all');
   const [search,        setSearch]        = useState('');
-  const [scheduleModal, setScheduleModal] = useState(null); // { id, date }
-  const [actionLoading, setActionLoading] = useState(null);
-  const [form, setForm] = useState({ title:'', type:'email', clientId:'', dateScheduled:'' });
 
   const fetchAll = async () => {
     try {
       const [c, cl] = await Promise.all([api.get('/api/campagnes'), api.get('/api/clients')]);
       setCampagnes(Array.isArray(c.data) ? c.data : c.data.data || []);
-      setClients(cl.data);
-    } catch(err) { console.error(err); }
+      setClients(Array.isArray(cl.data) ? cl.data : []);
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { fetchAll(); }, []);
 
-  // ── Créer une campagne ──
-  const handleAdd = async (e) => {
-    e.preventDefault(); setLoading(true);
-    try {
-      await api.post('/api/campagnes', form);
-      setForm({ title:'', type:'email', clientId:'', dateScheduled:'' });
-      setShowForm(false); fetchAll();
-    } catch(err) { alert('Erreur: ' + err.message); }
-    setLoading(false);
-  };
-
-  // ── Envoyer immédiatement ──
-  const handleSend = async (id) => {
+  const handleSend = async id => {
     if (!window.confirm('Envoyer cette campagne maintenant ?')) return;
-    setActionLoading(id);
-    try {
-      await api.post(`/api/emails/send/${id}`);
-      fetchAll();
-    } catch { alert("Erreur lors de l'envoi"); }
-    setActionLoading(null);
+    setActionId(id);
+    try { await api.post(`/api/emails/send/${id}`); fetchAll(); }
+    catch { alert("Erreur lors de l'envoi"); }
+    finally { setActionId(null); }
   };
 
-  // ── Confirmer planification ──
-  const handleSchedule = async () => {
-    if (!scheduleModal?.date) return alert('Choisissez une date');
-    setActionLoading(scheduleModal.id);
+  const handleSchedule = async (id, date) => {
+    if (!date) return;
+    setActionId(id);
     try {
-      await api.patch(`/api/campagnes/${scheduleModal.id}`, {
-        status: 'scheduled',
-        dateScheduled: scheduleModal.date,
-      });
-      setScheduleModal(null);
-      fetchAll();
+      await api.patch(`/api/campagnes/${id}`, { status: 'scheduled', dateScheduled: date });
+      setScheduleModal(null); fetchAll();
     } catch { alert('Erreur planification'); }
-    setActionLoading(null);
+    finally { setActionId(null); }
   };
 
-  // ── Repasser en brouillon ──
-  const handleToDraft = async (id) => {
-    if (!window.confirm('Remettre cette campagne en brouillon ?')) return;
-    setActionLoading(id);
-    try {
-      await api.patch(`/api/campagnes/${id}`, { status: 'draft', dateScheduled: null });
-      fetchAll();
-    } catch { alert('Erreur'); }
-    setActionLoading(null);
+  const handleToDraft = async id => {
+    if (!window.confirm('Remettre en brouillon ?')) return;
+    setActionId(id);
+    try { await api.patch(`/api/campagnes/${id}`, { status: 'draft', dateScheduled: null }); fetchAll(); }
+    catch { alert('Erreur'); }
+    finally { setActionId(null); }
   };
 
-  // ── Supprimer ──
-  const handleDelete = async (id) => {
+  const handleDelete = async id => {
     if (!window.confirm('Supprimer cette campagne ?')) return;
     try { await api.delete(`/api/campagnes/${id}`); fetchAll(); }
     catch { alert('Erreur suppression'); }
   };
 
-  // ── Filtres ──
   const filtered = campagnes.filter(c => {
-    const matchStatus = filter === 'all'     || c.status === filter;
-    const matchType   = typeFilter === 'all' || c.type?.toLowerCase() === typeFilter;
-    const matchSearch = !search || c.title?.toLowerCase().includes(search.toLowerCase()) || c.client?.name?.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchType && matchSearch;
+    const mS = filter === 'all'     || c.status === filter;
+    const mT = typeFilter === 'all' || c.type?.toLowerCase() === typeFilter;
+    const mQ = !search || c.title?.toLowerCase().includes(search.toLowerCase()) || c.client?.name?.toLowerCase().includes(search.toLowerCase());
+    return mS && mT && mQ;
   });
 
-  const sent      = campagnes.filter(c => c.status === 'sent').length;
-  const scheduled = campagnes.filter(c => c.status === 'scheduled').length;
-  const draft     = campagnes.filter(c => c.status === 'draft').length;
+  const stats = [
+    { label: 'Total',      value: campagnes.length,                               color: C.gold,   dim: C.goldDim,  icon: '📢' },
+    { label: 'Envoyées',   value: campagnes.filter(c => c.status === 'sent').length,      color: C.green,  dim: C.greenDim, icon: '✅' },
+    { label: 'Planifiées', value: campagnes.filter(c => c.status === 'scheduled').length, color: C.blue,   dim: C.blueDim,  icon: '🕐' },
+    { label: 'Brouillons', value: campagnes.filter(c => c.status === 'draft').length,     color: C.purple, dim: C.purpleDim,icon: '📝' },
+  ];
+
+  const STATUS_FILTERS = [['all','Tous'], ['sent','Envoyées'], ['scheduled','Planifiées'], ['draft','Brouillons']];
+  const TYPE_FILTERS   = [['all','Tous types'], ['email','📧 Email'], ['sms','📱 SMS'], ['push','🔔 Push']];
+  const TABLE_HEADS    = ['TITRE & CLIENT', 'CANAL', 'STATUT', 'DATE', 'ACTIONS'];
+
+  const formatDate = d => d
+    ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+    : '—';
 
   return (
-    <div style={{ fontFamily:DP.font, color:DP.text }}>
+    <div style={{
+      background: C.bg, minHeight: '100vh',
+      padding: '28px 32px',
+      fontFamily: "'Plus Jakarta Sans','Segoe UI',sans-serif",
+      color: C.text, boxSizing: 'border-box',
+    }}>
+      <style>{css}</style>
+
+      {showCreate && <CreateModal clients={clients} onClose={() => setShowCreate(false)} onSave={fetchAll} />}
+      {scheduleModal && <ScheduleModal modal={scheduleModal} onClose={() => setScheduleModal(null)} onConfirm={handleSchedule} loading={actionId === scheduleModal.id} />}
 
       {/* ── Header ── */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+        marginBottom: 26, animation: 'fadeUp 0.35s ease both',
+      }}>
         <div>
-          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
-            <div style={{ width:3, height:22, background:DP.gold, borderRadius:2 }} />
-            <h1 style={{ fontSize:20, fontWeight:900, margin:0 }}>Campagnes</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ width: 4, height: 22, background: `linear-gradient(180deg,${C.gold},${C.goldDark})`, borderRadius: 2 }} />
+            <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Campagnes</h1>
           </div>
-          <p style={{ color:DP.muted, fontSize:12, margin:'0 0 0 13px' }}>
+          <p style={{ color: C.textMuted, fontSize: 13, margin: 0, marginLeft: 14 }}>
             Gérez et suivez toutes vos campagnes marketing
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          style={{ background:DP.gold, color:DP.dark, border:'none', padding:'10px 20px', borderRadius:9, fontSize:12, fontWeight:800, cursor:'pointer', fontFamily:DP.font, display:'flex', alignItems:'center', gap:7, boxShadow:'0 4px 14px rgba(245,166,35,0.3)', transition:'all 0.2s' }}
-          onMouseEnter={e => { e.currentTarget.style.background=DP.goldDark; e.currentTarget.style.transform='translateY(-1px)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background=DP.gold; e.currentTarget.style.transform='none'; }}
-        >
-          <span style={{ fontSize:14 }}>+</span> Nouvelle campagne
+        <button className="dl-btn-add" onClick={() => setShowCreate(true)} style={{
+          background: C.gold, color: C.navy,
+          border: 'none', padding: '11px 22px',
+          borderRadius: 11, fontSize: 13, fontWeight: 800,
+          cursor: 'pointer', boxShadow: '0 4px 14px rgba(245,166,35,0.25)',
+          display: 'flex', alignItems: 'center', gap: 7,
+        }}>
+          <span style={{ fontSize: 16 }}>+</span> Nouvelle campagne
         </button>
       </div>
 
-      {/* ── KPI Cards ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:18 }}>
-        {[
-          { label:'Total',      value:campagnes.length, accent:DP.gold,  bg:DP.goldGlow,                  icon:'📢' },
-          { label:'Envoyées',   value:sent,             accent:DP.green, bg:'rgba(34,197,94,0.1)',         icon:'✅' },
-          { label:'Planifiées', value:scheduled,        accent:DP.blue,  bg:'rgba(59,130,246,0.1)',        icon:'🕐' },
-          { label:'Brouillons', value:draft,            accent:DP.muted, bg:'rgba(156,143,122,0.08)',      icon:'📝' },
-        ].map(s => (
-          <div key={s.label} style={{ background:DP.card, border:`1px solid ${DP.border}`, borderLeft:`3px solid ${s.accent}`, borderRadius:12, padding:'14px 16px' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
-              <div style={{ fontSize:10, fontWeight:700, color:DP.muted, textTransform:'uppercase', letterSpacing:'1px' }}>{s.label}</div>
-              <div style={{ width:28, height:28, borderRadius:7, background:s.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12 }}>{s.icon}</div>
+      {/* ── Stats ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
+        {stats.map((s, i) => (
+          <div key={i} className="dl-stat" style={{
+            background: C.card, borderRadius: 14,
+            border: `1.5px solid ${C.border}`,
+            padding: '18px 20px', boxShadow: C.shadow,
+            display: 'flex', alignItems: 'center', gap: 14,
+            animation: `fadeUp 0.4s ease ${i * 70}ms both`,
+          }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%',
+              background: s.dim, fontSize: 20,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>{s.icon}</div>
+            <div>
+              <div style={{ fontSize: 30, fontWeight: 800, color: s.color, lineHeight: 1, letterSpacing: '-0.03em' }}>
+                {loading ? <Skel w={36} h={26} /> : s.value}
+              </div>
+              <div style={{ fontSize: 11.5, color: C.textMuted, marginTop: 4, fontWeight: 500 }}>{s.label}</div>
             </div>
-            <div style={{ fontSize:26, fontWeight:900, color:s.accent }}>{s.value}</div>
           </div>
         ))}
       </div>
 
-      {/* ── Filters & Search ── */}
-      <div style={{ background:DP.card, border:`1px solid ${DP.border}`, borderRadius:12, padding:'12px 16px', marginBottom:14, display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
-        <div style={{ position:'relative', flex:'1', minWidth:180 }}>
-          <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', fontSize:13, opacity:0.4 }}>🔍</span>
-          <input
+      {/* ── Toolbar (search + filtres) ── */}
+      <div style={{
+        background: C.card, borderRadius: 14,
+        border: `1.5px solid ${C.border}`,
+        padding: '14px 18px', marginBottom: 18,
+        display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap',
+        boxShadow: C.shadow,
+        animation: 'fadeUp 0.4s ease 300ms both',
+      }}>
+        {/* Search */}
+        <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+          <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: C.textMuted }}>🔍</span>
+          <input className="dl-input"
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Rechercher une campagne..."
-            style={{ ...inputStyle, paddingLeft:32, padding:'8px 12px 8px 32px' }}
-            onFocus={e => e.target.style.borderColor=DP.gold}
-            onBlur={e => e.target.style.borderColor=DP.border}
+            style={{ ...inputBase, paddingLeft: 40, padding: '9px 14px 9px 40px' }}
           />
         </div>
-        <div style={{ display:'flex', gap:6 }}>
-          {[['all','Tous'],['sent','Envoyées'],['scheduled','Planifiées'],['draft','Brouillons']].map(([val, lbl]) => (
-            <button key={val} onClick={() => setFilter(val)} style={{
-              padding:'6px 12px', borderRadius:20, fontSize:11, fontWeight:700,
-              border:`1px solid ${filter===val ? DP.gold : DP.border}`,
-              background: filter===val ? DP.goldGlow : 'transparent',
-              color: filter===val ? DP.gold : DP.muted,
-              cursor:'pointer', fontFamily:DP.font, transition:'all 0.15s',
-            }}>{lbl}</button>
+
+        {/* Séparateur */}
+        <div style={{ width: 1, height: 28, background: C.border }} />
+
+        {/* Status filters */}
+        <div style={{ display: 'flex', gap: 5 }}>
+          {STATUS_FILTERS.map(([val, lbl]) => (
+            <button key={val} className="dl-filter"
+              onClick={() => setFilter(val)}
+              style={{
+                padding: '6px 13px', borderRadius: 20, fontSize: 11.5, fontWeight: 700,
+                border: `1.5px solid ${filter === val ? C.gold : C.border}`,
+                background: filter === val ? C.goldDim : 'none',
+                color: filter === val ? C.goldDark : C.textMuted,
+              }}>{lbl}</button>
           ))}
         </div>
-        <div style={{ display:'flex', gap:6 }}>
-          {[['all','Tous types'],['email','📧 Email'],['sms','📱 SMS'],['push','🔔 Push']].map(([val, lbl]) => (
-            <button key={val} onClick={() => setTypeFilter(val)} style={{
-              padding:'6px 12px', borderRadius:20, fontSize:11, fontWeight:700,
-              border:`1px solid ${typeFilter===val ? DP.blue : DP.border}`,
-              background: typeFilter===val ? 'rgba(59,130,246,0.08)' : 'transparent',
-              color: typeFilter===val ? DP.blue : DP.muted,
-              cursor:'pointer', fontFamily:DP.font, transition:'all 0.15s',
-            }}>{lbl}</button>
+
+        {/* Séparateur */}
+        <div style={{ width: 1, height: 28, background: C.border }} />
+
+        {/* Type filters */}
+        <div style={{ display: 'flex', gap: 5 }}>
+          {TYPE_FILTERS.map(([val, lbl]) => (
+            <button key={val} className="dl-filter"
+              onClick={() => setTypeFilter(val)}
+              style={{
+                padding: '6px 13px', borderRadius: 20, fontSize: 11.5, fontWeight: 700,
+                border: `1.5px solid ${typeFilter === val ? C.blue : C.border}`,
+                background: typeFilter === val ? C.blueDim : 'none',
+                color: typeFilter === val ? C.blue : C.textMuted,
+              }}>{lbl}</button>
           ))}
         </div>
       </div>
 
       {/* ── Table ── */}
-      <div style={{ background:DP.card, border:`1px solid ${DP.border}`, borderRadius:14, overflow:'hidden' }}>
-        <div style={{ padding:'12px 16px', borderBottom:`1px solid ${DP.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <span style={{ fontSize:13, fontWeight:800, color:DP.text }}>Liste des campagnes</span>
-          <span style={{ fontSize:11, color:DP.muted, background:DP.bg, padding:'3px 10px', borderRadius:20, border:`1px solid ${DP.border}` }}>
-            {filtered.length} / {campagnes.length}
+      <div style={{
+        background: C.card, borderRadius: 16,
+        border: `1.5px solid ${C.border}`,
+        boxShadow: C.shadow, overflow: 'hidden',
+        animation: 'fadeUp 0.4s ease 360ms both',
+      }}>
+        {/* table top bar */}
+        <div style={{
+          padding: '13px 20px', borderBottom: `1.5px solid ${C.border}`,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          background: '#fafbfd',
+        }}>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>
+            Liste des campagnes
+            <span style={{
+              marginLeft: 10, fontSize: 11, fontWeight: 700,
+              background: C.goldDim, color: C.goldDark,
+              border: `1px solid ${C.goldBorder}`,
+              padding: '2px 9px', borderRadius: 20,
+            }}>{filtered.length} / {campagnes.length}</span>
           </span>
+          {search && <span style={{ fontSize: 12, color: C.textMuted }}>Résultats pour "<b>{search}</b>"</span>}
         </div>
 
-        {filtered.length === 0 ? (
-          <div style={{ padding:'48px', textAlign:'center', color:DP.muted }}>
-            <div style={{ fontSize:36, marginBottom:10 }}>📢</div>
-            <p style={{ fontSize:13, fontWeight:600 }}>Aucune campagne trouvée</p>
-            <p style={{ fontSize:12, margin:'4px 0 0' }}>Créez votre première campagne ou modifiez les filtres</p>
+        {loading ? (
+          <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ flex: 2 }}><Skel h={14} w="70%" /><div style={{ marginTop: 6 }}><Skel h={11} w="40%" r={4} /></div></div>
+                <Skel w={70} h={24} r={20} />
+                <Skel w={80} h={24} r={20} />
+                <Skel w={90} h={14} r={4} />
+                <div style={{ display: 'flex', gap: 6 }}><Skel w={70} h={30} r={8} /><Skel w={70} h={30} r={8} /></div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: '60px 20px', textAlign: 'center', color: C.textMuted }}>
+            <div style={{ fontSize: 44, opacity: 0.2, marginBottom: 14 }}>📢</div>
+            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Aucune campagne trouvée</div>
+            <div style={{ fontSize: 13 }}>
+              {search ? `Aucun résultat pour "${search}"` : 'Créez votre première campagne'}
+            </div>
           </div>
         ) : (
-          <table style={{ width:'100%', borderCollapse:'collapse' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr>
-                {['Titre & Client','Canal','Statut','Date','Actions'].map(h => (
-                  <th key={h} style={{ padding:'8px 14px', textAlign:'left', fontSize:10, color:DP.muted, fontWeight:700, textTransform:'uppercase', letterSpacing:'1.5px', borderBottom:`1px solid ${DP.border}` }}>{h}</th>
+              <tr style={{ background: C.navy }}>
+                {TABLE_HEADS.map(h => (
+                  <th key={h} style={{
+                    padding: '13px 18px', textAlign: 'left',
+                    fontSize: 10, fontWeight: 800,
+                    letterSpacing: '0.16em', color: C.gold,
+                  }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.map(c => {
-                const sc = STATUS_STYLE[c.status] || STATUS_STYLE.draft;
-                const tc = TYPE_STYLE[c.type?.toLowerCase()];
-                const isLoading = actionLoading === c.id;
+              {filtered.map((c, idx) => {
+                const sc  = STATUS[c.status] || STATUS.draft;
+                const tc  = TYPE[c.type?.toLowerCase()];
+                const isL = actionId === c.id;
                 return (
-                  <tr key={c.id}
-                    onMouseEnter={() => setHoveredRow(c.id)}
-                    onMouseLeave={() => setHoveredRow(null)}
-                    style={{ borderBottom:`1px solid #f6f3ee`, background:hoveredRow===c.id?'#faf8f4':'transparent', transition:'background 0.15s' }}>
-
-                    <td style={{ padding:'11px 14px' }}>
-                      <div style={{ fontSize:13, fontWeight:700, color:DP.text }}>{c.title}</div>
-                      <div style={{ fontSize:11, color:DP.muted, marginTop:2 }}>{c.client?.name || '—'}</div>
+                  <tr key={c.id} className="dl-row" style={{
+                    borderBottom: `1px solid ${C.border}`,
+                    animation: `fadeUp 0.3s ease ${idx * 40}ms both`,
+                  }}>
+                    {/* Titre & Client */}
+                    <td style={{ padding: '14px 18px' }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text, marginBottom: 3 }}>{c.title}</div>
+                      <div style={{ fontSize: 12, color: C.textMuted, fontWeight: 500 }}>{c.client?.name || '—'}</div>
                     </td>
 
-                    <td style={{ padding:'11px 14px' }}>
-                      {tc ? <Pill text={tc.label} style={{ background:tc.background, color:tc.color }} />
-                          : <span style={{ fontSize:12, color:DP.muted }}>{c.type}</span>}
+                    {/* Canal */}
+                    <td style={{ padding: '14px 18px' }}>
+                      {tc
+                        ? <Pill label={`${tc.icon} ${tc.label}`} color={tc.color} bg={tc.bg} border={tc.border} />
+                        : <span style={{ fontSize: 12, color: C.textMuted }}>{c.type}</span>
+                      }
                     </td>
 
-                    <td style={{ padding:'11px 14px' }}>
-                      <Pill text={sc.label} style={{ background:sc.background, color:sc.color }} />
+                    {/* Statut */}
+                    <td style={{ padding: '14px 18px' }}>
+                      <Pill label={sc.label} color={sc.color} bg={sc.bg} border={sc.border} />
                     </td>
 
-                    <td style={{ padding:'11px 14px', fontSize:11, color:DP.muted }}>
-                      {c.dateScheduled
-                        ? new Date(c.dateScheduled).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' })
-                        : '—'}
+                    {/* Date */}
+                    <td style={{ padding: '14px 18px', fontSize: 12.5, color: C.textMuted, fontWeight: 500 }}>
+                      {formatDate(c.dateScheduled)}
                     </td>
 
-                    {/* ── Actions ── */}
-                    <td style={{ padding:'11px 14px' }}>
-                      <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-
-                        {/* ▶ Envoyer — draft ou scheduled */}
+                    {/* Actions */}
+                    <td style={{ padding: '14px 18px' }}>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {/* Envoyer */}
                         {c.status !== 'sent' && (
-                          <button
-                            onClick={() => handleSend(c.id)}
-                            disabled={isLoading}
+                          <button className="dl-btn" onClick={() => handleSend(c.id)} disabled={isL}
                             style={{
-                              background:'rgba(245,166,35,0.1)', color:'#d97706',
-                              border:'1px solid rgba(245,166,35,0.3)',
-                              padding:'5px 11px', borderRadius:7, fontSize:11, fontWeight:700,
-                              cursor: isLoading ? 'not-allowed' : 'pointer',
-                              fontFamily:DP.font, transition:'all 0.15s',
-                              opacity: isLoading ? 0.5 : 1,
-                            }}
-                            onMouseEnter={e => !isLoading && (e.currentTarget.style.background='rgba(245,166,35,0.2)')}
-                            onMouseLeave={e => (e.currentTarget.style.background='rgba(245,166,35,0.1)')}
-                          >▶ Envoyer</button>
+                              background: C.goldDim, color: C.goldDark,
+                              border: `1px solid ${C.goldBorder}`,
+                              padding: '6px 13px', borderRadius: 8,
+                              fontSize: 11.5, fontWeight: 700, cursor: isL ? 'not-allowed' : 'pointer',
+                              opacity: isL ? 0.5 : 1,
+                            }}>▶ Envoyer</button>
                         )}
 
-                        {/* 🕐 Planifier — draft seulement */}
+                        {/* Planifier */}
                         {c.status === 'draft' && (
-                          <button
+                          <button className="dl-btn"
                             onClick={() => setScheduleModal({ id: c.id, date: c.dateScheduled || '' })}
-                            disabled={isLoading}
+                            disabled={isL}
                             style={{
-                              background:'rgba(59,130,246,0.08)', color:DP.blue,
-                              border:'1px solid rgba(59,130,246,0.25)',
-                              padding:'5px 11px', borderRadius:7, fontSize:11, fontWeight:700,
-                              cursor: isLoading ? 'not-allowed' : 'pointer',
-                              fontFamily:DP.font, transition:'all 0.15s',
-                              opacity: isLoading ? 0.5 : 1,
-                            }}
-                            onMouseEnter={e => !isLoading && (e.currentTarget.style.background='rgba(59,130,246,0.15)')}
-                            onMouseLeave={e => (e.currentTarget.style.background='rgba(59,130,246,0.08)')}
-                          >🕐 Planifier</button>
+                              background: C.blueDim, color: C.blue,
+                              border: '1px solid rgba(59,130,246,0.25)',
+                              padding: '6px 13px', borderRadius: 8,
+                              fontSize: 11.5, fontWeight: 700, cursor: isL ? 'not-allowed' : 'pointer',
+                              opacity: isL ? 0.5 : 1,
+                            }}>🕐 Planifier</button>
                         )}
 
-                        {/* 📝 Brouillon — scheduled ou sent */}
+                        {/* Brouillon */}
                         {(c.status === 'scheduled' || c.status === 'sent') && (
-                          <button
-                            onClick={() => handleToDraft(c.id)}
-                            disabled={isLoading}
+                          <button className="dl-btn" onClick={() => handleToDraft(c.id)} disabled={isL}
                             style={{
-                              background:'rgba(156,143,122,0.08)', color:DP.muted,
-                              border:`1px solid ${DP.border}`,
-                              padding:'5px 11px', borderRadius:7, fontSize:11, fontWeight:700,
-                              cursor: isLoading ? 'not-allowed' : 'pointer',
-                              fontFamily:DP.font, transition:'all 0.15s',
-                              opacity: isLoading ? 0.5 : 1,
-                            }}
-                            onMouseEnter={e => !isLoading && (e.currentTarget.style.background='rgba(156,143,122,0.15)')}
-                            onMouseLeave={e => (e.currentTarget.style.background='rgba(156,143,122,0.08)')}
-                          >📝 Brouillon</button>
+                              background: C.purpleDim, color: C.purple,
+                              border: '1px solid rgba(139,92,246,0.25)',
+                              padding: '6px 13px', borderRadius: 8,
+                              fontSize: 11.5, fontWeight: 700, cursor: isL ? 'not-allowed' : 'pointer',
+                              opacity: isL ? 0.5 : 1,
+                            }}>📝 Brouillon</button>
                         )}
 
-                        {/* 🗑 Supprimer */}
-                        <button
-                          onClick={() => handleDelete(c.id)}
+                        {/* Supprimer */}
+                        <button className="dl-btn" onClick={() => handleDelete(c.id)}
                           style={{
-                            background:'rgba(239,68,68,0.07)', color:DP.red,
-                            border:'1px solid rgba(239,68,68,0.18)',
-                            padding:'5px 11px', borderRadius:7, fontSize:11, fontWeight:700,
-                            cursor:'pointer', fontFamily:DP.font, transition:'all 0.15s',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.14)'}
-                          onMouseLeave={e => e.currentTarget.style.background='rgba(239,68,68,0.07)'}
-                        >🗑 Supprimer</button>
-
+                            background: C.redDim, color: C.red,
+                            border: '1px solid rgba(239,68,68,0.22)',
+                            padding: '6px 13px', borderRadius: 8,
+                            fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+                          }}>🗑</button>
                       </div>
                     </td>
                   </tr>
@@ -351,204 +662,6 @@ export default function Campagnes() {
           </table>
         )}
       </div>
-
-      {/* ── Modal Créer campagne ── */}
-      {showForm && (
-        <div style={{
-          position:'fixed', inset:0, zIndex:1000,
-          background:'rgba(22,18,13,0.55)', backdropFilter:'blur(4px)',
-          display:'flex', alignItems:'center', justifyContent:'center', padding:24,
-        }} onClick={e => e.target===e.currentTarget && setShowForm(false)}>
-
-          <div style={{
-            background:DP.card, borderRadius:18, width:'100%', maxWidth:520,
-            border:`1px solid ${DP.border}`,
-            boxShadow:'0 24px 60px rgba(0,0,0,0.18)', overflow:'hidden',
-          }}>
-            <div style={{ background:DP.dark, padding:'18px 22px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <div>
-                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
-                  <span style={{ width:16, height:2, background:DP.gold, display:'inline-block' }} />
-                  <span style={{ fontSize:10, fontWeight:700, color:DP.gold, textTransform:'uppercase', letterSpacing:'2px' }}>Nouvelle Campagne</span>
-                </div>
-                <div style={{ fontSize:16, fontWeight:900, color:'#fff' }}>Créer une campagne</div>
-              </div>
-              <button onClick={() => setShowForm(false)} style={{
-                width:30, height:30, borderRadius:8,
-                background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.1)',
-                color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:14,
-                display:'flex', alignItems:'center', justifyContent:'center',
-              }}>✕</button>
-            </div>
-
-            <form onSubmit={handleAdd} style={{ padding:22, display:'flex', flexDirection:'column', gap:14 }}>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
-                <InputField label="Titre de la campagne">
-                  <input value={form.title} onChange={e => setForm({...form,title:e.target.value})} required
-                    placeholder="Ex: Promo Ramadan 2026"
-                    style={inputStyle}
-                    onFocus={e => e.target.style.borderColor=DP.gold}
-                    onBlur={e => e.target.style.borderColor=DP.border}
-                  />
-                </InputField>
-                <InputField label="Type de canal">
-                  <select value={form.type} onChange={e => setForm({...form,type:e.target.value})}
-                    style={inputStyle}
-                    onFocus={e => e.target.style.borderColor=DP.gold}
-                    onBlur={e => e.target.style.borderColor=DP.border}
-                  >
-                    <option value="email">📧 Email</option>
-                    <option value="sms">📱 SMS</option>
-                    <option value="push">🔔 Push</option>
-                  </select>
-                </InputField>
-              </div>
-
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
-                <InputField label="Client">
-                  <select value={form.clientId} onChange={e => setForm({...form,clientId:e.target.value})} required
-                    style={inputStyle}
-                    onFocus={e => e.target.style.borderColor=DP.gold}
-                    onBlur={e => e.target.style.borderColor=DP.border}
-                  >
-                    <option value="">— Sélectionner un client —</option>
-                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </InputField>
-                <InputField label="Date planifiée">
-                  <input type="datetime-local" value={form.dateScheduled} onChange={e => setForm({...form,dateScheduled:e.target.value})}
-                    style={inputStyle}
-                    onFocus={e => e.target.style.borderColor=DP.gold}
-                    onBlur={e => e.target.style.borderColor=DP.border}
-                  />
-                </InputField>
-              </div>
-
-              <div style={{ background:DP.bg, borderRadius:10, padding:'12px 14px', border:`1px solid ${DP.border}` }}>
-                <div style={{ fontSize:10, fontWeight:700, color:DP.muted, textTransform:'uppercase', letterSpacing:'1px', marginBottom:8 }}>Aperçu du canal sélectionné</div>
-                <div style={{ display:'flex', gap:8 }}>
-                  {['email','sms','push'].map(t => {
-                    const ts = TYPE_STYLE[t];
-                    return (
-                      <div key={t} style={{ flex:1, padding:'8px', borderRadius:8, border:`1.5px solid ${form.type===t ? ts.color : DP.border}`, background:form.type===t ? ts.background : 'transparent', textAlign:'center', cursor:'pointer', transition:'all 0.15s' }}
-                        onClick={() => setForm({...form,type:t})}>
-                        <div style={{ fontSize:16, marginBottom:2 }}>{TYPE_STYLE[t].label.split(' ')[0]}</div>
-                        <div style={{ fontSize:10, fontWeight:700, color:form.type===t ? ts.color : DP.muted, textTransform:'uppercase' }}>{t}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div style={{ display:'flex', gap:10, paddingTop:4 }}>
-                <button type="submit" disabled={loading} style={{
-                  flex:1, background:DP.gold, color:DP.dark, border:'none',
-                  padding:'11px', borderRadius:9, fontSize:13, fontWeight:800,
-                  cursor:loading?'not-allowed':'pointer', fontFamily:DP.font,
-                  opacity:loading?0.6:1, transition:'all 0.2s',
-                  display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-                }}>
-                  {loading ? <>
-                    <span style={{ width:12, height:12, border:`2px solid ${DP.dark}`, borderTop:'2px solid transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite', display:'inline-block' }} />
-                    Création...
-                  </> : '✓ Créer la campagne'}
-                </button>
-                <button type="button" onClick={() => setShowForm(false)} style={{
-                  background:'transparent', color:DP.muted, border:`1px solid ${DP.border}`,
-                  padding:'11px 20px', borderRadius:9, fontSize:12, cursor:'pointer', fontFamily:DP.font,
-                }}>Annuler</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── Modal Planifier ── */}
-      {scheduleModal && (
-        <div style={{
-          position:'fixed', inset:0, zIndex:1000,
-          background:'rgba(22,18,13,0.55)', backdropFilter:'blur(4px)',
-          display:'flex', alignItems:'center', justifyContent:'center', padding:24,
-        }} onClick={e => e.target===e.currentTarget && setScheduleModal(null)}>
-
-          <div style={{
-            background:DP.card, borderRadius:18, width:'100%', maxWidth:420,
-            border:`1px solid ${DP.border}`,
-            boxShadow:'0 24px 60px rgba(0,0,0,0.18)', overflow:'hidden',
-          }}>
-            {/* Header */}
-            <div style={{ background:DP.dark, padding:'18px 22px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <div>
-                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
-                  <span style={{ width:16, height:2, background:DP.blue, display:'inline-block' }} />
-                  <span style={{ fontSize:10, fontWeight:700, color:DP.blue, textTransform:'uppercase', letterSpacing:'2px' }}>Planification</span>
-                </div>
-                <div style={{ fontSize:16, fontWeight:900, color:'#fff' }}>Choisir une date d'envoi</div>
-              </div>
-              <button onClick={() => setScheduleModal(null)} style={{
-                width:30, height:30, borderRadius:8,
-                background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.1)',
-                color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:14,
-                display:'flex', alignItems:'center', justifyContent:'center',
-              }}>✕</button>
-            </div>
-
-            {/* Body */}
-            <div style={{ padding:22, display:'flex', flexDirection:'column', gap:16 }}>
-              <InputField label="Date et heure d'envoi">
-                <input
-                  type="datetime-local"
-                  value={scheduleModal.date}
-                  min={new Date().toISOString().slice(0,16)}
-                  onChange={e => setScheduleModal({ ...scheduleModal, date: e.target.value })}
-                  style={inputStyle}
-                  onFocus={e => e.target.style.borderColor=DP.blue}
-                  onBlur={e => e.target.style.borderColor=DP.border}
-                />
-              </InputField>
-
-              {/* Aperçu date */}
-              {scheduleModal.date && (
-                <div style={{ background:'rgba(59,130,246,0.06)', border:'1px solid rgba(59,130,246,0.2)', borderRadius:9, padding:'10px 14px' }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:DP.blue, textTransform:'uppercase', letterSpacing:'1px', marginBottom:4 }}>Envoi prévu le</div>
-                  <div style={{ fontSize:14, fontWeight:800, color:DP.text }}>
-                    {new Date(scheduleModal.date).toLocaleString('fr-FR', { dateStyle:'full', timeStyle:'short' })}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display:'flex', gap:10 }}>
-                <button
-                  onClick={handleSchedule}
-                  disabled={!scheduleModal.date || actionLoading === scheduleModal.id}
-                  style={{
-                    flex:1, background:DP.blue, color:'white', border:'none',
-                    padding:'11px', borderRadius:9, fontSize:13, fontWeight:800,
-                    cursor: (!scheduleModal.date || actionLoading === scheduleModal.id) ? 'not-allowed' : 'pointer',
-                    opacity: (!scheduleModal.date || actionLoading === scheduleModal.id) ? 0.5 : 1,
-                    fontFamily:DP.font, transition:'all 0.2s',
-                    display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-                  }}
-                >
-                  {actionLoading === scheduleModal.id ? <>
-                    <span style={{ width:12, height:12, border:'2px solid white', borderTop:'2px solid transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite', display:'inline-block' }} />
-                    Planification...
-                  </> : '🕐 Confirmer la planification'}
-                </button>
-                <button
-                  onClick={() => setScheduleModal(null)}
-                  style={{
-                    background:'transparent', color:DP.muted, border:`1px solid ${DP.border}`,
-                    padding:'11px 16px', borderRadius:9, fontSize:12, cursor:'pointer', fontFamily:DP.font,
-                  }}
-                >Annuler</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
