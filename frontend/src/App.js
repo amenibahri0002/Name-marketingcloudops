@@ -46,7 +46,7 @@ function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/access-denied" element={<AccessDenied />} />
-          <Route path="/" element={<HomePage />} />   {/* ← route publique */}
+          <Route path="/" element={<HomePage />} /> 
           <Route path="/login" element={<Login />} />
 
           <Route
