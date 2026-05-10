@@ -50,7 +50,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
 
           {/* Pages publiques */}
-          <Route path="/login"         element={<Login />} />
+          <Route path="/"         element={<Login />} />
           <Route path="/access-denied" element={<AccessDenied />} />
           <Route path="/campagnes-public" element={<PublicCampagnes />} />
           {/* Pages privées */}
