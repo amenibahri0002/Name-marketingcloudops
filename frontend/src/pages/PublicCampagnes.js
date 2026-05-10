@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API = process.env.REACT_APP_API_URL || 'https://techevent-app.onrender.com';
+const API = process.env.REACT_APP_API_URL || 'https://marketingcloudops-backend.onrender.com';
 
 const TYPE_STYLE = {
   email: { label: '📧 Email', color: '#3b82f6', bg: 'rgba(59,130,246,0.10)' },

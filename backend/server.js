@@ -35,7 +35,7 @@ const clientRoutes = require('./routes/clients')
 app.use('/api/clients', authenticate, clientRoutes)
 
 const campagnesRoutes = require('./routes/campagnes')
-app.use('/api/campagnes', authenticate, campagnesRoutes)
+app.use('/api/campagnes', campagnesRoutes)
 
 const contactsRoutes = require('./routes/contacts')
 app.use('/api/contacts', authenticate, contactsRoutes)
