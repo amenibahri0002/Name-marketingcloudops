@@ -45,7 +45,7 @@ export default function Login() {
     setError('');
     try {
       const res = await axios.post(
-        `${process.env.REACT_APP_API_URL || 'https://marketingcloudops-backend.onrender.com'}/auth/login`,
+        `${process.env.REACT_APP_API_URL || 'https://marketingcloudops-backend.onrender.com'}/api/auth/login`,
         { email, password }
       );
       localStorage.setItem('token', res.data.token);
@@ -333,7 +333,10 @@ export default function Login() {
 
           {/* Footer */}
           <p style={{ textAlign:'center', fontSize:11, color:DP.muted, margin:0 }}>
-            DigiPip © 2026 — DigiLab Solutions
+            <a href="/" style={{ color:DP.gold, textDecoration:'none', fontWeight:700 }}>
+             ← Retour à l'accueil
+            </a>
+            {' '}· DigiPip © 2026 — DigiLab Solutions
           </p>
         </div>
       </div>
