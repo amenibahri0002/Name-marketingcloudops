@@ -3,7 +3,8 @@ const router = express.Router()
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 const nodemailer = require('nodemailer')
-const admin = require('../config/firebase') // ← Firebase activé
+const admin = require('../config/firebase')
+const { authMiddleware } = require('../middleware/auth')
 
 // ── Nodemailer transporter (Gmail SMTP) ──
 const transporter = nodemailer.createTransport({
@@ -15,9 +16,54 @@ const transporter = nodemailer.createTransport({
 })
 
 // ─────────────────────────────────────────
-// GET /api/campagnes
+// ✅ GET /api/campagnes/public  (sans auth)
+// Liste les campagnes envoyées pour la homepage
 // ─────────────────────────────────────────
-router.get('/', async (req, res) => {
+router.get('/public', async (req, res) => {
+  try {
+    const campagnes = await prisma.campagne.findMany({
+      where: { status: 'sent' },
+      include: { client: { select: { id: true, name: true } } },
+      orderBy: { createdAt: 'desc' },
+    })
+    res.json(campagnes)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ─────────────────────────────────────────
+// ✅ POST /api/campagnes/:id/inscrire  (auth requise)
+// Inscription d'un client à une campagne
+// ─────────────────────────────────────────
+router.post('/:id/inscrire', authMiddleware, async (req, res) => {
+  try {
+    const campagneId = parseInt(req.params.id)
+    const userId     = req.user.id
+
+    const campagne = await prisma.campagne.findUnique({ where: { id: campagneId } })
+    if (!campagne) return res.status(404).json({ message: 'Campagne introuvable' })
+
+    // Vérifier si déjà inscrit
+    const existing = await prisma.inscription.findFirst({
+      where: { userId, campagneId }
+    })
+    if (existing) return res.status(400).json({ message: 'Vous êtes déjà inscrit à cette campagne' })
+
+    const inscription = await prisma.inscription.create({
+      data: { userId, campagneId }
+    })
+
+    res.status(201).json({ message: 'Inscription réussie', inscription })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ─────────────────────────────────────────
+// GET /api/campagnes  (auth requise)
+// ─────────────────────────────────────────
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const user = req.user
     let campagnes
@@ -42,7 +88,7 @@ router.get('/', async (req, res) => {
 // ─────────────────────────────────────────
 // POST /api/campagnes
 // ─────────────────────────────────────────
-router.post('/', async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   try {
     const { title, type, clientId, dateScheduled } = req.body
     const campagne = await prisma.campagne.create({
@@ -63,7 +109,7 @@ router.post('/', async (req, res) => {
 // ─────────────────────────────────────────
 // PATCH /api/campagnes/:id
 // ─────────────────────────────────────────
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', authMiddleware, async (req, res) => {
   try {
     const { title, status, dateScheduled } = req.body
     const campagne = await prisma.campagne.update({
@@ -85,7 +131,7 @@ router.patch('/:id', async (req, res) => {
 // ─────────────────────────────────────────
 // POST /api/campagnes/send/:id
 // ─────────────────────────────────────────
-router.post('/send/:id', async (req, res) => {
+router.post('/send/:id', authMiddleware, async (req, res) => {
   try {
     const campagne = await prisma.campagne.findUnique({
       where: { id: parseInt(req.params.id) },
@@ -100,9 +146,7 @@ router.post('/send/:id', async (req, res) => {
     // ── 📧 EMAIL ──────────────────────────────
     if (type === 'email') {
       const clientEmail = campagne.client?.email
-      if (!clientEmail) {
-        return res.status(400).json({ error: "Le client n'a pas d'adresse email" })
-      }
+      if (!clientEmail) return res.status(400).json({ error: "Le client n'a pas d'adresse email" })
 
       await transporter.sendMail({
         from: `"MarketingCloudOps" <${process.env.MAIL_USER}>`,
@@ -123,26 +167,14 @@ router.post('/send/:id', async (req, res) => {
     // ── 📱 SMS ────────────────────────────────
     else if (type === 'sms') {
       const clientPhone = campagne.client?.phone
-      if (!clientPhone) {
-        return res.status(400).json({ error: "Le client n'a pas de numéro de téléphone" })
-      }
-      // Décommentez quand Twilio est configuré :
-      // const twilio = require('twilio')
-      // const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN)
-      // await client.messages.create({
-      //   body: campagne.title,
-      //   from: process.env.TWILIO_FROM,
-      //   to: clientPhone,
-      // })
+      if (!clientPhone) return res.status(400).json({ error: "Le client n'a pas de numéro de téléphone" })
       console.log(`[SMS] Envoi simulé à ${clientPhone} : ${campagne.title}`)
     }
 
     // ── 🔔 PUSH — Firebase FCM ────────────────
     else if (type === 'push') {
       const fcmToken = campagne.client?.fcmToken
-      if (!fcmToken) {
-        return res.status(400).json({ error: "Le client n'a pas de token FCM" })
-      }
+      if (!fcmToken) return res.status(400).json({ error: "Le client n'a pas de token FCM" })
 
       await admin.messaging().send({
         token: fcmToken,
@@ -168,10 +200,7 @@ router.post('/send/:id', async (req, res) => {
     // ── Mettre à jour le statut → sent ────────
     const updated = await prisma.campagne.update({
       where: { id: campagne.id },
-      data: {
-        status: 'sent',
-        sentAt: new Date(),
-      },
+      data: { status: 'sent', sentAt: new Date() },
       include: { client: true }
     })
 
@@ -186,7 +215,7 @@ router.post('/send/:id', async (req, res) => {
 // ─────────────────────────────────────────
 // DELETE /api/campagnes/:id
 // ─────────────────────────────────────────
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     await prisma.campagne.delete({ where: { id: parseInt(req.params.id) } })
     res.json({ message: 'Campagne supprimée' })

@@ -6,6 +6,7 @@ import NotFound from './pages/NotFound';
 import Profile  from './pages/Profile';
 import Settings from './pages/Settings';
 import HomePage from './pages/HomePage';
+import PublicCampagnes from './pages/PublicCampagnes';
 
 const Login      = lazy(() => import('./pages/Login'));
 const Dashboard  = lazy(() => import('./pages/Dashboard'));
@@ -51,7 +52,7 @@ function App() {
           {/* Pages publiques */}
           <Route path="/login"         element={<Login />} />
           <Route path="/access-denied" element={<AccessDenied />} />
-
+          <Route path="/campagnes-public" element={<PublicCampagnes />} />
           {/* Pages privées */}
           <Route path="/dashboard" element={
             <PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>
