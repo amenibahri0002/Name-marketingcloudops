@@ -2,8 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
-const C = { /* garde ta palette */ };
+const C = {
+  bg:         '#f4f6fb',
+  card:       '#ffffff',
+  border:     '#e5e9f2',
+  navy:       '#16120d',
+  gold:       '#f5a623',
+  goldDark:   '#c8831a',
+  goldDim:    'rgba(245,166,35,0.12)',
+  text:       '#1a1f3c',
+  textMuted:  '#6b7280',
+  green:      '#22c55e',
+  blue:       '#3b82f6',
+  orange:     '#f5a623',
+  red:        '#ef4444',
+};
 
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+  @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes drawLine { from { stroke-dashoffset: 400; } to { stroke-dashoffset: 0; } }
+  .stat-card { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+  .stat-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(245,166,35,0.18) !important; border-color: #f5a623 !important; }
+`;
 export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
