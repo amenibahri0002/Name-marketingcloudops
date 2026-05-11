@@ -350,87 +350,69 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══ CLOUD & DEVOPS ══ */}
-      <section id="devops" style={{ padding: '120px 6%', background: '#0a0a0a', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-
-          {/* Two column intro */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', marginBottom: 80 }}>
-            <div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.25)', borderRadius: 30, padding: '8px 20px', marginBottom: 24 }}>
-                <span style={{ fontSize: 14 }}>☁️</span>
-                <span style={{ color: '#a78bfa', fontWeight: 700, fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase' }}>Cloud & DevOps</span>
-              </div>
-              <h2 style={{ fontSize: 'clamp(36px,5vw,52px)', fontWeight: 800, lineHeight: 1.08, marginBottom: 20 }}>
-                Infrastructure cloud<br /><span style={{ color: G.gold }}>pensée pour les agences</span>
-              </h2>
-              <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)', lineHeight: 1.8, marginBottom: 32 }}>
-                Architecture multi-tenant isolée, déploiement automatisé et monitoring en temps réel — pour que votre agence se concentre sur l'essentiel.
-              </p>
-
-              {/* DevOps pipeline steps */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {[
-                  { step: '01', title: 'Code & Version', desc: 'GitHub — branches, pull requests et code review.', color: '#60a5fa' },
-                  { step: '02', title: 'CI — Tests auto', desc: 'GitHub Actions — lint, tests unitaires, build.', color: '#34d399' },
-                  { step: '03', title: 'CD — Déploiement', desc: 'Vercel (frontend) + Render (backend) — automatique.', color: G.gold },
-                  { step: '04', title: 'Monitoring & Alertes', desc: 'Surveillance des services + alertes email/Slack.', color: '#a78bfa' },
-                ].map((s, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 20, padding: '16px 0', borderBottom: i < 3 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: s.color, opacity: 0.7, minWidth: 28, paddingTop: 2, letterSpacing: '0.05em' }}>{s.step}</div>
-                    <div style={{ width: 3, background: s.color, borderRadius: 2, opacity: 0.4 }} />
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: '#fff', marginBottom: 3 }}>{s.title}</div>
-                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>{s.desc}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Cloud infra visual */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {[
-                { title: 'Hébergement Cloud', img: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&q=70', desc: 'Vercel · Render · Neon DB', color: '#60a5fa' },
-                { title: 'CI/CD Automatisé', img: 'https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=600&q=70', desc: 'GitHub Actions · Deploy automatique', color: '#34d399' },
-                { title: 'Monitoring 24/7', img: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=70', desc: 'Alertes · Logs · Dashboard live', color: G.gold },
-              ].map((item, i) => (
-                <div key={i} style={{
-                  display: 'flex', gap: 0, borderRadius: 16, overflow: 'hidden',
-                  background: G.dark3, border: '1px solid rgba(255,255,255,0.07)',
-                  transition: 'transform 0.3s',
-                }}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'translateX(6px)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = 'none'}
-                >
-                  <div style={{ width: 4, background: item.color, flexShrink: 0 }} />
-                  <img src={item.img} alt={item.title} style={{ width: 100, height: 80, objectFit: 'cover', flexShrink: 0 }} />
-                  <div style={{ padding: '14px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: '#fff', marginBottom: 4 }}>{item.title}</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{item.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Stats devops */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 1, background: 'rgba(255,255,255,0.06)', borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
-            {[
-              { val: '99.9%', label: 'Uptime garanti', icon: '🟢', color: '#34d399' },
-              { val: '< 2s',  label: 'Temps de build CI', icon: '⚡', color: G.gold },
-              { val: '100%',  label: 'Tests automatisés', icon: '✅', color: '#60a5fa' },
-              { val: '0',     label: 'Downtime production', icon: '🛡', color: '#a78bfa' },
-            ].map((s, i) => (
-              <div key={i} style={{ background: '#0a0a0a', padding: '36px 28px', textAlign: 'center' }}>
-                <div style={{ fontSize: 28, marginBottom: 12 }}>{s.icon}</div>
-                <div style={{ fontSize: 36, fontWeight: 800, color: s.color, letterSpacing: '-0.03em', marginBottom: 8 }}>{s.val}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
+{/* ══ CLOUD & DEVOPS SECTION (version améliorée) ══ */}
+<section id="devops" style={{ padding: '140px 6%', background: '#0a0a0a' }}>
+  <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+      
+      <div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.3)', borderRadius: 30, padding: '8px 22px', marginBottom: 24 }}>
+          <span style={{ fontSize: 15 }}>☁️</span>
+          <span style={{ color: '#a78bfa', fontWeight: 700, fontSize: 13, letterSpacing: '2.5px', textTransform: 'uppercase' }}>Cloud Native DevOps</span>
         </div>
-      </section>
+
+        <h2 style={{ fontSize: 'clamp(36px, 5.5vw, 54px)', fontWeight: 800, lineHeight: 1.1, marginBottom: 24 }}>
+          Une infrastructure pensée<br /> 
+          <span style={{ color: G.gold }}>pour scaler les agences</span>
+        </h2>
+
+        <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.6)', lineHeight: 1.8, marginBottom: 40 }}>
+          Architecture multi-tenant sécurisée, déploiement continu et observabilité complète — tout ce dont une agence moderne a besoin.
+        </p>
+
+        {/* Pipeline amélioré */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {[
+            { n: '01', title: 'GitHub + IaC', desc: 'Terraform & GitHub Actions — Infrastructure as Code', tech: 'Terraform • GitHub' },
+            { n: '02', title: 'Build & Test', desc: 'Tests automatisés + qualité de code', tech: 'Jest • ESLint • SonarQube' },
+            { n: '03', title: 'Déploiement Automatique', desc: 'Frontend → Vercel | Backend → Render', tech: 'Vercel • Render • Docker' },
+            { n: '04', title: 'Monitoring & Observability', desc: 'Logs, métriques, tracing et alertes intelligentes', tech: 'Grafana • Prometheus • OpenTelemetry' },
+          ].map((step, i) => (
+            <div key={i} style={{ display: 'flex', gap: 20 }}>
+              <div style={{ minWidth: 42, height: 42, borderRadius: '50%', background: 'rgba(245,166,35,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: G.gold, border: '1px solid rgba(245,166,35,0.3)' }}>
+                {step.n}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 16.5 }}>{step.title}</div>
+                <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 14.5, marginTop: 4 }}>{step.desc}</div>
+                <div style={{ fontSize: 12, color: '#a78bfa', marginTop: 6 }}>{step.tech}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Visual Cloud Architecture */}
+      <div style={{ background: '#111', borderRadius: 24, padding: 32, border: '1px solid rgba(245,166,35,0.15)' }}>
+        <div style={{ textAlign: 'center', marginBottom: 20, color: G.gold, fontWeight: 600 }}>Architecture Actuelle</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontSize: 14 }}>
+          {[
+            "Frontend : Next.js + Vercel",
+            "Backend : Node.js / Python + Render",
+            "Database : Neon PostgreSQL (Serverless)",
+            "CI/CD : GitHub Actions",
+            "Monitoring : Grafana + Custom Dashboard",
+            "Auth : JWT + Role-based (Agence / Client)"
+          ].map((line, i) => (
+            <div key={i} style={{ padding: '12px 18px', background: 'rgba(255,255,255,0.03)', borderRadius: 12, borderLeft: '3px solid #f5a623' }}>
+              {line}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* ══ CAMPAGNES ══ */}
       <section id="campagnes" style={{ padding: '120px 6%' }}>

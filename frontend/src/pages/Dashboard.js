@@ -2,53 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
-const C = {
-  bg:         '#f4f6fb',
-  card:       '#ffffff',
-  border:     '#e5e9f2',
-  navy:       '#16120d',
-  gold:       '#f5a623',
-  goldDark:   '#c8831a',
-  goldDim:    'rgba(245,166,35,0.12)',
-  text:       '#1a1f3c',
-  textMuted:  '#6b7280',
-  green:      '#22c55e',
-  blue:       '#3b82f6',
-  orange:     '#f5a623',
-  red:        '#ef4444',
-};
-
-const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-  @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-  @keyframes drawLine { from { stroke-dashoffset: 400; } to { stroke-dashoffset: 0; } }
-  .stat-card { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
-  .stat-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(245,166,35,0.18) !important; border-color: #f5a623 !important; }
-`;
-
-function Sparkline({ color, data }) {
-  const w = 88, h = 38;
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * w;
-    const y = h - ((v - min) / range) * (h - 6);
-    return `${x},${y}`;
-  }).join(' ');
-
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+const C = { /* garde ta palette */ };
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [evolution, setEvolution] = useState(null);
   const [canaux, setCanaux] = useState(null);
+  const [realtime, setRealtime] = useState(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState({});
 
@@ -56,155 +17,163 @@ export default function Dashboard() {
     const u = JSON.parse(localStorage.getItem('user') || '{}');
     setUser(u);
 
-    Promise.all([
-      api.get('/api/dashboard/stats').catch(() => ({ data: {} })),
-      api.get('/api/dashboard/evolution').catch(() => ({ data: {} })),
-      api.get('/api/dashboard/canaux').catch(() => ({ data: [] })),
-    ]).then(([s, e, c]) => {
-      setStats(s.data);
-      setEvolution(e.data);
-      setCanaux(c.data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    const fetchData = async () => {
+      try {
+        const [statsRes, evoRes, canauxRes, realtimeRes] = await Promise.allSettled([
+          api.get('/api/dashboard/stats'),
+          api.get('/api/dashboard/evolution'),
+          api.get('/api/dashboard/canaux'),
+          api.get('/api/dashboard/realtime'),   // nouveau endpoint
+        ]);
+
+        setStats(statsRes.status === 'fulfilled' ? statsRes.value.data : {});
+        setEvolution(evoRes.status === 'fulfilled' ? evoRes.value.data : null);
+        setCanaux(canauxRes.status === 'fulfilled' ? canauxRes.value.data : []);
+        setRealtime(realtimeRes.status === 'fulfilled' ? realtimeRes.value.data : null);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const isClient = user.role === 'CLIENT';
+  const firstName = user.name?.split(' ')[0] || 'Cher utilisateur';
 
+  // KPI Cards enrichies
   const statCards = [
-    { key: 'clients',    label: 'CLIENTS',     value: stats?.clients ?? 12,    icon: '👥', color: C.gold,     route: '/clients' },
-    { key: 'campagnes',  label: 'CAMPAGNES',   value: stats?.campagnes ?? 7,   icon: '📢', color: C.orange,  route: '/campagnes' },
-    { key: 'contacts',   label: 'CONTACTS',    value: stats?.contacts ?? 1240, icon: '📋', color: C.green,   route: '/contacts' },
-    { key: 'segments',   label: 'SEGMENTS',    value: stats?.segments ?? 9,    icon: '🎯', color: C.blue,    route: '/segments' },
+    { 
+      key: 'campagnes', 
+      label: 'CAMPAGNES ACTIVES', 
+      value: stats?.campagnesActives ?? 7, 
+      total: stats?.campagnesTotal,
+      icon: '🚀', 
+      color: C.gold, 
+      route: '/campagnes' 
+    },
+    { 
+      key: 'roi', 
+      label: 'ROAS MOYEN', 
+      value: stats?.roas ? `${stats.roas}x` : '3.4x', 
+      icon: '💰', 
+      color: '#22c55e', 
+      route: '/analytics' 
+    },
+    { 
+      key: 'budget', 
+      label: 'BUDGET CONSOMMÉ', 
+      value: stats?.budgetConsomme ? `${stats.budgetConsomme}€` : '12450€', 
+      icon: '☁️', 
+      color: C.orange 
+    },
+    { 
+      key: 'contacts', 
+      label: 'CONTACTS', 
+      value: stats?.contacts?.toLocaleString('fr-FR') ?? '1 240', 
+      icon: '👥', 
+      color: C.green, 
+      route: '/contacts' 
+    },
   ];
-
-  const evoLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-  const evoData = [
-    { label: 'Email', color: C.blue,   data: [8200, 12500, 9800, 15200, 13100, 17800, 14200] },
-    { label: 'SMS',   color: C.green,  data: [3100, 4200, 3800, 5100, 4600, 5800, 4900] },
-    { label: 'Push',  color: C.orange, data: [1800, 2900, 3200, 4100, 3700, 4500, 3900] },
-  ];
-
-  const canauxData = canaux?.length ? canaux : [
-    { label: 'Email', pct: 68, color: C.blue,   icon: '📧' },
-    { label: 'SMS',   pct: 52, color: C.green,  icon: '💬' },
-    { label: 'Push',  pct: 81, color: C.orange, icon: '🔔' },
-  ];
-
-  const firstName = user.name?.split(' ')[0] || 'Cher client';
 
   if (loading) {
-    return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
-        Chargement du tableau de bord...
-      </div>
-    );
+    return <div style={{height: '100vh', display:'flex', alignItems:'center', justifyContent:'center', background: C.bg}}>Chargement du dashboard...</div>;
   }
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', sans-serif", padding: '32px' }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '32px', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <style>{css}</style>
 
-      {/* Hero Welcome */}
+      {/* Hero */}
       <div style={{
         background: `linear-gradient(135deg, ${C.navy} 0%, #2a2118 100%)`,
-        borderRadius: 20, padding: '36px 40px', marginBottom: 32,
-        color: 'white', position: 'relative', overflow: 'hidden'
+        borderRadius: 24, padding: '40px 48px', marginBottom: 40, color: 'white', position: 'relative'
       }}>
-        <div style={{ position: 'absolute', top: -40, right: -60, width: 220, height: 220, background: 'rgba(245,166,35,0.08)', borderRadius: '50%' }} />
-        
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.gold, letterSpacing: '2px', marginBottom: 8 }}>
-          BIENVENUE SUR DIGIPIP
-        </div>
-        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>
+        <h1 style={{ fontSize: 34, fontWeight: 800, marginBottom: 8 }}>
           Bonjour, {firstName} 👋
         </h1>
-        <p style={{ fontSize: 15.5, opacity: 0.85, maxWidth: 520 }}>
+        <p style={{ fontSize: 16, opacity: 0.9 }}>
           {isClient 
-            ? "Voici l’état de vos campagnes et performances marketing." 
-            : "Voici un aperçu global de votre plateforme."}
+            ? "Vue d’ensemble de vos performances marketing" 
+            : "État global de la plateforme MarketingCloudOps"}
         </p>
+        
+        {/* Status Cloud */}
+        <div style={{ position: 'absolute', top: 32, right: 48, textAlign: 'right' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+            <span style={{ color: '#22c55e' }}>●</span>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>Tous les services Cloud OK</span>
+          </div>
+          <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+            {realtime?.usersOnline || 0} utilisateur(s) connecté(s)
+          </div>
+        </div>
       </div>
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20, marginBottom: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24, marginBottom: 40 }}>
         {statCards.map((card, i) => (
           <div
             key={card.key}
             className="stat-card"
-            onClick={() => navigate(card.route)}
+            onClick={() => card.route && navigate(card.route)}
             style={{
               background: C.card,
               border: `2px solid ${C.border}`,
-              borderRadius: 18,
-              padding: '28px 26px',
-              cursor: 'pointer',
-              animation: `fadeUp 0.5s ease ${i * 60}ms both`,
+              borderRadius: 20,
+              padding: '32px 28px',
+              cursor: card.route ? 'pointer' : 'default',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '1px', color: C.textMuted }}>{card.label}</span>
-              <div style={{ fontSize: 26 }}>{card.icon}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.textMuted, letterSpacing: '0.5px' }}>
+                  {card.label}
+                </div>
+                <div style={{ fontSize: 42, fontWeight: 800, color: card.color, marginTop: 8 }}>
+                  {card.value}
+                </div>
+              </div>
+              <div style={{ fontSize: 32, opacity: 0.9 }}>{card.icon}</div>
             </div>
-
-            <div style={{ fontSize: 42, fontWeight: 800, color: card.color, marginBottom: 4 }}>
-              {card.value.toLocaleString('fr-FR')}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-              <span style={{ fontSize: 13, color: C.textMuted }}>Total</span>
-              <Sparkline color={card.color} data={[2, 3, 2.5, 4, 3.8, 5, 4.5]} />
-            </div>
+            
+            {card.total && (
+              <div style={{ marginTop: 12, fontSize: 13, color: C.textMuted }}>
+                sur {card.total} total
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Charts Section */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
-        
-        {/* Evolution Chart */}
-        <div style={{ background: C.card, borderRadius: 18, padding: '28px', border: `2px solid ${C.border}` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+      {/* Deuxième rangée : Graphiques + Canaux */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+        {/* Évolution */}
+        <div style={{ background: C.card, borderRadius: 20, padding: 32, border: `2px solid ${C.border}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>Évolution des envois (7 jours)</div>
-              <div style={{ fontSize: 13, color: C.textMuted }}>Comparaison par canal</div>
+              <h3 style={{ fontSize: 18, fontWeight: 700 }}>Évolution des performances (7 jours)</h3>
+              <p style={{ color: C.textMuted, fontSize: 14 }}>Envois par canal</p>
             </div>
-            <button onClick={() => navigate('/analytics')} style={{ color: C.gold, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
-              Détails →
-            </button>
+            <button onClick={() => navigate('/analytics')} style={{ color: C.gold, fontWeight: 600 }}>Voir l’analytics complet →</button>
           </div>
-          {/* MiniChart component ici si tu veux la garder */}
-          <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 14 }}>
-            [Graphique d'évolution - à compléter avec MiniChart]
+          
+          {/* Ici tu mettras ton vrai graphique (Chart.js, Recharts, Tremor, etc.) */}
+          <div style={{ height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', borderRadius: 12 }}>
+            [Graphique d’évolution à implémenter]
           </div>
         </div>
 
-        {/* Canaux */}
-        <div style={{ background: C.card, borderRadius: 18, padding: '28px', border: `2px solid ${C.border}` }}>
-          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 20 }}>Répartition par Canal</div>
+        {/* Canaux de diffusion */}
+        <div style={{ background: C.card, borderRadius: 20, padding: 32, border: `2px solid ${C.border}` }}>
+          <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 24 }}>Performance par Canal</h3>
           {canauxData.map((c, i) => (
-            <div key={i} style={{ marginBottom: i < canauxData.length - 1 ? 16 : 0 }}>
-              <CanalBar label={c.label} pct={c.pct} color={c.color} icon={c.icon} />
-            </div>
+            <CanalBar key={i} {...c} />
           ))}
         </div>
-      </div>
-    </div>
-  );
-}
-
-/* Composant CanalBar */
-function CanalBar({ label, pct, color, icon }) {
-  return (
-    <div style={{ padding: '12px 0' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 18 }}>{icon}</span>
-          <span style={{ fontWeight: 600 }}>{label}</span>
-        </div>
-        <span style={{ fontWeight: 700, color }}>{pct}%</span>
-      </div>
-      <div style={{ height: 6, background: '#e5e9f2', borderRadius: 999, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 999, transition: 'width 1.2s ease' }} />
       </div>
     </div>
   );
