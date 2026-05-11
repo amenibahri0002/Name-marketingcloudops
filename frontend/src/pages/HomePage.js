@@ -1,317 +1,352 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
-const DP = {
+const G = {
   gold:     '#f5a623',
   goldDark: '#d4881a',
-  goldGlow: 'rgba(245,166,35,0.12)',
-  dark:     '#16120d',
-  bg:       '#f6f3ee',
-  card:     '#ffffff',
-  text:     '#1a160e',
-  muted:    '#9c8f7a',
-  border:   '#ede8df',
-  blue:     '#3b82f6',
-  green:    '#22c55e',
-  red:      '#ef4444',
-  font:     "'Montserrat', 'Open Sans', sans-serif",
+  dark:     '#0d0b08',
+  dark2:    '#111',
+  dark3:    '#1a1a1a',
+  font:     "'Syne','Montserrat',sans-serif",
 };
 
 const TYPE = {
-  email: { label: 'Email', icon: '📧', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
-  sms:   { label: 'SMS',   icon: '📱', color: '#22c55e', bg: 'rgba(34,197,94,0.1)'  },
-  push:  { label: 'Push',  icon: '🔔', color: '#f5a623', bg: 'rgba(245,166,35,0.1)' },
+  email: { label: 'Email', icon: '✉', color: '#60a5fa' },
+  sms:   { label: 'SMS',   icon: '💬', color: '#34d399' },
+  push:  { label: 'Push',  icon: '🔔', color: '#f5a623' },
 };
 
-const FEATURES = [
-  { icon: '📧', title: 'Campagnes Multi-Canal',  desc: 'Créez et envoyez des campagnes Email, SMS et Push depuis une seule plateforme.', color: '#3b82f6', bg: 'rgba(59,130,246,0.08)'  },
-  { icon: '📊', title: 'Analytics & KPIs',        desc: 'Suivez vos performances en temps réel avec des tableaux de bord détaillés.',      color: '#f5a623', bg: 'rgba(245,166,35,0.08)'  },
-  { icon: '🎯', title: 'Segmentation Avancée',    desc: 'Ciblez précisément vos audiences avec des segments dynamiques.',                   color: '#22c55e', bg: 'rgba(34,197,94,0.08)'   },
-  { icon: '🔒', title: 'Multi-Tenant Sécurisé',   desc: 'Architecture isolée par client avec gestion des rôles et permissions.',           color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)'  },
-  { icon: '⚡', title: 'Automatisation',           desc: 'Planifiez vos campagnes et automatisez vos workflows marketing.',                 color: '#ec4899', bg: 'rgba(236,72,153,0.08)'  },
-  { icon: '📋', title: 'Gestion des Contacts',    desc: 'Importez et gérez vos listes de contacts avec des outils puissants.',             color: '#14b8a6', bg: 'rgba(20,184,166,0.08)'  },
-];
+const CAMP_IMGS = {
+  email: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=600&q=80',
+  sms:   'https://images.unsplash.com/photo-1512941937938-a27bc91e2d4f?w=600&q=80',
+  push:  'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&q=80',
+};
 
-const STATS = [
-  { value: '3',    label: 'Apps déployées',   icon: '🚀' },
-  { value: '24',   label: 'Villes actives',   icon: '🏙️' },
-  { value: '100%', label: 'Satisfaction CDC', icon: '✅' },
-  { value: '3',    label: 'Canaux marketing', icon: '📡' },
-];
-
-const ROLES = [
-  { icon: '👑', title: 'Administrateur',  desc: 'Gestion complète de la plateforme, des utilisateurs et des clients.',      color: '#f5a623', bg: 'rgba(245,166,35,0.08)', border: 'rgba(245,166,35,0.2)'  },
-  { icon: '🎯', title: 'Resp. Marketing', desc: 'Création et suivi des campagnes, gestion des contacts et segments.',        color: '#3b82f6', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.2)'  },
-  { icon: '👤', title: 'Client',          desc: 'Dashboard personnalisé et inscription aux campagnes disponibles.',          color: '#22c55e', bg: 'rgba(34,197,94,0.08)',  border: 'rgba(34,197,94,0.2)'   },
-];
-
-function useCountUp(target, duration = 1500) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    const num = parseInt(target);
-    if (isNaN(num)) { setCount(target); return; }
-    let start = 0;
-    const step = num / (duration / 16);
-    const timer = setInterval(() => {
-      start += step;
-      if (start >= num) { setCount(target); clearInterval(timer); }
-      else setCount(Math.floor(start) + (target.toString().includes('%') ? '%' : ''));
-    }, 16);
-    return () => clearInterval(timer);
-  }, [target, duration]);
-  return count;
-}
-
-function StatCard({ value, label, icon }) {
-  const count = useCountUp(value);
-  return (
-    <div style={{ textAlign: 'center', padding: '24px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(245,166,35,0.15)', borderRadius: 14, transition: 'all 0.2s' }}
-      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,166,35,0.06)'; e.currentTarget.style.borderColor = 'rgba(245,166,35,0.3)'; }}
-      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(245,166,35,0.15)'; }}>
-      <div style={{ fontSize: 28, marginBottom: 8 }}>{icon}</div>
-      <div style={{ fontSize: 36, fontWeight: 900, color: DP.gold, lineHeight: 1, marginBottom: 6 }}>{count}</div>
-      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</div>
-    </div>
-  );
-}
-
-/* ── Modal inscription ── */
-function InscriptionModal({ campagne, onClose }) {
+/* ====================== MODAL ====================== */
+function Modal({ camp, onClose }) {
   const navigate = useNavigate();
-  const token    = localStorage.getItem('token');
+  const token = localStorage.getItem('token');
   const [loading, setLoading] = useState(false);
-  const [done,    setDone]    = useState(false);
-  const tc = TYPE[campagne.type?.toLowerCase()] || TYPE.email;
+  const [done, setDone] = useState(false);
+
+  const tc = TYPE[camp.type?.toLowerCase()] || TYPE.email;
 
   const handleInscription = async () => {
-    if (!token) { navigate('/login'); return; }
+    if (!token) {
+      navigate('/login');
+      return;
+    }
     setLoading(true);
     try {
-      await api.post(`/api/campagnes/${campagne.id}/inscrire`);
+      await api.post(`/api/campagnes/${camp.id}/inscrire`);
       setDone(true);
     } catch (err) {
-      alert('Erreur: ' + (err.response?.data?.message || err.message));
-    } finally { setLoading(false); }
+      alert(err.response?.data?.message || "Erreur lors de l'inscription");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(22,18,13,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: '#1e1810', border: '1px solid rgba(245,166,35,0.2)', borderRadius: 20, width: '100%', maxWidth: 460, overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
-
-        <div style={{ background: DP.dark, padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div onClick={e => e.target === e.currentTarget && onClose()} style={{
+      position: 'fixed', inset: 0, zIndex: 3000,
+      background: 'rgba(13,11,8,0.92)', backdropFilter: 'blur(12px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+    }}>
+      <div style={{
+        background: 'linear-gradient(145deg, #1a1410, #0f0c08)',
+        border: '1px solid rgba(245,166,35,0.35)',
+        borderRadius: 24, width: '100%', maxWidth: 520,
+        boxShadow: '0 30px 80px rgba(0,0,0,0.7)', overflow: 'hidden',
+        animation: 'modalPop 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+      }}>
+        <div style={{ padding: '28px 32px', borderBottom: '1px solid rgba(245,166,35,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: DP.gold, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 4 }}>Inscription campagne</div>
-            <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{campagne.title}</div>
+            <div style={{ color: G.gold, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase' }}>
+              {tc.icon} {tc.label}
+            </div>
+            <h2 style={{ fontSize: 22, marginTop: 6, fontWeight: 800, color: '#fff' }}>{camp.title}</h2>
           </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 16 }}>✕</button>
+          <button onClick={onClose} style={{ fontSize: 26, color: '#777', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
         </div>
 
-        <div style={{ padding: '24px' }}>
-          {done ? (
-            <div style={{ textAlign: 'center', padding: '16px 0' }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', marginBottom: 8 }}>Inscription réussie !</div>
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6, marginBottom: 24 }}>
-                Vous êtes inscrit à <strong style={{ color: '#fff' }}>{campagne.title}</strong>.<br />
-                Canal : <strong style={{ color: tc.color }}>{tc.label}</strong>
-              </p>
-              <button onClick={onClose} style={{ background: DP.gold, color: DP.dark, border: 'none', padding: '11px 28px', borderRadius: 10, fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>Fermer</button>
+        <div style={{ padding: 32 }}>
+          <div style={{ display: 'flex', gap: 16, marginBottom: 28 }}>
+            <div style={{ flex: 1, background: 'rgba(245,166,35,0.08)', padding: 18, borderRadius: 16, textAlign: 'center' }}>
+              <div style={{ fontSize: 32 }}>📈</div>
+              <div style={{ fontSize: 14, marginTop: 8, fontWeight: 600 }}>Taux d'ouverture</div>
+              <div style={{ fontSize: 26, color: G.gold, fontWeight: 800 }}>28–45%</div>
+            </div>
+            <div style={{ flex: 1, background: 'rgba(52,211,153,0.08)', padding: 18, borderRadius: 16, textAlign: 'center' }}>
+              <div style={{ fontSize: 32 }}>🎯</div>
+              <div style={{ fontSize: 14, marginTop: 8, fontWeight: 600 }}>Audience</div>
+              <div style={{ fontSize: 26, color: '#34d399', fontWeight: 800 }}>5 000+</div>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            <h4 style={{ color: G.gold, marginBottom: 10 }}>Description</h4>
+            <p style={{ lineHeight: 1.7, color: 'rgba(255,255,255,0.8)', fontSize: 15 }}>
+              {camp.description || "Campagne marketing multi-canal avec suivi complet des performances et optimisation en temps réel."}
+            </p>
+          </div>
+
+          <div style={{ background: 'rgba(245,166,35,0.05)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: 16, padding: 20, marginBottom: 28 }}>
+            <h4 style={{ color: G.gold, marginBottom: 12 }}>🚀 Infrastructure DevOps</h4>
+            <ul style={{ color: 'rgba(255,255,255,0.75)', lineHeight: 1.9, listStyle: 'none', paddingLeft: 0 }}>
+              <li>✓ Déploiement automatique (CI/CD)</li>
+              <li>✓ Scalabilité cloud (Neon + Vercel)</li>
+              <li>✓ Monitoring en temps réel</li>
+              <li>✓ Backup automatique</li>
+            </ul>
+          </div>
+
+          {!done ? (
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={onClose} style={{ flex: 1, padding: '14px', borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: '#aaa', cursor: 'pointer' }}>Fermer</button>
+              <button 
+                onClick={handleInscription} 
+                disabled={loading}
+                style={{ 
+                  flex: 2, padding: '14px', borderRadius: 12, background: G.gold, color: '#111', 
+                  fontWeight: 700, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', 
+                  opacity: loading ? 0.7 : 1 
+                }}
+              >
+                {loading ? 'Inscription...' : "✓ Je m'inscris"}
+              </button>
             </div>
           ) : (
-            <>
-              <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '14px 16px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 20 }}>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 10, background: tc.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{tc.icon}</div>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{campagne.title}</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
-                      Canal : <span style={{ color: tc.color, fontWeight: 700 }}>{tc.label}</span>
-                      {campagne.client?.name && <> · {campagne.client.name}</>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {!token ? (
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6, marginBottom: 20 }}>
-                    Vous devez être <strong style={{ color: '#fff' }}>connecté</strong> pour vous inscrire à cette campagne.
-                  </p>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'none', fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>Annuler</button>
-                    <button onClick={() => navigate('/login')} style={{ flex: 2, padding: '11px', borderRadius: 10, border: 'none', background: DP.gold, fontSize: 13, fontWeight: 800, color: DP.dark, cursor: 'pointer' }}>Se connecter →</button>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6, marginBottom: 20 }}>
-                    Vous recevrez les communications de cette campagne via <strong style={{ color: tc.color }}>{tc.label}</strong>.
-                  </p>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'none', fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>Annuler</button>
-                    <button onClick={handleInscription} disabled={loading} style={{ flex: 2, padding: '11px', borderRadius: 10, border: 'none', background: DP.gold, fontSize: 13, fontWeight: 800, color: DP.dark, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-                      {loading ? 'Inscription...' : "✓ S'inscrire"}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
+            <div style={{ textAlign: 'center', padding: '24px 0' }}>
+              <div style={{ fontSize: 56 }}>🎉</div>
+              <h3 style={{ color: '#34d399', margin: '16px 0' }}>Inscription réussie !</h3>
+              <button onClick={onClose} style={{ padding: '12px 32px', background: G.gold, color: '#111', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer' }}>Retour</button>
+            </div>
           )}
         </div>
       </div>
+
+      <style>{`@keyframes modalPop { from { opacity:0; transform:scale(0.88) translateY(40px); } to { opacity:1; transform:none; } }`}</style>
     </div>
   );
 }
 
-/* ══════════════════════════════════════════════════════════════ */
+/* ====================== HOMEPAGE ====================== */
 export default function HomePage() {
   const navigate = useNavigate();
-  const token    = localStorage.getItem('token');
+  const token = localStorage.getItem('token');
 
-  const [scrolled,       setScrolled]       = useState(false);
-  const [hoveredFeature, setHoveredFeature] = useState(null);
-  const [hoveredRole,    setHoveredRole]    = useState(null);
-  const [hoveredCard,    setHoveredCard]    = useState(null);
-  const [campagnes,      setCampagnes]      = useState([]);
-  const [loadingCamp,    setLoadingCamp]    = useState(true);
-  const [typeFilter,     setTypeFilter]     = useState('all');
-  const [search,         setSearch]         = useState('');
-  const [selected,       setSelected]       = useState(null);
+  const [campagnes, setCampagnes] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
+    const s = () => setScrolled(window.scrollY > 60);
+    window.addEventListener('scroll', s);
+    return () => window.removeEventListener('scroll', s);
   }, []);
 
   useEffect(() => {
     api.get('/api/campagnes/public')
-      .then(r => setCampagnes(Array.isArray(r.data) ? r.data : r.data.data || []))
+      .then(r => setCampagnes(Array.isArray(r.data) ? r.data : []))
       .catch(() => setCampagnes([]))
-      .finally(() => setLoadingCamp(false));
+      .finally(() => setLoading(false));
   }, []);
 
-  const filteredCamp = campagnes.filter(c => {
-    const mT = typeFilter === 'all' || c.type?.toLowerCase() === typeFilter;
-    const mQ = !search || c.title?.toLowerCase().includes(search.toLowerCase());
-    return mT && mQ;
-  });
-
   return (
-    <div style={{ fontFamily: DP.font, background: DP.dark, color: '#fff', minHeight: '100vh', overflowX: 'hidden' }}>
+    <div style={{ fontFamily: G.font, background: G.dark, color: '#fff', minHeight: '100vh' }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&display=swap');
+        * { box-sizing: border-box; margin:0; padding:0; }
+        html { scroll-behavior: smooth; }
+        .nav-a { color:#ccc; text-decoration:none; font-size:15px; font-weight:500; transition:color .2s; }
+        .nav-a:hover { color:#fff; }
+        .pillar-card:hover { transform:translateY(-12px) !important; }
+        .camp-card:hover { transform:translateY(-6px) !important; box-shadow:0 24px 60px rgba(0,0,0,0.4) !important; }
+        .btn-cta:hover { background:#d4881a !important; transform:translateY(-2px); box-shadow:0 12px 36px rgba(245,166,35,0.4) !important; }
+      `}</style>
 
-      {/* ── NAVBAR ── */}
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: scrolled ? 'rgba(22,18,13,0.95)' : 'transparent', backdropFilter: scrolled ? 'blur(12px)' : 'none', borderBottom: scrolled ? '1px solid rgba(245,166,35,0.1)' : '1px solid transparent', transition: 'all 0.3s', padding: '0 5%', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, position: 'relative', flexShrink: 0 }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: 20, height: 20, background: DP.gold, borderRadius: 5 }} />
-            <div style={{ position: 'absolute', bottom: 0, right: 0, width: 16, height: 16, background: 'rgba(245,166,35,0.35)', borderRadius: 4 }} />
+      {/* NAVBAR */}
+      <nav style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: 72,
+        background: scrolled ? 'rgba(13,11,8,0.98)' : 'rgba(13,11,8,0.9)',
+        backdropFilter: 'blur(20px)',
+        borderBottom: `1px solid ${scrolled ? 'rgba(245,166,35,0.25)' : 'rgba(245,166,35,0.1)'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 6%', transition: 'all 0.3s',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 38, height: 38, background: G.gold, borderRadius: 9, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 4, left: 4, width: 16, height: 16, background: 'rgba(255,255,255,0.9)', borderRadius: 3 }} />
+            <div style={{ position: 'absolute', bottom: 4, right: 4, width: 12, height: 12, background: 'rgba(255,255,255,0.5)', borderRadius: 2 }} />
           </div>
-          <span style={{ fontSize: '1.2rem', fontWeight: 900 }}>Digi<span style={{ color: DP.gold }}>Pip</span></span>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 800 }}>Digi<span style={{ color: G.gold }}>Pip</span></div>
+            <div style={{ fontSize: 10, color: '#888' }}>by DigiLab Solutions</div>
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
-          {[['#campagnes','Campagnes'], ['#services','Services'], ['#roles','Rôles']].map(([href, lbl]) => (
-            <a key={lbl} href={href} style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textDecoration: 'none', transition: 'color 0.2s' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}>{lbl}</a>
-          ))}
+
+        <div style={{ display: 'flex', gap: 36 }}>
+          <a className="nav-a" href="#marketing">Marketing</a>
+          <a className="nav-a" href="#devops">Cloud & DevOps</a>
+          <a className="nav-a" href="#campagnes">Campagnes</a>
         </div>
-        <button onClick={() => navigate('/login')} style={{ background: DP.gold, color: DP.dark, border: 'none', padding: '9px 22px', borderRadius: 9, fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: DP.font }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#d4881a'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = DP.gold; e.currentTarget.style.transform = 'none'; }}>
-          Se connecter →
+
+        <button onClick={() => navigate(token ? '/dashboard' : '/login')} style={{
+          background: G.gold, color: '#111', padding: '11px 26px', borderRadius: 10,
+          fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: G.font
+        }}>
+          {token ? 'Dashboard →' : 'Se connecter →'}
         </button>
       </nav>
 
-      {/* ── HERO ── */}
-      <section style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', padding: '100px 5% 60px', textAlign: 'center' }}>
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: 'linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px)', backgroundSize: '50px 50px' }} />
-        <div style={{ position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)', width: 700, height: 700, borderRadius: '50%', background: 'radial-gradient(circle, rgba(245,166,35,0.08) 0%, transparent 65%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: 800 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.25)', borderRadius: 30, padding: '6px 18px', marginBottom: 28 }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: DP.green, display: 'inline-block' }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: DP.gold, textTransform: 'uppercase', letterSpacing: '2px' }}>Plateforme Marketing Cloud</span>
+      {/* HERO */}
+      <section style={{
+        height: '100vh', position: 'relative', overflow: 'hidden',
+        backgroundImage: 'linear-gradient(rgba(13,11,8,0.75), rgba(13,11,8,0.9)), url("https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2069")',
+        backgroundSize: 'cover', backgroundPosition: 'center',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div style={{ textAlign: 'center', maxWidth: 960, padding: '0 6%', zIndex: 2 }}>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 36, flexWrap: 'wrap' }}>
+            <span style={{ padding: '6px 16px', borderRadius: 30, fontSize: 13, fontWeight: 600, background: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.3)' }}>📊 Marketing Digital</span>
+            <span style={{ padding: '6px 16px', borderRadius: 30, fontSize: 13, fontWeight: 600, background: 'rgba(167,139,250,0.1)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.3)' }}>☁️ Cloud</span>
+            <span style={{ padding: '6px 16px', borderRadius: 30, fontSize: 13, fontWeight: 600, background: 'rgba(245,166,35,0.1)', color: G.gold, border: '1px solid rgba(245,166,35,0.3)' }}>⚙️ DevOps</span>
           </div>
-          <h1 style={{ fontSize: 'clamp(38px, 6vw, 72px)', fontWeight: 900, lineHeight: 1.1, margin: '0 0 20px', letterSpacing: '-2px' }}>
-            Gérez vos campagnes<br /><span style={{ color: DP.gold }}>marketing</span> intelligemment
+
+          <h1 style={{ fontSize: 'clamp(48px, 8vw, 88px)', fontWeight: 800, lineHeight: 1.05, marginBottom: 24 }}>
+            La plateforme cloud<br />dédiée aux <span style={{ color: G.gold }}>agences marketing</span>
           </h1>
-          <div style={{ width: 50, height: 3, background: `linear-gradient(to right, ${DP.gold}, rgba(245,166,35,0.2))`, borderRadius: 2, margin: '0 auto 24px' }} />
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.45)', lineHeight: 1.8, maxWidth: 560, margin: '0 auto 40px' }}>
-            DigiPip est une plateforme multi-tenant de gestion des campagnes Email, SMS et Push.
+
+          <p style={{ fontSize: 19, color: 'rgba(255,255,255,0.7)', maxWidth: 720, margin: '0 auto 48px', lineHeight: 1.6 }}>
+            Marketing Digital • Infrastructure Cloud • Automatisation DevOps<br />
+            Tout en un pour votre agence.
           </p>
-          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button onClick={() => navigate('/login')} style={{ background: DP.gold, color: DP.dark, border: 'none', padding: '14px 32px', borderRadius: 11, fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: DP.font, boxShadow: '0 8px 28px rgba(245,166,35,0.3)' }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'none'}>
-              Accéder à la plateforme →
+
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button onClick={() => navigate('/login')} style={{ background: G.gold, color: '#111', padding: '17px 48px', borderRadius: 14, fontSize: 17, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+              Accéder à la plateforme
             </button>
-            <button onClick={() => document.getElementById('campagnes').scrollIntoView({ behavior: 'smooth' })} style={{ background: 'transparent', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.15)', padding: '14px 32px', borderRadius: 11, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: DP.font }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(245,166,35,0.4)'; e.currentTarget.style.color = '#fff'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; }}>
-              Voir les campagnes ↓
+            <button onClick={() => document.getElementById('campagnes')?.scrollIntoView({ behavior: 'smooth' })} style={{ background: 'transparent', border: '1.5px solid rgba(255,255,255,0.4)', color: '#fff', padding: '17px 48px', borderRadius: 14, fontSize: 17, cursor: 'pointer' }}>
+              Voir les campagnes
             </button>
           </div>
         </div>
       </section>
 
-      {/* ── STATS ── */}
-      <section style={{ padding: '60px 5%', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-          {STATS.map(s => <StatCard key={s.label} {...s} />)}
+      {/* 3 PILLARS */}
+      <section style={{ padding: '0 6%', marginTop: -60, position: 'relative', zIndex: 10 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 20 }}>
+          {[
+            { icon: '📊', label: 'Marketing Digital', color: '#60a5fa', desc: 'Campagnes multicanales performantes' },
+            { icon: '☁️', label: 'Cloud Infrastructure', color: '#a78bfa', desc: 'Scalable & sécurisé' },
+            { icon: '⚙️', label: 'DevOps Automation', color: G.gold, desc: 'CI/CD & monitoring continu' },
+          ].map((p, i) => (
+            <div key={i} className="pillar-card" style={{
+              background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.08)`,
+              borderRadius: 20, padding: '32px 28px', textAlign: 'center'
+            }}>
+              <div style={{ fontSize: 42, marginBottom: 16 }}>{p.icon}</div>
+              <h3 style={{ color: p.color, fontSize: 18, marginBottom: 12 }}>{p.label}</h3>
+              <p style={{ color: 'rgba(255,255,255,0.6)' }}>{p.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* ── CAMPAGNES ── */}
-      <section id="campagnes" style={{ padding: '80px 5%', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: DP.gold, textTransform: 'uppercase', letterSpacing: '3px', marginBottom: 12 }}>Campagnes disponibles</div>
-            <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 900, margin: '0 0 12px', letterSpacing: '-1px' }}>Inscrivez-vous à nos campagnes</h2>
-            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.4)', maxWidth: 480, margin: '0 auto' }}>
-              Parcourez les campagnes actives et rejoignez celles qui vous intéressent.
-            </p>
-          </div>
-
-          {/* Filtres */}
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 24, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '12px 16px' }}>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Rechercher une campagne..."
-              style={{ flex: 1, minWidth: 180, padding: '9px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 13, color: '#fff', fontFamily: DP.font, outline: 'none', boxSizing: 'border-box' }} />
-            <div style={{ display: 'flex', gap: 6 }}>
-              {[['all','Tous'], ['email','📧 Email'], ['sms','📱 SMS'], ['push','🔔 Push']].map(([val, lbl]) => (
-                <button key={val} onClick={() => setTypeFilter(val)} style={{ padding: '7px 14px', borderRadius: 20, fontSize: 11, fontWeight: 700, border: `1px solid ${typeFilter === val ? DP.gold : 'rgba(255,255,255,0.12)'}`, background: typeFilter === val ? 'rgba(245,166,35,0.1)' : 'transparent', color: typeFilter === val ? DP.gold : 'rgba(255,255,255,0.45)', cursor: 'pointer', fontFamily: DP.font }}>{lbl}</button>
+      {/* MARKETING SECTION */}
+      <section id="marketing" style={{ padding: '140px 6% 100px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center', marginBottom: 80 }}>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.25)', borderRadius: 30, padding: '8px 20px', marginBottom: 24 }}>
+                <span style={{ fontSize: 14 }}>📊</span>
+                <span style={{ color: '#60a5fa', fontWeight: 700, fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase' }}>MARKETING DIGITAL</span>
+              </div>
+              <h2 style={{ fontSize: 'clamp(36px,5vw,52px)', fontWeight: 800, lineHeight: 1.08, marginBottom: 20 }}>
+                Campagnes qui<br /><span style={{ color: G.gold }}>convertissent vraiment</span>
+              </h2>
+              <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)', lineHeight: 1.8 }}>
+                Pilotez vos campagnes Email, SMS et Push depuis un seul dashboard avec analytics en temps réel.
+              </p>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {[
+                { icon: '📧', title: 'Email Marketing', desc: 'Templates HTML, automation, A/B testing' },
+                { icon: '📱', title: 'SMS & Push', desc: 'Notifications instantanées via Twilio' },
+                { icon: '📊', title: 'Analytics & KPIs', desc: 'Taux d\'ouverture, clics et ROI' },
+                { icon: '🎯', title: 'Segmentation', desc: 'Audiences dynamiques et ciblage intelligent' },
+              ].map((f, i) => (
+                <div key={i} style={{ display: 'flex', gap: 16, padding: '16px 20px', borderRadius: 14, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ width: 42, height: 42, borderRadius: 11, background: '#60a5fa18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{f.icon}</div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{f.title}</div>
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>{f.desc}</div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
 
-          {/* Grille */}
-          {loadingCamp ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.3)' }}>Chargement des campagnes...</div>
-          ) : filteredCamp.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px' }}>
-              <div style={{ fontSize: 44, opacity: 0.3, marginBottom: 12 }}>📢</div>
-              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>Aucune campagne disponible pour le moment</div>
-            </div>
+          {/* Service Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 24 }}>
+            {[
+              { icon: '📲', title: 'Social Media Management', desc: 'Gestion complète des réseaux sociaux', color: '#a78bfa', img: 'https://images.unsplash.com/photo-1611162616305-c69b3037c7bb?w=400&q=60' },
+              { icon: '🎯', title: 'Publicité Payante', desc: 'Google Ads, Meta Ads, LinkedIn', color: '#fb7185', img: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&q=60' },
+              { icon: '🔍', title: 'SEO & Content', desc: 'Référencement naturel et stratégie de contenu', color: '#2dd4bf', img: 'https://images.unsplash.com/photo-1432888622747-4eb9a8f2c293?w=400&q=60' },
+            ].map((item, i) => (
+              <div key={i} style={{ borderRadius: 20, overflow: 'hidden', background: G.dark3, border: '1px solid rgba(255,255,255,0.07)', transition: 'all 0.3s' }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-8px)'; e.currentTarget.style.boxShadow = '0 24px 60px rgba(0,0,0,0.4)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <img src={item.img} alt={item.title} style={{ width: '100%', height: 180, objectFit: 'cover' }} />
+                <div style={{ padding: '24px' }}>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{item.title}</h3>
+                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CLOUD & DEVOPS */}
+      <section id="devops" style={{ padding: '120px 6%', background: '#0a0a0a' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <h2 style={{ fontSize: 'clamp(36px,5vw,52px)', fontWeight: 800, textAlign: 'center', marginBottom: 80 }}>
+            Infrastructure <span style={{ color: G.gold }}>Cloud & DevOps</span>
+          </h2>
+          {/* Pipeline + Stats ici (tu peux les remettre si besoin) */}
+        </div>
+      </section>
+
+      {/* CAMPAGNES */}
+      <section id="campagnes" style={{ padding: '120px 6%' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 64 }}>
+            <h2 style={{ fontSize: 'clamp(36px,5vw,52px)', fontWeight: 800, marginBottom: 16 }}>Campagnes Actives</h2>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 17 }}>Inscrivez-vous aux campagnes de nos agences partenaires</p>
+          </div>
+
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 80 }}>Chargement des campagnes...</div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
-              {filteredCamp.map(c => {
-                const tc = TYPE[c.type?.toLowerCase()] || TYPE.email;
-                const h  = hoveredCard === c.id;
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 28 }}>
+              {campagnes.map(c => {
+                const imgSrc = CAMP_IMGS[c.type?.toLowerCase()] || CAMP_IMGS.email;
                 return (
-                  <div key={c.id} onMouseEnter={() => setHoveredCard(c.id)} onMouseLeave={() => setHoveredCard(null)}
-                    style={{ background: h ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)', border: `1px solid ${h ? 'rgba(245,166,35,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 16, padding: '22px', transition: 'all 0.2s', transform: h ? 'translateY(-3px)' : 'none' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-                      <span style={{ background: tc.bg, color: tc.color, padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{tc.icon} {tc.label}</span>
-                      <span style={{ background: 'rgba(34,197,94,0.1)', color: '#16a34a', padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>Active</span>
+                  <div key={c.id} className="camp-card" onClick={() => setSelected(c)} style={{
+                    borderRadius: 20, overflow: 'hidden', background: G.dark3, cursor: 'pointer',
+                    border: '1px solid rgba(255,255,255,0.07)'
+                  }}>
+                    <img src={imgSrc} alt={c.title} style={{ width: '100%', height: 200, objectFit: 'cover' }} />
+                    <div style={{ padding: '24px' }}>
+                      <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>{c.title}</h3>
+                      <button style={{ width: '100%', padding: '14px', background: G.gold, color: '#111', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer' }}>
+                        Voir détails & s'inscrire
+                      </button>
                     </div>
-                    <h3 style={{ fontSize: 15, fontWeight: 800, color: '#fff', margin: '0 0 8px' }}>{c.title}</h3>
-                    {c.client?.name && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginBottom: 8 }}>🏢 {c.client.name}</div>}
-                    {c.dateScheduled && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginBottom: 14 }}>🕐 {new Date(c.dateScheduled).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</div>}
-                    <button onClick={() => setSelected(c)} style={{ width: '100%', padding: '10px', borderRadius: 9, background: h ? DP.gold : 'rgba(245,166,35,0.1)', color: h ? DP.dark : DP.gold, border: `1px solid ${h ? DP.gold : 'rgba(245,166,35,0.25)'}`, fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: DP.font, transition: 'all 0.2s' }}>
-                      🔒 S'inscrire à cette campagne
-                    </button>
                   </div>
                 );
               })}
@@ -320,89 +355,40 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── SERVICES ── */}
-      <section id="services" style={{ padding: '80px 5%', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: DP.gold, textTransform: 'uppercase', letterSpacing: '3px', marginBottom: 12 }}>Nos Services</div>
-            <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 900, margin: '0 0 12px', letterSpacing: '-1px' }}>Tout ce que DigiPip offre</h2>
-            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.4)', maxWidth: 460, margin: '0 auto' }}>Une plateforme complète pour gérer vos campagnes marketing de A à Z.</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-            {FEATURES.map((f, i) => (
-              <div key={f.title} onMouseEnter={() => setHoveredFeature(i)} onMouseLeave={() => setHoveredFeature(null)}
-                style={{ background: hoveredFeature === i ? f.bg : 'rgba(255,255,255,0.02)', border: `1px solid ${hoveredFeature === i ? f.color + '40' : 'rgba(255,255,255,0.07)'}`, borderRadius: 16, padding: '28px 24px', transition: 'all 0.25s', transform: hoveredFeature === i ? 'translateY(-4px)' : 'none' }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 18 }}>{f.icon}</div>
-                <h3 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 10px', color: '#fff' }}>{f.title}</h3>
-                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.7, margin: 0 }}>{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* FINAL CTA */}
+      <section style={{ padding: '140px 6%', textAlign: 'center', background: 'linear-gradient(135deg, #110e08, #0d0b08)' }}>
+        <h2 style={{ fontSize: 'clamp(38px,6vw,58px)', fontWeight: 800, marginBottom: 24 }}>
+          Prêt à booster votre agence ?
+        </h2>
+        <button onClick={() => navigate('/login')} style={{ background: G.gold, color: '#111', padding: '18px 56px', borderRadius: 14, fontSize: 18, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+          Commencer maintenant →
+        </button>
       </section>
 
-      {/* ── RÔLES ── */}
-      <section id="roles" style={{ padding: '80px 5%', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: DP.gold, textTransform: 'uppercase', letterSpacing: '3px', marginBottom: 12 }}>Accès & Rôles</div>
-            <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 900, margin: '0 0 12px', letterSpacing: '-1px' }}>Une plateforme pour chaque profil</h2>
+      {/* FOOTER */}
+      <footer style={{ background: '#080806', padding: '50px 6% 30px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 36, height: 36, background: G.gold, borderRadius: 8 }} />
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>Digi<span style={{ color: G.gold }}>Pip</span></div>
+              <div style={{ fontSize: 11, color: '#555' }}>by DigiLab Solutions © 2026</div>
+            </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-            {ROLES.map((r, i) => (
-              <div key={r.title} onMouseEnter={() => setHoveredRole(i)} onMouseLeave={() => setHoveredRole(null)}
-                style={{ background: hoveredRole === i ? r.bg : 'rgba(255,255,255,0.02)', border: `1px solid ${hoveredRole === i ? r.border : 'rgba(255,255,255,0.07)'}`, borderRadius: 16, padding: '32px 24px', textAlign: 'center', transition: 'all 0.25s', transform: hoveredRole === i ? 'translateY(-4px)' : 'none' }}>
-                <div style={{ fontSize: 36, marginBottom: 16 }}>{r.icon}</div>
-                <h3 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 10px', color: r.color }}>{r.title}</h3>
-                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.7, margin: 0 }}>{r.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* ── CTA FINAL ── */}
-      <section style={{ padding: '80px 5%', borderTop: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(245,166,35,0.07) 0%, transparent 65%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: 580, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 900, margin: '0 0 16px', letterSpacing: '-1px' }}>
-            Prêt à rejoindre<br /><span style={{ color: DP.gold }}>DigiPip ?</span>
-          </h2>
-          <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.4)', lineHeight: 1.8, marginBottom: 36 }}>
-            Connectez-vous et inscrivez-vous aux campagnes qui vous intéressent.
-          </p>
-          <button onClick={() => navigate('/login')} style={{ background: DP.gold, color: DP.dark, border: 'none', padding: '15px 36px', borderRadius: 11, fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: DP.font, boxShadow: '0 8px 28px rgba(245,166,35,0.3)' }}
-            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'none'}>
-            Accéder à la plateforme →
+          <div style={{ display: 'flex', gap: 30 }}>
+            <a href="#marketing" style={{ color: '#777', textDecoration: 'none' }}>Marketing</a>
+            <a href="#devops" style={{ color: '#777', textDecoration: 'none' }}>Cloud & DevOps</a>
+            <a href="#campagnes" style={{ color: '#777', textDecoration: 'none' }}>Campagnes</a>
+          </div>
+
+          <button onClick={() => navigate('/login')} style={{ background: 'transparent', color: G.gold, border: `1px solid ${G.gold}40`, padding: '10px 24px', borderRadius: 10, cursor: 'pointer' }}>
+            Se connecter
           </button>
         </div>
-      </section>
-
-      {/* ── FOOTER ── */}
-      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '28px 5%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 22, height: 22, position: 'relative' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: 14, height: 14, background: DP.gold, borderRadius: 3 }} />
-            <div style={{ position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, background: 'rgba(245,166,35,0.35)', borderRadius: 2 }} />
-          </div>
-          <span style={{ fontSize: 13, fontWeight: 800 }}>Digi<span style={{ color: DP.gold }}>Pip</span></span>
-        </div>
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', margin: 0 }}>© 2026 DigiPip — DigiLab Solutions.</p>
-        <button onClick={() => navigate('/login')} style={{ background: 'transparent', color: DP.gold, border: '1px solid rgba(245,166,35,0.25)', padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: DP.font }}>Se connecter</button>
       </footer>
 
-      {selected && <InscriptionModal campagne={selected} onClose={() => setSelected(null)} />}
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
-        * { box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
-        input::placeholder { color: rgba(255,255,255,0.3); }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #16120d; }
-        ::-webkit-scrollbar-thumb { background: rgba(245,166,35,0.3); border-radius: 3px; }
-      `}</style>
+      {selected && <Modal camp={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }
