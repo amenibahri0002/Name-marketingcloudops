@@ -19,6 +19,7 @@ const Users      = lazy(() => import('./pages/Users'));
 const Monitoring = lazy(() => import('./pages/Monitoring'));
 const Analytics  = lazy(() => import('./pages/Analytics'));
 const AccessDenied = lazy(() => import('./pages/AccessDenied'));
+const PipelineStatus  = lazy(() => import('./pages/PipelineStatus'));
 
 const Loading = () => (
   <div style={{
@@ -101,6 +102,11 @@ function App() {
           <Route path="/analytics" element={
             <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
               <Layout><Analytics /></Layout>
+            </PrivateRoute>
+          }/>
+          <Route path="/pipeline" element={
+            <PrivateRoute roles={['ADMIN']}>
+              <Layout><PipelineStatus /></Layout>
             </PrivateRoute>
           }/>
 

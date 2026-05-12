@@ -9,8 +9,9 @@ const adminMenu = [
     { path: '/dashboard', icon: '⬛', label: 'Dashboard' },
     { path: '/users', icon: '👤', label: 'Utilisateurs' },
   ]},
-  { section: 'Monitoring', items: [
+  { section: 'Monitoring & DevOps', items: [
     { path: '/monitoring', icon: '◎', label: 'Monitoring' },
+    { path: '/pipeline', icon: '⚙️', label: 'Pipeline DevOps' },
     { path: '/reporting', icon: '📊', label: 'Reporting' },
     { path: '/analytics', icon: '📈', label: 'Analytics' },
   ]},
