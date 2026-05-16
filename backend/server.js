@@ -75,7 +75,11 @@ app.use('/api/export', authenticate, exportRoutes)
 
 client.collectDefaultMetrics({ timeout: 5000 })
 
-app.get('/health', (req, res) => res.json({ status: 'ok' }))
+app.get('/api/health', (req, res) => res.json({ 
+  status: 'ok', 
+  timestamp: new Date(),
+  service: 'MarketingCloudOps Backend'
+}))
 
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', client.register.contentType)
