@@ -64,6 +64,12 @@ app.use('/api/sms', authenticate, smsRoutes)
 const analyticsRoutes = require('./routes/analytics')
 app.use('/api/analytics', authenticate, analyticsRoutes)
 
+const chatRoutes = require('./routes/chat');
+app.use('/api/chat', chatRoutes); // sans authenticate — route publique
+
+const devopsRouter = require('./routes/devops')
+app.use('/api/devops', devopsRouter)
+
 const exportRoutes = require('./routes/export')
 app.use('/api/export', authenticate, exportRoutes)
 
