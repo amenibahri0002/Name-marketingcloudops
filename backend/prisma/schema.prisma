@@ -25,6 +25,7 @@ model Client {
   contacts  Contact[]
   segments  Segment[]
   users     User[]
+  fcmToken String?
 }
 
 model Campagne {
@@ -33,6 +34,7 @@ model Campagne {
   type          String         @db.VarChar(100)
   status        String?        @default("draft") @db.VarChar(50)
   clientId      Int?
+   url           String?        @db.VarChar(500)
   createdAt     DateTime?      @default(now()) @db.Timestamp(6)
   dateScheduled DateTime?      @db.Timestamp(6)
   sentAt        DateTime?      @db.Timestamp(6)

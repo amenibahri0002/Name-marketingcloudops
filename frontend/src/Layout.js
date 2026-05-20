@@ -38,8 +38,7 @@ const clientMenu = [
     { path: '/dashboard', icon: '⬛', label: 'Dashboard' },
   ]},
   { section: 'Mes Campagnes', items: [
-    { path: '/mes-campagnes', label: 'Mes Campagnes', icon: '📢' }
-    { path: '/campagnes', icon: '📧', label: 'Mes Campagnes' },
+    { path: '/mes-campagnes', icon: '📢', label: 'Mes Campagnes' },    { path: '/campagnes', icon: '📧', label: 'Mes Campagnes' },
     { path: '/reporting', icon: '📊', label: 'Résultats' },
 
   ]},
