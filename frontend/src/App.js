@@ -20,6 +20,7 @@ const Monitoring = lazy(() => import('./pages/Monitoring'));
 const Analytics  = lazy(() => import('./pages/Analytics'));
 const AccessDenied = lazy(() => import('./pages/AccessDenied'));
 const PipelineStatus  = lazy(() => import('./pages/PipelineStatus'));
+const MesCampagnes = lazy(() => import('./pages/MesCampagnes'));
 
 const Loading = () => (
   <div style={{
@@ -109,6 +110,9 @@ function App() {
               <Layout><PipelineStatus /></Layout>
             </PrivateRoute>
           }/>
+          <Route path="/mes-campagnes" element={
+  <PrivateRoute><Layout><MesCampagnes /></Layout></PrivateRoute>
+}/>
 
           <Route path="*" element={<NotFound />} />
         </Routes>
