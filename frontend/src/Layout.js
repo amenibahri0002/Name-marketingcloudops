@@ -21,6 +21,8 @@ const marketingMenu = [
   { section: 'Campagnes', items: [
     { path: '/dashboard', icon: '⬛', label: 'Dashboard' },
     { path: '/campagnes', icon: '📧', label: 'Campagnes' },
+    { path: '/mes-campagnes', icon: '📢', label: 'Mes Campagnes' }
+
   ]},
   { section: 'Gestion', items: [
     { path: '/contacts', icon: '👥', label: 'Contacts' },

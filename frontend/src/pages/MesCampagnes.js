@@ -2,101 +2,93 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
-const C = {
-  bg:     '#f4f6fb',
-  card:   '#ffffff',
-  navy:   '#0f172a',
-  gold:   '#f5a623',
-  green:  '#10b981',
-  blue:   '#3b82f6',
-  purple: '#8b5cf6',
-  muted:  '#64748b',
-  border: '#e8edf5',
-  shadow: '0 2px 16px rgba(15,23,42,0.07)',
+const DP = {
+  gold:     '#f5a623',
+  goldDark: '#d4881a',
+  goldGlow: 'rgba(245,166,35,0.12)',
+  dark:     '#16120d',
+  bg:       '#f6f3ee',
+  card:     '#ffffff',
+  border:   '#ede8df',
+  text:     '#1a160e',
+  muted:    '#9c8f7a',
+  blue:     '#3b82f6',
+  green:    '#22c55e',
+  red:      '#ef4444',
+  font:     "'Montserrat', 'Open Sans', sans-serif",
 };
 
-const TYPE_CFG = {
-  email: { label:'Email', color:'#3b82f6', bg:'rgba(59,130,246,0.1)',  icon:'✉'  },
-  sms:   { label:'SMS',   color:'#10b981', bg:'rgba(16,185,129,0.1)',  icon:'💬' },
-  push:  { label:'Push',  color:'#f5a623', bg:'rgba(245,166,35,0.1)',  icon:'🔔' },
+const TYPE = {
+  email: { label: 'Email', icon: '📧', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+  sms:   { label: 'SMS',   icon: '📱', color: '#22c55e', bg: 'rgba(34,197,94,0.1)'  },
+  push:  { label: 'Push',  icon: '🔔', color: '#f5a623', bg: 'rgba(245,166,35,0.1)' },
 };
 
-const CAMP_IMGS = {
-  email: 'https://images.unsplash.com/photo-1596526131083-e8c633c948d2?w=500&q=70',
-  sms:   'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=500&q=70',
-  push:  'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500&q=70',
+const STATUS_STYLE = {
+  sent:      { bg: 'rgba(34,197,94,0.1)',   color: '#16a34a', label: 'Envoyée'   },
+  scheduled: { bg: 'rgba(59,130,246,0.1)',  color: '#2563eb', label: 'Planifiée' },
+  draft:     { bg: 'rgba(245,166,35,0.1)',  color: '#d97706', label: 'Brouillon' },
 };
 
-function StatusBadge({ status }) {
-  const cfg = {
-    sent:      { bg:'#d1fae5', color:'#059669', label:'Envoyée'   },
-    scheduled: { bg:'#dbeafe', color:'#1d4ed8', label:'Planifiée' },
-    draft:     { bg:'#f1f5f9', color:'#64748b', label:'Brouillon' },
-  }[status] || { bg:'#f1f5f9', color:'#64748b', label: status };
-  return <span style={{ padding:'4px 12px', borderRadius:20, fontSize:11, fontWeight:700, background:cfg.bg, color:cfg.color }}>{cfg.label}</span>;
+/* ── Pill ── */
+function Pill({ text, bg, color }) {
+  return (
+    <span style={{ background: bg, color, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, display: 'inline-block' }}>
+      {text}
+    </span>
+  );
 }
 
-/* ── Modal inscription ── */
-function InscriptionModal({ camp, onClose, onSuccess }) {
-  const [loading, setLoading] = useState(false);
-  const [done, setDone]       = useState(false);
-  const tc = TYPE_CFG[camp.type?.toLowerCase()] || TYPE_CFG.email;
-
-  const submit = async () => {
-    setLoading(true);
-    try {
-      await api.post(`/api/campagnes/${camp.id}/inscrire`);
-      setDone(true);
-      onSuccess && onSuccess(camp.id);
-    } catch (e) {
-      alert(e.response?.data?.message || 'Erreur inscription');
-    } finally { setLoading(false); }
-  };
+/* ── Carte campagne pour CLIENT ── */
+function ClientCampagneCard({ campagne, inscriptions, onInscrire, loadingId }) {
+  const navigate  = useNavigate();
+  const tc        = TYPE[campagne.type?.toLowerCase()] || TYPE.email;
+  const isInscrit = inscriptions.includes(campagne.id);
+  const isLoading = loadingId === campagne.id;
 
   return (
-    <div onClick={e => e.target === e.currentTarget && onClose()} style={{
-      position:'fixed', inset:0, background:'rgba(15,23,42,0.7)', backdropFilter:'blur(6px)',
-      zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center', padding:24,
+    <div style={{
+      background: DP.card, border: `1px solid ${isInscrit ? 'rgba(34,197,94,0.3)' : DP.border}`,
+      borderRadius: 14, padding: '18px', transition: 'all 0.2s',
     }}>
-      <div style={{ background:C.card, borderRadius:20, width:'100%', maxWidth:460, overflow:'hidden', boxShadow:'0 40px 80px rgba(0,0,0,0.2)', animation:'modalIn 0.3s ease', fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
-        <div style={{ background:C.navy, padding:'20px 24px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div>
-            <div style={{ fontSize:11, fontWeight:700, color:C.gold, letterSpacing:'0.15em', textTransform:'uppercase', marginBottom:4 }}>{tc.icon} Inscription campagne</div>
-            <h2 style={{ color:'#fff', margin:0, fontSize:17, fontWeight:800 }}>{camp.title}</h2>
-          </div>
-          <button onClick={onClose} style={{ width:32, height:32, borderRadius:8, background:'rgba(255,255,255,0.08)', border:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:16 }}>✕</button>
-        </div>
-        <div style={{ padding:24 }}>
-          {done ? (
-            <div style={{ textAlign:'center', padding:'16px 0' }}>
-              <div style={{ fontSize:52, marginBottom:14 }}>✅</div>
-              <h3 style={{ color:C.green, margin:'0 0 8px' }}>Inscription réussie !</h3>
-              <p style={{ color:C.muted, fontSize:14, marginBottom:20 }}>Vous recevrez les communications via <strong style={{ color:tc.color }}>{tc.label}</strong>.</p>
-              <button onClick={onClose} style={{ background:C.gold, color:'#111', border:'none', padding:'11px 28px', borderRadius:10, fontWeight:700, cursor:'pointer' }}>Fermer</button>
-            </div>
-          ) : (
-            <div>
-              <div style={{ background:'#f8fafc', borderRadius:12, padding:'14px 16px', marginBottom:20, border:`1px solid ${C.border}`, display:'flex', gap:12, alignItems:'center' }}>
-                <div style={{ width:42, height:42, borderRadius:10, background:tc.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>{tc.icon}</div>
-                <div>
-                  <div style={{ fontWeight:700, fontSize:14, color:C.navy }}>{camp.title}</div>
-                  <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>Canal : <span style={{ color:tc.color, fontWeight:600 }}>{tc.label}</span> {camp.client?.name && `· ${camp.client.name}`}</div>
-                </div>
-              </div>
-              <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, marginBottom:20 }}>
-                En vous inscrivant, vous recevrez les communications de cette campagne via <strong style={{ color:tc.color }}>{tc.label}</strong>.
-              </p>
-              <div style={{ display:'flex', gap:10 }}>
-                <button onClick={onClose} style={{ flex:1, padding:12, borderRadius:10, border:`1px solid ${C.border}`, background:'none', color:C.muted, cursor:'pointer', fontFamily:'inherit' }}>Annuler</button>
-                <button onClick={submit} disabled={loading} style={{ flex:2, padding:12, borderRadius:10, border:'none', background:C.gold, color:'#111', fontWeight:700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, fontFamily:'inherit' }}>
-                  {loading ? 'Inscription...' : "✓ S'inscrire"}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+        <span style={{ background: tc.bg, color: tc.color, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+          {tc.icon} {tc.label}
+        </span>
+        {isInscrit && (
+          <span style={{ background: 'rgba(34,197,94,0.1)', color: '#16a34a', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+            ✅ Inscrit
+          </span>
+        )}
       </div>
-      <style>{`@keyframes modalIn { from{opacity:0;transform:scale(0.93) translateY(12px)} to{opacity:1;transform:none} }`}</style>
+
+      <h3 style={{ fontSize: 14, fontWeight: 800, color: DP.text, margin: '0 0 6px' }}>{campagne.title}</h3>
+
+      {campagne.client?.name && (
+        <div style={{ fontSize: 12, color: DP.muted, marginBottom: 10 }}>🏢 {campagne.client.name}</div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        <button
+          onClick={() => navigate(`/campagnes/${campagne.id}`)}
+          style={{ flex: 1, padding: '8px', borderRadius: 8, background: DP.bg, border: `1px solid ${DP.border}`, fontSize: 12, fontWeight: 600, color: DP.muted, cursor: 'pointer' }}>
+          Voir détails
+        </button>
+        {!isInscrit ? (
+          <button
+            onClick={() => onInscrire(campagne)}
+            disabled={isLoading}
+            style={{ flex: 2, padding: '8px', borderRadius: 8, background: DP.gold, border: 'none', fontSize: 12, fontWeight: 800, color: DP.dark, cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.7 : 1 }}>
+            {isLoading ? 'Inscription...' : "✓ S'inscrire"}
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate(`/campagnes/${campagne.id}`)}
+            style={{ flex: 2, padding: '8px', borderRadius: 8, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', fontSize: 12, fontWeight: 700, color: '#16a34a', cursor: 'pointer' }}>
+            ✅ Voir ma campagne
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -104,252 +96,274 @@ function InscriptionModal({ camp, onClose, onSuccess }) {
 /* ══════════════════════════════════════════════════════════════ */
 export default function MesCampagnes() {
   const navigate = useNavigate();
-  const user     = JSON.parse(localStorage.getItem('user') || 'null');
-  const token    = localStorage.getItem('token');
 
-  const [campagnes,    setCampagnes]    = useState([]);
-  const [inscriptions, setInscriptions] = useState([]); // ids des campagnes où l'user est inscrit
-  const [loading,      setLoading]      = useState(true);
-  const [filter,       setFilter]       = useState('all');
-  const [search,       setSearch]       = useState('');
-  const [selected,     setSelected]     = useState(null);
+  // Récupérer le rôle depuis le token
+  const token   = localStorage.getItem('token');
+  const user    = JSON.parse(localStorage.getItem('user') || '{}');
+  const role    = user.role || 'CLIENT';
+  const isAdmin = role === 'ADMIN' || role === 'RESPONSABLE_MARKETING';
 
-  const isAdmin = user?.role === 'ADMIN' || user?.role === 'RESPONSABLE_MARKETING';
+  const [campagnes,     setCampagnes]     = useState([]);
+  const [inscriptions,  setInscriptions]  = useState([]); // IDs des campagnes où client est inscrit
+  const [loading,       setLoading]       = useState(true);
+  const [loadingId,     setLoadingId]     = useState(null);
+  const [search,        setSearch]        = useState('');
+  const [typeFilter,    setTypeFilter]    = useState('all');
+  const [statusFilter,  setStatusFilter]  = useState('all');
+  const [expandedClient, setExpandedClient] = useState(null);
 
   useEffect(() => {
-    if (!token) { navigate('/login'); return; }
-    setLoading(true);
-
-    const promises = [api.get('/api/campagnes/public')];
-
-    // Admin/Resp Marketing : charge TOUTES les campagnes
-    if (isAdmin) {
-      promises.push(api.get('/api/campagnes'));
-    }
-
-    Promise.all(promises)
-      .then(([publicRes, allRes]) => {
-        if (isAdmin && allRes) {
-          const all = Array.isArray(allRes.data) ? allRes.data : allRes.data?.data || [];
-          setCampagnes(all);
+    const fetchData = async () => {
+      try {
+        if (isAdmin) {
+          // Admin/Marketing → toutes les campagnes
+          const res = await api.get('/api/campagnes');
+          setCampagnes(Array.isArray(res.data) ? res.data : res.data.data || []);
         } else {
-          const pub = Array.isArray(publicRes.data) ? publicRes.data : [];
-          setCampagnes(pub);
+          // Client → campagnes publiques + ses inscriptions
+          const [pubRes, inscRes] = await Promise.all([
+            api.get('/api/campagnes/public'),
+            api.get('/api/campagnes/mes-inscriptions').catch(() => ({ data: [] })),
+          ]);
+          setCampagnes(Array.isArray(pubRes.data) ? pubRes.data : []);
+          const inscData = Array.isArray(inscRes.data) ? inscRes.data : [];
+          setInscriptions(inscData.map(c => c.id));
         }
-      })
-      .catch(() => setCampagnes([]))
-      .finally(() => setLoading(false));
-  }, [token, isAdmin, navigate]);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [isAdmin]);
 
-  const filtered = campagnes.filter(c => {
-    const mT = filter === 'all' || c.type?.toLowerCase() === filter;
-    const mQ = !search || c.title?.toLowerCase().includes(search.toLowerCase()) || c.client?.name?.toLowerCase().includes(search.toLowerCase());
-    return mT && mQ;
-  });
-
-  const handleInscriptionSuccess = (campId) => {
-    setInscriptions(prev => [...prev, campId]);
+  const handleInscrire = async (campagne) => {
+    if (!token) { navigate('/login', { state: { from: '/mes-campagnes' } }); return; }
+    setLoadingId(campagne.id);
+    try {
+      await api.post(`/api/campagnes/${campagne.id}/inscrire`);
+      setInscriptions(prev => [...prev, campagne.id]);
+    } catch (err) {
+      if (err.response?.data?.message === 'Vous êtes déjà inscrit') {
+        setInscriptions(prev => [...prev, campagne.id]);
+      } else {
+        alert('Erreur: ' + (err.response?.data?.message || err.message));
+      }
+    } finally {
+      setLoadingId(null);
+    }
   };
 
-  // Grouper par client pour Admin/Resp Marketing
-  const grouped = isAdmin
-    ? filtered.reduce((acc, c) => {
-        const key = c.client?.name || 'Sans client';
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(c);
-        return acc;
-      }, {})
-    : null;
+  // Filtrage
+  const filtered = campagnes.filter(c => {
+    const mT = typeFilter   === 'all' || c.type?.toLowerCase()   === typeFilter;
+    const mS = statusFilter === 'all' || c.status?.toLowerCase() === statusFilter;
+    const mQ = !search || c.title?.toLowerCase().includes(search.toLowerCase()) || c.client?.name?.toLowerCase().includes(search.toLowerCase());
+    return mT && mS && mQ;
+  });
+
+  // Grouper par client (pour Admin/Marketing)
+  const grouped = filtered.reduce((acc, c) => {
+    const key = c.client?.name || 'Sans client';
+    if (!acc[key]) acc[key] = { client: c.client, campagnes: [] };
+    acc[key].campagnes.push(c);
+    return acc;
+  }, {});
+
+  const firstName = user.name?.split(' ')[0] || '';
 
   return (
-    <div style={{ background:C.bg, minHeight:'100vh', padding:'28px 32px', fontFamily:"'Plus Jakarta Sans','Segoe UI',sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
-        @keyframes spin   { to{transform:rotate(360deg)} }
-        .camp-card { transition:transform .25s, box-shadow .25s, border-color .25s; }
-        .camp-card:hover { transform:translateY(-4px); box-shadow:0 12px 36px rgba(15,23,42,0.12) !important; }
-        .filter-btn { transition:all .18s; cursor:pointer; }
-        .filter-btn:hover { border-color:rgba(245,166,35,0.4) !important; }
-      `}</style>
+    <div style={{ fontFamily: DP.font, color: DP.text }}>
 
-      {/* ── Header ── */}
-      <div style={{ marginBottom:24 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
-          <div style={{ width:4, height:24, background:`linear-gradient(180deg,${C.gold},#d4881a)`, borderRadius:2 }} />
-          <h1 style={{ fontSize:22, fontWeight:800, color:C.navy, margin:0 }}>
-            {isAdmin ? 'Toutes les campagnes' : 'Mes campagnes'}
-          </h1>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <p style={{ color: DP.muted, fontSize: 13, margin: 0 }}>
+            {isAdmin
+              ? 'Toutes les campagnes de chaque client sur la plateforme'
+              : `Bonjour ${firstName} — campagnes disponibles & vos inscriptions`}
+          </p>
         </div>
-        <p style={{ color:C.muted, fontSize:13, margin:'0 0 0 14px' }}>
-          {isAdmin
-            ? `${user?.role === 'ADMIN' ? 'Administrateur' : 'Responsable Marketing'} — vue complète de toutes les campagnes par client`
-            : `Bienvenue ${user?.name || ''} — inscrivez-vous aux campagnes qui vous intéressent`
-          }
-        </p>
-      </div>
-
-      {/* ── Stats ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:22 }}>
-        {[
-          { label:'Total',      val: loading ? '—' : campagnes.length,                             color:C.gold,   icon:'📢', bg:'#fffbeb' },
-          { label:'Email',      val: loading ? '—' : campagnes.filter(c=>c.type==='email').length,  color:C.blue,   icon:'✉',  bg:'#eff6ff' },
-          { label:'SMS',        val: loading ? '—' : campagnes.filter(c=>c.type==='sms').length,    color:C.green,  icon:'💬', bg:'#f0fdf4' },
-          { label:'Push',       val: loading ? '—' : campagnes.filter(c=>c.type==='push').length,   color:C.purple, icon:'🔔', bg:'#f5f3ff' },
-        ].map((k,i) => (
-          <div key={i} style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, padding:'15px 18px', boxShadow:C.shadow, display:'flex', alignItems:'center', gap:12, animation:`fadeUp 0.4s ease ${i*60}ms both` }}>
-            <div style={{ width:40, height:40, borderRadius:'50%', background:k.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>{k.icon}</div>
-            <div>
-              <div style={{ fontSize:22, fontWeight:800, color:k.color, lineHeight:1 }}>{k.val}</div>
-              <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{k.label}</div>
+        {!isAdmin && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ background: DP.goldGlow, border: '1px solid rgba(245,166,35,0.3)', borderRadius: 10, padding: '7px 14px', fontSize: 12, fontWeight: 700, color: DP.goldDark }}>
+              ✅ {inscriptions.length} inscription{inscriptions.length > 1 ? 's' : ''}
             </div>
           </div>
-        ))}
+        )}
       </div>
 
-      {/* ── Filters ── */}
-      <div style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, padding:'12px 16px', marginBottom:20, display:'flex', gap:12, alignItems:'center', flexWrap:'wrap', boxShadow:C.shadow }}>
-        <div style={{ position:'relative', flex:1, minWidth:200 }}>
-          <span style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', fontSize:14, color:C.muted }}>🔍</span>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher une campagne..."
-            style={{ width:'100%', padding:'9px 14px 9px 38px', background:'#f8fafc', border:`1px solid ${C.border}`, borderRadius:10, fontSize:13, color:C.navy, outline:'none', fontFamily:'inherit', boxSizing:'border-box' }}
-            onFocus={e => e.target.style.borderColor = C.gold}
-            onBlur={e => e.target.style.borderColor = C.border}
-          />
-        </div>
-        <div style={{ width:1, height:28, background:C.border }} />
-        <div style={{ display:'flex', gap:6 }}>
-          {[['all','Tous'],['email','✉ Email'],['sms','💬 SMS'],['push','🔔 Push']].map(([v,l]) => (
-            <button key={v} className="filter-btn" onClick={() => setFilter(v)} style={{
-              padding:'7px 14px', borderRadius:20, fontSize:12, fontWeight:600,
-              border:`1px solid ${filter===v ? C.gold : C.border}`,
-              background: filter===v ? 'rgba(245,166,35,0.1)' : 'none',
-              color: filter===v ? '#d4881a' : C.muted, fontFamily:'inherit',
-            }}>{l}</button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Contenu ── */}
-      {loading ? (
-        <div style={{ textAlign:'center', padding:60, color:C.muted }}>
-          <div style={{ width:36, height:36, border:'3px solid rgba(245,166,35,0.2)', borderTop:`3px solid ${C.gold}`, borderRadius:'50%', animation:'spin 1s linear infinite', margin:'0 auto 16px' }} />
-          Chargement des campagnes...
-        </div>
-      ) : filtered.length === 0 ? (
-        <div style={{ background:C.card, borderRadius:18, padding:'60px 24px', textAlign:'center', border:`1px solid ${C.border}` }}>
-          <div style={{ fontSize:44, marginBottom:16, opacity:0.2 }}>📢</div>
-          <p style={{ color:C.muted, fontSize:15, fontWeight:600 }}>Aucune campagne trouvée</p>
-        </div>
-      ) : isAdmin ? (
-        /* ── VUE ADMIN : groupée par client ── */
-        Object.entries(grouped).map(([clientName, camps]) => (
-          <div key={clientName} style={{ marginBottom:32 }}>
-            {/* Client header */}
-            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, padding:'12px 18px', background:C.card, borderRadius:12, border:`1px solid ${C.border}`, boxShadow:C.shadow }}>
-              <div style={{ width:40, height:40, borderRadius:10, background:'rgba(245,166,35,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>🏢</div>
+      {/* Stats rapides — Admin/Marketing */}
+      {isAdmin && !loading && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+          {[
+            { label: 'Total campagnes', value: campagnes.length,                                      color: DP.gold,  bg: DP.goldGlow,               icon: '📢' },
+            { label: 'Envoyées',        value: campagnes.filter(c => c.status === 'sent').length,      color: DP.green, bg: 'rgba(34,197,94,0.1)',      icon: '✅' },
+            { label: 'Planifiées',      value: campagnes.filter(c => c.status === 'scheduled').length, color: DP.blue,  bg: 'rgba(59,130,246,0.1)',     icon: '🕐' },
+            { label: 'Clients actifs',  value: Object.keys(grouped).length,                           color: '#8b5cf6',bg: 'rgba(139,92,246,0.1)',     icon: '🏢' },
+          ].map(s => (
+            <div key={s.label} style={{ background: DP.card, border: `1px solid ${DP.border}`, borderLeft: `3px solid ${s.color}`, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 9, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{s.icon}</div>
               <div>
-                <div style={{ fontWeight:800, fontSize:16, color:C.navy }}>{clientName}</div>
-                <div style={{ fontSize:12, color:C.muted }}>{camps.length} campagne{camps.length>1?'s':''}</div>
-              </div>
-              <div style={{ marginLeft:'auto', display:'flex', gap:6 }}>
-                {['email','sms','push'].map(t => {
-                  const count = camps.filter(c=>c.type===t).length;
-                  if (!count) return null;
-                  const tc = TYPE_CFG[t];
-                  return (
-                    <span key={t} style={{ fontSize:11, fontWeight:600, color:tc.color, background:tc.bg, padding:'3px 9px', borderRadius:20 }}>
-                      {tc.icon} {count}
-                    </span>
-                  );
-                })}
+                <div style={{ fontSize: 22, fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: DP.muted, marginTop: 2 }}>{s.label}</div>
               </div>
             </div>
-
-            {/* Grille campagnes du client */}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:16 }}>
-              {camps.map((c,i) => {
-                const tc     = TYPE_CFG[c.type?.toLowerCase()] || TYPE_CFG.email;
-                const imgSrc = CAMP_IMGS[c.type?.toLowerCase()] || CAMP_IMGS.email;
-                const isInsc = inscriptions.includes(c.id);
-                return (
-                  <div key={c.id} className="camp-card" style={{ background:C.card, borderRadius:16, overflow:'hidden', border:`1px solid ${C.border}`, boxShadow:C.shadow, animation:`fadeUp 0.4s ease ${i*50}ms both` }}>
-                    <div style={{ height:150, overflow:'hidden', position:'relative' }}>
-                      <img src={imgSrc} alt={c.title} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.target.style.display='none'; }} />
-                      <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,transparent 40%,rgba(15,23,42,0.7))' }} />
-                      <div style={{ position:'absolute', top:10, left:10, display:'flex', gap:6 }}>
-                        <span style={{ fontSize:11, fontWeight:700, color:tc.color, background:'rgba(255,255,255,0.95)', padding:'3px 9px', borderRadius:20 }}>{tc.icon} {tc.label}</span>
-                      </div>
-                      <div style={{ position:'absolute', top:10, right:10 }}>
-                        <StatusBadge status={c.status} />
-                      </div>
-                    </div>
-                    <div style={{ padding:'16px 18px 18px' }}>
-                      <h3 style={{ fontSize:14, fontWeight:700, color:C.navy, margin:'0 0 4px', lineHeight:1.3 }}>{c.title}</h3>
-                      {c.dateScheduled && <div style={{ fontSize:11, color:C.muted, marginBottom:10 }}>🕐 {new Date(c.dateScheduled).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}</div>}
-                      <div style={{ display:'flex', gap:8 }}>
-                        <span style={{ flex:1, fontSize:11, fontWeight:600, color:C.muted, background:'#f8fafc', padding:'5px 10px', borderRadius:8, textAlign:'center', border:`1px solid ${C.border}` }}>
-                          {c.status === 'sent' ? '✅ Envoyée' : c.status === 'scheduled' ? '📅 Planifiée' : '📝 Brouillon'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))
-      ) : (
-        /* ── VUE CLIENT : grille avec bouton inscription ── */
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:18 }}>
-          {filtered.map((c, i) => {
-            const tc     = TYPE_CFG[c.type?.toLowerCase()] || TYPE_CFG.email;
-            const imgSrc = CAMP_IMGS[c.type?.toLowerCase()] || CAMP_IMGS.email;
-            const isInsc = inscriptions.includes(c.id);
-            return (
-              <div key={c.id} className="camp-card" style={{ background:C.card, borderRadius:18, overflow:'hidden', border:`1px solid ${C.border}`, boxShadow:C.shadow, animation:`fadeUp 0.4s ease ${i*60}ms both` }}>
-                <div style={{ height:180, overflow:'hidden', position:'relative' }}>
-                  <img src={imgSrc} alt={c.title} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.target.style.display='none'; }} />
-                  <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,transparent 40%,rgba(15,23,42,0.75))' }} />
-                  <div style={{ position:'absolute', top:12, left:12 }}>
-                    <span style={{ fontSize:11, fontWeight:700, color:tc.color, background:'rgba(255,255,255,0.95)', padding:'4px 11px', borderRadius:20 }}>{tc.icon} {tc.label}</span>
-                  </div>
-                </div>
-                <div style={{ padding:'18px 20px 22px' }}>
-                  {c.client?.name && <div style={{ fontSize:11, color:C.muted, marginBottom:5 }}>🏢 {c.client.name}</div>}
-                  <h3 style={{ fontSize:15, fontWeight:700, color:C.navy, margin:'0 0 6px', lineHeight:1.3 }}>{c.title}</h3>
-                  {c.dateScheduled && <div style={{ fontSize:12, color:C.muted, marginBottom:14 }}>🕐 {new Date(c.dateScheduled).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}</div>}
-
-                  {isInsc ? (
-                    <div style={{ padding:'11px', borderRadius:10, background:'#f0fdf4', border:'1px solid #bbf7d0', fontSize:13, fontWeight:700, color:'#059669', textAlign:'center' }}>
-                      ✅ Inscrit à cette campagne
-                    </div>
-                  ) : (
-                    <button onClick={() => setSelected(c)} style={{
-                      width:'100%', padding:'12px', borderRadius:10,
-                      background:C.gold, color:'#111', border:'none',
-                      fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit',
-                      transition:'background .2s',
-                    }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#d4881a'}
-                      onMouseLeave={e => e.currentTarget.style.background = C.gold}
-                    >
-                      S'inscrire à cette campagne →
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          ))}
         </div>
       )}
 
-      {selected && (
-        <InscriptionModal
-          camp={selected}
-          onClose={() => setSelected(null)}
-          onSuccess={handleInscriptionSuccess}
-        />
+      {/* Filtres */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 20, background: DP.card, border: `1px solid ${DP.border}`, borderRadius: 12, padding: '12px 16px' }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Rechercher..."
+          style={{ flex: 1, minWidth: 180, padding: '8px 12px', border: `1px solid ${DP.border}`, borderRadius: 8, fontSize: 13, fontFamily: DP.font, outline: 'none', background: DP.bg }} />
+
+        <div style={{ display: 'flex', gap: 5 }}>
+          {[['all','Tous'], ['email','📧 Email'], ['sms','📱 SMS'], ['push','🔔 Push']].map(([val, lbl]) => (
+            <button key={val} onClick={() => setTypeFilter(val)} style={{ padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, border: `1px solid ${typeFilter === val ? DP.gold : DP.border}`, background: typeFilter === val ? DP.goldGlow : 'transparent', color: typeFilter === val ? DP.goldDark : DP.muted, cursor: 'pointer' }}>{lbl}</button>
+          ))}
+        </div>
+
+        {isAdmin && (
+          <div style={{ display: 'flex', gap: 5 }}>
+            {[['all','Tous statuts'], ['sent','Envoyées'], ['scheduled','Planifiées'], ['draft','Brouillons']].map(([val, lbl]) => (
+              <button key={val} onClick={() => setStatusFilter(val)} style={{ padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, border: `1px solid ${statusFilter === val ? DP.blue : DP.border}`, background: statusFilter === val ? 'rgba(59,130,246,0.1)' : 'transparent', color: statusFilter === val ? DP.blue : DP.muted, cursor: 'pointer' }}>{lbl}</button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Contenu */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '60px', color: DP.muted }}>Chargement...</div>
+      ) : filtered.length === 0 ? (
+        <div style={{ background: DP.card, borderRadius: 14, border: `1px solid ${DP.border}`, padding: '60px', textAlign: 'center' }}>
+          <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📢</div>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>Aucune campagne trouvée</div>
+          <p style={{ fontSize: 13, color: DP.muted }}>Essayez un autre filtre ou revenez plus tard.</p>
+        </div>
+
+      ) : isAdmin ? (
+        /* ── VUE ADMIN / MARKETING — groupée par client ── */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {Object.entries(grouped).map(([clientName, group]) => (
+            <div key={clientName} style={{ background: DP.card, border: `1px solid ${DP.border}`, borderRadius: 16, overflow: 'hidden' }}>
+
+              {/* En-tête client */}
+              <div
+                onClick={() => setExpandedClient(expandedClient === clientName ? null : clientName)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', cursor: 'pointer', borderBottom: expandedClient === clientName ? `1px solid ${DP.border}` : 'none', background: expandedClient === clientName ? DP.bg : DP.card, transition: 'background 0.15s' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 9, background: DP.goldGlow, border: `1px solid rgba(245,166,35,0.2)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: DP.gold }}>
+                    {clientName.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: DP.text }}>🏢 {clientName}</div>
+                    <div style={{ fontSize: 11, color: DP.muted, marginTop: 2 }}>
+                      {group.campagnes.length} campagne{group.campagnes.length > 1 ? 's' : ''} ·{' '}
+                      {group.campagnes.filter(c => c.status === 'sent').length} envoyée{group.campagnes.filter(c => c.status === 'sent').length > 1 ? 's' : ''}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  {/* Compteurs par type */}
+                  {['email', 'sms', 'push'].map(t => {
+                    const count = group.campagnes.filter(c => c.type?.toLowerCase() === t).length;
+                    if (!count) return null;
+                    const tc = TYPE[t];
+                    return (
+                      <span key={t} style={{ background: tc.bg, color: tc.color, padding: '3px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+                        {tc.icon} {count}
+                      </span>
+                    );
+                  })}
+                  <span style={{ fontSize: 18, color: DP.muted, marginLeft: 8 }}>
+                    {expandedClient === clientName ? '▲' : '▼'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Campagnes du client */}
+              {expandedClient === clientName && (
+                <div style={{ padding: '16px 20px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        {['Titre', 'Canal', 'Statut', 'Date planifiée', 'Stats'].map(h => (
+                          <th key={h} style={{ padding: '6px 12px', textAlign: 'left', fontSize: 10, color: DP.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `1px solid ${DP.border}` }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.campagnes.map((c, i) => {
+                        const tc = TYPE[c.type?.toLowerCase()] || TYPE.email;
+                        const sc = STATUS_STYLE[c.status] || STATUS_STYLE.draft;
+                        return (
+                          <tr key={c.id} onClick={() => navigate(`/campagnes/${c.id}`)}
+                            style={{ borderBottom: i < group.campagnes.length - 1 ? `1px solid ${DP.bg}` : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                            onMouseEnter={e => e.currentTarget.style.background = DP.bg}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 600, color: DP.text }}>{c.title}</td>
+                            <td style={{ padding: '10px 12px' }}><Pill text={`${tc.icon} ${tc.label}`} bg={tc.bg} color={tc.color} /></td>
+                            <td style={{ padding: '10px 12px' }}><Pill text={sc.label} bg={sc.bg} color={sc.color} /></td>
+                            <td style={{ padding: '10px 12px', fontSize: 12, color: DP.muted }}>
+                              {c.dateScheduled ? new Date(c.dateScheduled).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                            </td>
+                            <td style={{ padding: '10px 12px' }}>
+                              {c.stats ? (
+                                <div style={{ display: 'flex', gap: 8, fontSize: 11 }}>
+                                  <span style={{ color: DP.blue }}>📧 {c.stats.emailsSent ?? 0}</span>
+                                  <span style={{ color: DP.green }}>👁 {c.stats.opens ?? 0}</span>
+                                  <span style={{ color: DP.gold }}>🖱 {c.stats.clicks ?? 0}</span>
+                                </div>
+                              ) : <span style={{ fontSize: 11, color: DP.muted }}>—</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+      ) : (
+        /* ── VUE CLIENT — grille campagnes avec bouton inscription ── */
+        <div>
+          {/* Mes inscriptions en haut */}
+          {inscriptions.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: DP.text, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 3, height: 16, background: DP.green, borderRadius: 2, display: 'inline-block' }} />
+                Mes inscriptions ({inscriptions.length})
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+                {filtered.filter(c => inscriptions.includes(c.id)).map(c => (
+                  <ClientCampagneCard key={c.id} campagne={c} inscriptions={inscriptions} onInscrire={handleInscrire} loadingId={loadingId} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Autres campagnes disponibles */}
+          {filtered.filter(c => !inscriptions.includes(c.id)).length > 0 && (
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: DP.text, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 3, height: 16, background: DP.gold, borderRadius: 2, display: 'inline-block' }} />
+                Campagnes disponibles ({filtered.filter(c => !inscriptions.includes(c.id)).length})
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+                {filtered.filter(c => !inscriptions.includes(c.id)).map(c => (
+                  <ClientCampagneCard key={c.id} campagne={c} inscriptions={inscriptions} onInscrire={handleInscrire} loadingId={loadingId} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
