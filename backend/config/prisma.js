@@ -1,11 +1,13 @@
-const { PrismaClient } = require('@prisma/client')
+const { PrismaClient } = require('@prisma/client');
+const { PrismaNeon } = require('@prisma/adapter-neon');
+const { Pool } = require('@neondatabase/serverless');
 
-let prisma
+// Initialise le Pool avec Neon
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaNeon(pool);
 
-if (!global.prisma) {
-  global.prisma = new PrismaClient()
-}
+// Crée une instance unique de PrismaClient
+const prisma = new PrismaClient({ adapter });
 
-prisma = global.prisma
-
-module.exports = prisma
+// Exporte l'instance
+module.exports = prisma;

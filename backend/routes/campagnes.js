@@ -19,18 +19,26 @@ const transporter = nodemailer.createTransport({
 // ✅ GET /api/campagnes/public  (sans auth)
 // Liste les campagnes envoyées pour la homepage
 // ─────────────────────────────────────────
+// Remplace cette partie dans routes/campagnes.js
 router.get('/public', async (req, res) => {
   try {
     const campagnes = await prisma.campagne.findMany({
-      where: { status: 'sent' },
-      include: { client: { select: { id: true, name: true } } },
+      where: {
+        // Remplace `status: 'sent'` par `isPublic: true`
+        isPublic: true,
+        // Optionnel : Filtrer aussi par statut si nécessaire
+        // status: { in: ['sent', 'scheduled'] },
+      },
+      include: {
+        client: { select: { id: true, name: true } }
+      },
       orderBy: { createdAt: 'desc' },
-    })
-    res.json(campagnes)
+    });
+    res.json(campagnes);
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
 // ─────────────────────────────────────────
 // ✅ POST /api/campagnes/:id/inscrire  (auth requise)
@@ -223,5 +231,45 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+// Ajoute ceci à la fin de routes/campagnes.js
+router.get('/mes-inscriptions', authMiddleware, async (req, res) => {
+  try {
+    const inscriptions = await prisma.inscription.findMany({
+      where: {
+        userId: req.user.id, // Filtrer par l'utilisateur connecté
+      },
+      include: {
+        campagne: {
+          include: {
+            client: true, // Inclure les infos du client (organisateur)
+          },
+        },
+      },
+      orderBy: {
+        dateInscription: 'desc', // Tri par date d'inscription (plus récentes en premier)
+      },
+    });
+    res.json(inscriptions);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// Ajoute ceci aussi dans routes/campagnes.js
+router.get('/:id/is-registered', authMiddleware, async (req, res) => {
+  try {
+    const campagneId = parseInt(req.params.id);
+    const userId = req.user.id;
 
+    const inscription = await prisma.inscription.findFirst({
+      where: {
+        userId,
+        campagneId,
+      },
+    });
+
+    res.json({ isRegistered: !!inscription });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 module.exports = router

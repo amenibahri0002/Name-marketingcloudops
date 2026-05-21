@@ -4,28 +4,32 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+
 }
 
 model Inscription {
-  id        Int       @id @default(autoincrement())
-  name      String    @db.VarChar(255)
-  email     String    @db.VarChar(255)
-  phone     String    @db.VarChar(50)
-  createdAt DateTime? @default(now()) @db.Timestamp(6)
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(255)
+  email       String    @db.VarChar(255)
+  phone       String    @db.VarChar(50)
+  campagneId  Int?
+  campagne    Campagne? @relation(fields: [campagneId], references: [id])
+  userId      Int?
+  user        User?     @relation(fields: [userId], references: [id])
+  createdAt   DateTime? @default(now()) @db.Timestamp(6)
 }
 
 model Client {
   id        Int        @id @default(autoincrement())
   name      String     @db.VarChar(255)
   email     String     @unique @db.VarChar(255)
+  phone     String?    @db.VarChar(50)  // ✅ Ajoute cette ligne
+  fcmToken   String?
   createdAt DateTime?  @default(now()) @db.Timestamp(6)
   campagnes Campagne[]
   contacts  Contact[]
   segments  Segment[]
   users     User[]
-  fcmToken String?
 }
 
 model Campagne {
@@ -33,13 +37,16 @@ model Campagne {
   title         String         @db.VarChar(255)
   type          String         @db.VarChar(100)
   status        String?        @default("draft") @db.VarChar(50)
+  isPublic      Boolean        @default(false)
+  description   String?        @db.Text
   clientId      Int?
-   url           String?        @db.VarChar(500)
+  url           String?        @db.VarChar(500)
   createdAt     DateTime?      @default(now()) @db.Timestamp(6)
   dateScheduled DateTime?      @db.Timestamp(6)
   sentAt        DateTime?      @db.Timestamp(6)
   client        Client?        @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   stats         CampagneStats?
+  inscriptions  Inscription[]
 }
 
 model Contact {
@@ -59,10 +66,12 @@ model User {
   email            String             @unique @db.VarChar(255)
   password         String             @db.VarChar(255)
   role             String?            @default("user") @db.VarChar(50)
+  fcmToken         String?
   createdAt        DateTime?          @default(now()) @db.Timestamp(6)
   clientId         Int?
   PushSubscription PushSubscription[]
   client           Client?            @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  inscriptions     Inscription[]
 }
 
 model Segment {
