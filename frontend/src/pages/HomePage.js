@@ -30,6 +30,101 @@ const CAMP_IMGS = {
 };
 
 /* ══════════════════════════════════════════════════════════════
+   AURORA BACKGROUND — Gradient animé pleine page
+══════════════════════════════════════════════════════════════ */
+function AuroraBackground() {
+  const canvasRef = useRef(null);
+  const animRef   = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    let t = 0;
+
+    const orbs = [
+      { baseX: 0.15, baseY: 0.20, rx: 0.18, ry: 0.12, freq: 0.22, phase: 0.00, r: 520, color: [79,  142, 247], alpha: 0.07 },
+      { baseX: 0.85, baseY: 0.15, rx: 0.14, ry: 0.10, freq: 0.17, phase: 1.10, r: 460, color: [124,  58, 237], alpha: 0.06 },
+      { baseX: 0.50, baseY: 0.50, rx: 0.20, ry: 0.15, freq: 0.13, phase: 2.20, r: 580, color: [245, 166,  35], alpha: 0.05 },
+      { baseX: 0.80, baseY: 0.75, rx: 0.16, ry: 0.12, freq: 0.19, phase: 3.50, r: 500, color: [ 16, 185, 129], alpha: 0.06 },
+      { baseX: 0.20, baseY: 0.80, rx: 0.14, ry: 0.10, freq: 0.25, phase: 4.80, r: 440, color: [124,  58, 237], alpha: 0.05 },
+      { baseX: 0.60, baseY: 0.25, rx: 0.12, ry: 0.08, freq: 0.30, phase: 0.70, r: 380, color: [ 79, 142, 247], alpha: 0.04 },
+    ];
+
+    const resize = () => {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const draw = () => {
+      const { width: W, height: H } = canvas;
+
+      ctx.fillStyle = '#080c14';
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.018)';
+      ctx.lineWidth   = 0.5;
+      const step = 50;
+      for (let x = 0; x < W; x += step) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+      for (let y = 0; y < H; y += step) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+      ctx.restore();
+
+      orbs.forEach(o => {
+        const cx = (o.baseX + Math.sin(t * o.freq + o.phase)           * o.rx) * W;
+        const cy = (o.baseY + Math.cos(t * o.freq * 0.7 + o.phase + 1) * o.ry) * H;
+        const radius = o.r * (1 + Math.sin(t * o.freq * 1.3 + o.phase) * 0.08);
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+        grad.addColorStop(0,   `rgba(${o.color.join(',')},${o.alpha})`);
+        grad.addColorStop(0.4, `rgba(${o.color.join(',')},${o.alpha * 0.5})`);
+        grad.addColorStop(1,   `rgba(${o.color.join(',')},0)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+      });
+
+      const vignette = ctx.createLinearGradient(0, 0, 0, H);
+      vignette.addColorStop(0,   'rgba(8,12,20,0)');
+      vignette.addColorStop(0.7, 'rgba(8,12,20,0)');
+      vignette.addColorStop(1,   'rgba(8,12,20,0.6)');
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, W, H);
+
+      t += 0.008;
+      animRef.current = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: 0,
+        pointerEvents: 'none',
+        display: 'block',
+      }}
+    />
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
    AI CHATBOT — Powered by Claude
 ══════════════════════════════════════════════════════════════ */
 function AIChatbot() {
@@ -108,7 +203,6 @@ Sois utile, précis et concis (max 3 phrases par réponse).`;
     }
   };
 
-  /* ── Format markdown simple ── */
   const formatMsg = (text) => {
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -136,7 +230,6 @@ Sois utile, précis et concis (max 3 phrases par réponse).`;
         .send-btn:disabled { opacity:0.5; cursor:not-allowed; }
       `}</style>
 
-      {/* Toggle button */}
       <button
         onClick={() => setOpen(o => !o)}
         style={{
@@ -154,14 +247,12 @@ Sois utile, précis et concis (max 3 phrases par réponse).`;
         {open ? '✕' : '💬'}
       </button>
 
-      {/* Unread dot */}
       {!open && (
         <div style={{ position: 'fixed', bottom: 78, right: 28, zIndex: 9001, width: 14, height: 14, borderRadius: '50%', background: '#ef4444', border: '2px solid #080c14', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{ fontSize: 8, color: '#fff', fontWeight: 700 }}>1</span>
         </div>
       )}
 
-      {/* Chat window */}
       {open && (
         <div style={{
           position: 'fixed', bottom: 100, right: 28, zIndex: 9000,
@@ -175,8 +266,6 @@ Sois utile, précis et concis (max 3 phrases par réponse).`;
           animation: 'chatIn 0.3s cubic-bezier(0.34,1.56,0.64,1)',
           fontFamily: T.font,
         }}>
-
-          {/* Header */}
           <div style={{
             padding: '16px 20px',
             background: 'linear-gradient(135deg, #141c2e, #0d1420)',
@@ -200,7 +289,6 @@ Sois utile, précis et concis (max 3 phrases par réponse).`;
             </div>
           </div>
 
-          {/* Messages */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12, scrollbarWidth: 'thin', scrollbarColor: 'rgba(245,166,35,0.2) transparent' }}>
             {msgs.map((m, i) => (
               <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexDirection: m.role === 'user' ? 'row-reverse' : 'row' }}>
@@ -215,7 +303,6 @@ Sois utile, précis et concis (max 3 phrases par réponse).`;
               </div>
             ))}
 
-            {/* Typing indicator */}
             {loading && (
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                 <div style={{ width: 28, height: 28, borderRadius: 8, background: T.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🤖</div>
@@ -229,7 +316,6 @@ Sois utile, précis et concis (max 3 phrases par réponse).`;
             <div ref={bottomRef} />
           </div>
 
-          {/* Suggestions */}
           {msgs.length <= 1 && !loading && (
             <div style={{ padding: '0 12px 10px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {SUGGESTIONS.map((s, i) => (
@@ -241,7 +327,6 @@ Sois utile, précis et concis (max 3 phrases par réponse).`;
             </div>
           )}
 
-          {/* Input */}
           <div style={{ padding: '12px 14px', borderTop: `1px solid rgba(255,255,255,0.06)`, display: 'flex', gap: 8 }}>
             <input
               ref={inputRef}
@@ -276,7 +361,6 @@ Sois utile, précis et concis (max 3 phrases par réponse).`;
             </button>
           </div>
 
-          {/* Powered by */}
           <div style={{ padding: '6px 0 10px', textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>
             Propulsé par Claude AI · DigiPip © 2026
           </div>
@@ -457,281 +541,290 @@ export default function HomePage() {
   ];
 
   return (
-    <div style={{ fontFamily: T.font, background: T.bg, color: T.white, minHeight: '100vh', overflowX: 'hidden' }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-        * { box-sizing:border-box; margin:0; padding:0; }
-        html { scroll-behavior:smooth; }
-        ::-webkit-scrollbar { width:4px; }
-        ::-webkit-scrollbar-thumb { background:rgba(245,166,35,0.4); border-radius:2px; }
-        @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-10px); } }
-        @keyframes spin { to { transform:rotate(360deg); } }
-        .nav-a { color:rgba(255,255,255,0.6); text-decoration:none; font-size:14px; font-weight:500; transition:color .2s; }
-        .nav-a:hover { color:#fff; }
-        .btn-gold { transition:all .2s; }
-        .btn-gold:hover { background:#d4881a !important; transform:translateY(-2px); box-shadow:0 12px 36px rgba(245,166,35,0.4) !important; }
-        .btn-ghost { transition:all .2s; }
-        .btn-ghost:hover { background:rgba(255,255,255,0.08) !important; }
-        .camp-card { transition:all .3s; }
-        .camp-card:hover { transform:translateY(-6px); box-shadow:0 24px 60px rgba(0,0,0,0.4) !important; border-color:rgba(245,166,35,0.25) !important; }
-        .tab-btn { transition:all .2s; cursor:pointer; border:none; font-family:inherit; }
-        .feat-card { transition:all .3s; }
-        .feat-card:hover { transform:translateY(-6px); border-color:rgba(245,166,35,0.3) !important; }
-      `}</style>
+    /* ─── position:relative + zIndex:1 pour passer AU-DESSUS du canvas aurora ─── */
+    <div style={{ fontFamily: T.font, color: T.white, minHeight: '100vh', overflowX: 'hidden', position: 'relative' }}>
 
-      {/* NAVBAR */}
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: 68, background: scrolled ? 'rgba(8,12,20,0.97)' : 'transparent', backdropFilter: scrolled ? 'blur(20px)' : 'none', borderBottom: scrolled ? `1px solid ${T.border}` : '1px solid transparent', transition: 'all 0.35s', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 5%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 36, height: 36, background: T.gold, borderRadius: 8, position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 4, left: 4, width: 16, height: 16, background: 'rgba(255,255,255,0.9)', borderRadius: 3 }} />
-            <div style={{ position: 'absolute', bottom: 4, right: 4, width: 11, height: 11, background: 'rgba(255,255,255,0.5)', borderRadius: 2 }} />
-          </div>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>Digi<span style={{ color: T.gold }}>Pip</span></div>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.06em' }}>by DigiLab Solutions</div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 32 }}>
-          {[['#marketing','Marketing'],['#cloud','Cloud'],['#devops','DevOps'],['#campagnes','Campagnes']].map(([h,l]) => (
-            <a key={l} className="nav-a" href={h}>{l}</a>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn-ghost" onClick={() => navigate('/login')} style={{ background: 'transparent', color: T.white, border: `1px solid rgba(255,255,255,0.15)`, padding: '9px 20px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: T.font }}>Se connecter</button>
-          <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '9px 22px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Démarrer gratuitement →</button>
-        </div>
-      </nav>
+      {/* ══ AURORA BACKGROUND (fixed, zIndex:0) ══ */}
+      <AuroraBackground />
 
-      {/* HERO */}
-      <section style={{ minHeight: '100vh', padding: '120px 5% 80px', display: 'flex', alignItems: 'center', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(79,142,247,0.1) 0%, transparent 60%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px)', backgroundSize: '50px 50px', pointerEvents: 'none' }} />
-        <div style={{ maxWidth: 1280, margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
-          <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(79,142,247,0.1)', border: '1px solid rgba(79,142,247,0.3)', borderRadius: 30, padding: '8px 18px', marginBottom: 32 }}>
-              <div style={{ display: 'flex' }}>{['#f5a623','#4f8ef7','#10b981'].map((c,i) => <div key={i} style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: '2px solid #080c14', marginLeft: i > 0 ? -8 : 0 }} />)}</div>
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>Plateforme cloud pour agences marketing</span>
+      {/* ══ CONTENU (position:relative, zIndex:1 implicite) ══ */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
+
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+          * { box-sizing:border-box; margin:0; padding:0; }
+          html { scroll-behavior:smooth; }
+          ::-webkit-scrollbar { width:4px; }
+          ::-webkit-scrollbar-thumb { background:rgba(245,166,35,0.4); border-radius:2px; }
+          @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-10px); } }
+          @keyframes spin { to { transform:rotate(360deg); } }
+          .nav-a { color:rgba(255,255,255,0.6); text-decoration:none; font-size:14px; font-weight:500; transition:color .2s; }
+          .nav-a:hover { color:#fff; }
+          .btn-gold { transition:all .2s; }
+          .btn-gold:hover { background:#d4881a !important; transform:translateY(-2px); box-shadow:0 12px 36px rgba(245,166,35,0.4) !important; }
+          .btn-ghost { transition:all .2s; }
+          .btn-ghost:hover { background:rgba(255,255,255,0.08) !important; }
+          .camp-card { transition:all .3s; }
+          .camp-card:hover { transform:translateY(-6px); box-shadow:0 24px 60px rgba(0,0,0,0.4) !important; border-color:rgba(245,166,35,0.25) !important; }
+          .tab-btn { transition:all .2s; cursor:pointer; border:none; font-family:inherit; }
+          .feat-card { transition:all .3s; }
+          .feat-card:hover { transform:translateY(-6px); border-color:rgba(245,166,35,0.3) !important; }
+        `}</style>
+
+        {/* NAVBAR */}
+        <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: 68, background: scrolled ? 'rgba(8,12,20,0.97)' : 'transparent', backdropFilter: scrolled ? 'blur(20px)' : 'none', borderBottom: scrolled ? `1px solid ${T.border}` : '1px solid transparent', transition: 'all 0.35s', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 5%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, background: T.gold, borderRadius: 8, position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 4, left: 4, width: 16, height: 16, background: 'rgba(255,255,255,0.9)', borderRadius: 3 }} />
+              <div style={{ position: 'absolute', bottom: 4, right: 4, width: 11, height: 11, background: 'rgba(255,255,255,0.5)', borderRadius: 2 }} />
             </div>
-            <h1 style={{ fontSize: 'clamp(40px,5vw,64px)', fontWeight: 900, lineHeight: 1.05, letterSpacing: '-0.03em', marginBottom: 24 }}>
-              La plateforme<br />
-              <span style={{ background: 'linear-gradient(135deg,#f5a623,#ffc048)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>tout-en-un</span><br />
-              pour agences modernes
-            </h1>
-            <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.55)', lineHeight: 1.75, maxWidth: 480, marginBottom: 40 }}>
-              Unifiez votre <strong style={{ color: T.white }}>marketing</strong>, votre <strong style={{ color: T.white }}>cloud</strong> et votre <strong style={{ color: T.white }}>DevOps</strong> dans une seule plateforme multi-tenant.
-            </p>
-            <div style={{ display: 'flex', gap: 14, marginBottom: 48, flexWrap: 'wrap' }}>
-              <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '15px 36px', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Démarrer gratuitement →</button>
-              <button className="btn-ghost" onClick={() => document.getElementById('marketing')?.scrollIntoView({ behavior: 'smooth' })} style={{ background: 'transparent', color: T.white, border: `1px solid rgba(255,255,255,0.15)`, padding: '15px 28px', borderRadius: 10, fontSize: 15, cursor: 'pointer', fontFamily: T.font }}>Voir la démo ▶</button>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>Digi<span style={{ color: T.gold }}>Pip</span></div>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.06em' }}>by DigiLab Solutions</div>
             </div>
-            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-              {[['📊','Marketing Digital',T.blue],['☁️','Cloud Scalable',T.purple],['⚙️','DevOps CI/CD',T.gold]].map(([icon,label,color],i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: color+'18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{icon}</div>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>{label}</span>
-                </div>
+          </div>
+          <div style={{ display: 'flex', gap: 32 }}>
+            {[['#marketing','Marketing'],['#cloud','Cloud'],['#devops','DevOps'],['#campagnes','Campagnes']].map(([h,l]) => (
+              <a key={l} className="nav-a" href={h}>{l}</a>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn-ghost" onClick={() => navigate('/login')} style={{ background: 'transparent', color: T.white, border: `1px solid rgba(255,255,255,0.15)`, padding: '9px 20px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: T.font }}>Se connecter</button>
+            <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '9px 22px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Démarrer gratuitement →</button>
+          </div>
+        </nav>
+
+        {/* HERO */}
+        <section style={{ minHeight: '100vh', padding: '120px 5% 80px', display: 'flex', alignItems: 'center', position: 'relative', overflow: 'hidden' }}>
+          {/* Le radial-gradient du hero est conservé en superposition légère */}
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(79,142,247,0.06) 0%, transparent 60%)', pointerEvents: 'none' }} />
+          <div style={{ maxWidth: 1280, margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(79,142,247,0.1)', border: '1px solid rgba(79,142,247,0.3)', borderRadius: 30, padding: '8px 18px', marginBottom: 32 }}>
+                <div style={{ display: 'flex' }}>{['#f5a623','#4f8ef7','#10b981'].map((c,i) => <div key={i} style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: '2px solid #080c14', marginLeft: i > 0 ? -8 : 0 }} />)}</div>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>Plateforme cloud pour agences marketing</span>
+              </div>
+              <h1 style={{ fontSize: 'clamp(40px,5vw,64px)', fontWeight: 900, lineHeight: 1.05, letterSpacing: '-0.03em', marginBottom: 24 }}>
+                La plateforme<br />
+                <span style={{ background: 'linear-gradient(135deg,#f5a623,#ffc048)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>tout-en-un</span><br />
+                pour agences modernes
+              </h1>
+              <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.55)', lineHeight: 1.75, maxWidth: 480, marginBottom: 40 }}>
+                Unifiez votre <strong style={{ color: T.white }}>marketing</strong>, votre <strong style={{ color: T.white }}>cloud</strong> et votre <strong style={{ color: T.white }}>DevOps</strong> dans une seule plateforme multi-tenant.
+              </p>
+              <div style={{ display: 'flex', gap: 14, marginBottom: 48, flexWrap: 'wrap' }}>
+                <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '15px 36px', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Démarrer gratuitement →</button>
+                <button className="btn-ghost" onClick={() => document.getElementById('marketing')?.scrollIntoView({ behavior: 'smooth' })} style={{ background: 'transparent', color: T.white, border: `1px solid rgba(255,255,255,0.15)`, padding: '15px 28px', borderRadius: 10, fontSize: 15, cursor: 'pointer', fontFamily: T.font }}>Voir la démo ▶</button>
+              </div>
+              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                {[['📊','Marketing Digital',T.blue],['☁️','Cloud Scalable',T.purple],['⚙️','DevOps CI/CD',T.gold]].map(([icon,label,color],i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: color+'18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{icon}</div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ position: 'relative', animation: 'float 6s ease-in-out infinite' }}>
+              <MockupDashboard />
+              <div style={{ position: 'absolute', bottom: -16, right: -16, background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: '12px 18px', boxShadow: '0 16px 40px rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📈</div>
+                <div><div style={{ fontSize: 13, fontWeight: 700 }}>+88% Push rate</div><div style={{ fontSize: 11, color: T.gray }}>ce mois-ci</div></div>
+              </div>
+              <div style={{ position: 'absolute', top: -12, left: -20, background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.green, boxShadow: `0 0 8px ${T.green}` }} />
+                <span style={{ fontSize: 12, fontWeight: 600 }}>5/6 services actifs</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* TECH TICKER */}
+        <div style={{ background: 'rgba(13,20,32,0.85)', backdropFilter: 'blur(12px)', borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, padding: '16px 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 48, flexWrap: 'wrap', padding: '0 5%' }}>
+            {['React','Node.js','Firebase','Twilio','Vercel','Render','Prisma','PostgreSQL','GitHub Actions'].map(t => (
+              <span key={t} style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.06em' }}>{t}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* FEATURES TABS */}
+        <section id="marketing" style={{ padding: '120px 5%' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <Reveal>
+              <div style={{ textAlign: 'center', marginBottom: 48 }}>
+                <h2 style={{ fontSize: 'clamp(32px,4.5vw,50px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 16 }}>Marketing • Cloud • DevOps</h2>
+                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 16 }}>tout depuis une seule plateforme</p>
+              </div>
+            </Reveal>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 48 }}>
+              {[['📊 Marketing',T.blue],['☁️ Cloud',T.purple],['⚙️ DevOps',T.gold]].map(([label,color],i) => (
+                <button key={i} className="tab-btn" onClick={() => setActiveTab(i)} style={{ padding: '11px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600, background: activeTab === i ? color+'18' : 'transparent', color: activeTab === i ? color : 'rgba(255,255,255,0.4)', border: `1px solid ${activeTab === i ? color+'40' : T.border}` }}>{label}</button>
               ))}
             </div>
-          </div>
-          <div style={{ position: 'relative', animation: 'float 6s ease-in-out infinite' }}>
-            <MockupDashboard />
-            <div style={{ position: 'absolute', bottom: -16, right: -16, background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: '12px 18px', boxShadow: '0 16px 40px rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📈</div>
-              <div><div style={{ fontSize: 13, fontWeight: 700 }}>+88% Push rate</div><div style={{ fontSize: 11, color: T.gray }}>ce mois-ci</div></div>
-            </div>
-            <div style={{ position: 'absolute', top: -12, left: -20, background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.green, boxShadow: `0 0 8px ${T.green}` }} />
-              <span style={{ fontSize: 12, fontWeight: 600 }}>5/6 services actifs</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* TECH TICKER */}
-      <div style={{ background: T.bg2, borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, padding: '16px 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 48, flexWrap: 'wrap', padding: '0 5%' }}>
-          {['React','Node.js','Firebase','Twilio','Vercel','Render','Prisma','PostgreSQL','GitHub Actions'].map(t => (
-            <span key={t} style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.06em' }}>{t}</span>
-          ))}
-        </div>
-      </div>
-
-      {/* FEATURES TABS */}
-      <section id="marketing" style={{ padding: '120px 5%' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: 48 }}>
-              <h2 style={{ fontSize: 'clamp(32px,4.5vw,50px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 16 }}>Marketing • Cloud • DevOps</h2>
-              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 16 }}>tout depuis une seule plateforme</p>
-            </div>
-          </Reveal>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 48 }}>
-            {[['📊 Marketing',T.blue],['☁️ Cloud',T.purple],['⚙️ DevOps',T.gold]].map(([label,color],i) => (
-              <button key={i} className="tab-btn" onClick={() => setActiveTab(i)} style={{ padding: '11px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600, background: activeTab === i ? color+'18' : 'transparent', color: activeTab === i ? color : 'rgba(255,255,255,0.4)', border: `1px solid ${activeTab === i ? color+'40' : T.border}` }}>{label}</button>
-            ))}
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
-            <Reveal from="left" key={activeTab}>
-              <div>
-                <h3 style={{ fontSize: 'clamp(22px,3vw,34px)', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 16 }}>{TAB_CONTENT[activeTab].title}</h3>
-                <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)', lineHeight: 1.75, marginBottom: 28 }}>{TAB_CONTENT[activeTab].desc}</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
-                  {TAB_CONTENT[activeTab].features.map((f,i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 20, height: 20, borderRadius: 6, background: TAB_CONTENT[activeTab].color+'20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: TAB_CONTENT[activeTab].color }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+              <Reveal from="left" key={activeTab}>
+                <div>
+                  <h3 style={{ fontSize: 'clamp(22px,3vw,34px)', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 16 }}>{TAB_CONTENT[activeTab].title}</h3>
+                  <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)', lineHeight: 1.75, marginBottom: 28 }}>{TAB_CONTENT[activeTab].desc}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+                    {TAB_CONTENT[activeTab].features.map((f,i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 20, height: 20, borderRadius: 6, background: TAB_CONTENT[activeTab].color+'20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <div style={{ width: 7, height: 7, borderRadius: '50%', background: TAB_CONTENT[activeTab].color }} />
+                        </div>
+                        <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>{f}</span>
                       </div>
-                      <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>{f}</span>
-                    </div>
-                  ))}
-                </div>
-                <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '13px 28px', borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Accéder à la plateforme →</button>
-              </div>
-            </Reveal>
-            <Reveal from="right" key={activeTab+10}>
-              <div style={{ borderRadius: 16, overflow: 'hidden', border: `1px solid ${T.border}`, boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
-                <img src={TAB_CONTENT[activeTab].img} alt="" style={{ width: '100%', height: 320, objectFit: 'cover', display: 'block' }} />
-              </div>
-            </Reveal>
-          </div>
-        </div>
-      </section>
-
-      {/* STATS */}
-      <section style={{ padding: '0 5% 120px' }}>
-        <Reveal>
-          <div style={{ maxWidth: 1200, margin: '0 auto', background: `linear-gradient(135deg,rgba(79,142,247,0.06),rgba(124,58,237,0.06),rgba(245,166,35,0.06))`, border: `1px solid ${T.border}`, borderRadius: 20, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', overflow: 'hidden' }}>
-            {[['99.9%','Uptime','🟢',T.green],['3','Canaux','📡',T.blue],['24h','Déploiement','⚡',T.gold],['100%','CI/CD auto','🔄',T.purple]].map(([v,l,icon,c],i) => (
-              <div key={i} style={{ padding: '44px 28px', textAlign: 'center', borderRight: i < 3 ? `1px solid ${T.border}` : 'none' }}>
-                <div style={{ fontSize: 28, marginBottom: 14 }}>{icon}</div>
-                <div style={{ fontSize: 44, fontWeight: 900, color: c, letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 10 }}>{v}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{l}</div>
-              </div>
-            ))}
-          </div>
-        </Reveal>
-      </section>
-
-      {/* DEVOPS */}
-      <section id="devops" style={{ padding: '0 5% 120px', background: T.bg2, borderTop: `1px solid ${T.border}`, paddingTop: 80 }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: 56 }}>
-              <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 800, letterSpacing: '-0.03em' }}>Pipeline DevOps <span style={{ color: T.gold }}>automatisé</span></h2>
-            </div>
-          </Reveal>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 32 }}>
-            {[['💻','01','Code & Push','Commit GitHub déclenche le pipeline.',T.blue],['🧪','02','Tests CI','Lint, tests, build automatiques.',T.purple],['🚀','03','Déploiement','Vercel + Render en moins de 2 min.',T.green],['📡','04','Monitoring','Alertes email + dashboard live.',T.gold]].map(([icon,step,title,desc,color],i) => (
-              <Reveal key={i} delay={i*80}>
-                <div className="feat-card" style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: '28px 24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: color+'16', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{icon}</div>
-                    <span style={{ fontSize: 11, fontWeight: 800, color, opacity: 0.5 }}>{step}</span>
+                    ))}
                   </div>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>{title}</h3>
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>{desc}</p>
+                  <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '13px 28px', borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Accéder à la plateforme →</button>
                 </div>
               </Reveal>
-            ))}
+              <Reveal from="right" key={activeTab+10}>
+                <div style={{ borderRadius: 16, overflow: 'hidden', border: `1px solid ${T.border}`, boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
+                  <img src={TAB_CONTENT[activeTab].img} alt="" style={{ width: '100%', height: 320, objectFit: 'cover', display: 'block' }} />
+                </div>
+              </Reveal>
+            </div>
           </div>
+        </section>
+
+        {/* STATS */}
+        <section style={{ padding: '0 5% 120px' }}>
           <Reveal>
-            <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: '20px 28px', display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap', justifyContent: 'center' }}>
-              {[['git push',T.blue],['npm test ✓',T.purple],['npm build ✓',T.green],['deploy ✓',T.gold],['🟢 Live',T.green]].map(([l,c],i) => (
-                <React.Fragment key={i}>
-                  <div style={{ background: c+'14', border: `1px solid ${c}30`, borderRadius: 8, padding: '10px 16px', textAlign: 'center' }}>
-                    <code style={{ fontSize: 12, color: c, fontWeight: 600 }}>{l}</code>
-                  </div>
-                  {i < 4 && <span style={{ color: 'rgba(255,255,255,0.2)', padding: '0 8px', fontSize: 16 }}>→</span>}
-                </React.Fragment>
+            <div style={{ maxWidth: 1200, margin: '0 auto', background: `linear-gradient(135deg,rgba(79,142,247,0.06),rgba(124,58,237,0.06),rgba(245,166,35,0.06))`, border: `1px solid ${T.border}`, borderRadius: 20, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', overflow: 'hidden' }}>
+              {[['99.9%','Uptime','🟢',T.green],['3','Canaux','📡',T.blue],['24h','Déploiement','⚡',T.gold],['100%','CI/CD auto','🔄',T.purple]].map(([v,l,icon,c],i) => (
+                <div key={i} style={{ padding: '44px 28px', textAlign: 'center', borderRight: i < 3 ? `1px solid ${T.border}` : 'none' }}>
+                  <div style={{ fontSize: 28, marginBottom: 14 }}>{icon}</div>
+                  <div style={{ fontSize: 44, fontWeight: 900, color: c, letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 10 }}>{v}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{l}</div>
+                </div>
               ))}
             </div>
           </Reveal>
-        </div>
-      </section>
+        </section>
 
-      {/* CAMPAGNES */}
-      <section id="campagnes" style={{ padding: '120px 5%' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: 56 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 20, padding: '6px 16px', marginBottom: 20 }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: T.green, display: 'block', boxShadow: `0 0 6px ${T.green}` }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: T.green, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Live — Campagnes Actives</span>
+        {/* DEVOPS */}
+        <section id="devops" style={{ padding: '80px 5% 120px', background: 'rgba(13,20,32,0.7)', backdropFilter: 'blur(12px)', borderTop: `1px solid ${T.border}` }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <Reveal>
+              <div style={{ textAlign: 'center', marginBottom: 56 }}>
+                <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 800, letterSpacing: '-0.03em' }}>Pipeline DevOps <span style={{ color: T.gold }}>automatisé</span></h2>
               </div>
-              <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 14 }}>Inscrivez-vous à nos campagnes</h2>
-              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 16, maxWidth: 440, margin: '0 auto' }}>Campagnes Email, SMS et Push de nos agences partenaires.</p>
-            </div>
-          </Reveal>
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: 60, color: 'rgba(255,255,255,0.3)' }}>
-              <div style={{ width: 34, height: 34, border: '3px solid rgba(245,166,35,0.15)', borderTop: `3px solid ${T.gold}`, borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-              Chargement...
-            </div>
-          ) : campagnes.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 80 }}>
-              <div style={{ fontSize: 48, opacity: 0.15, marginBottom: 16 }}>📢</div>
-              <p style={{ color: 'rgba(255,255,255,0.25)' }}>Aucune campagne disponible.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 22 }}>
-              {campagnes.map((c,idx) => (
-                <Reveal key={c.id} delay={idx*60}>
-                  <div className="camp-card" onClick={() => setSelected(c)} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
-                    <div style={{ height: 190, overflow: 'hidden', position: 'relative' }}>
-                      <img src={CAMP_IMGS[c.type?.toLowerCase()] || CAMP_IMGS.email} alt={c.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.src = `https://picsum.photos/seed/${c.id}/600/400`; }} />
-                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,transparent 40%,rgba(20,28,46,0.9))' }} />
+            </Reveal>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 32 }}>
+              {[['💻','01','Code & Push','Commit GitHub déclenche le pipeline.',T.blue],['🧪','02','Tests CI','Lint, tests, build automatiques.',T.purple],['🚀','03','Déploiement','Vercel + Render en moins de 2 min.',T.green],['📡','04','Monitoring','Alertes email + dashboard live.',T.gold]].map(([icon,step,title,desc,color],i) => (
+                <Reveal key={i} delay={i*80}>
+                  <div className="feat-card" style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: '28px 24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 12, background: color+'16', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{icon}</div>
+                      <span style={{ fontSize: 11, fontWeight: 800, color, opacity: 0.5 }}>{step}</span>
                     </div>
-                    <div style={{ padding: '20px 22px 24px' }}>
-                      {c.client?.name && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>🏢 {c.client.name}</div>}
-                      <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 18, lineHeight: 1.35 }}>{c.title}</h3>
-                      <button style={{ width: '100%', padding: '12px', background: T.gold, color: '#111', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: T.font, transition: 'background .2s' }}
-                        onMouseEnter={e => e.currentTarget.style.background = T.goldDk}
-                        onMouseLeave={e => e.currentTarget.style.background = T.gold}
-                      >Voir détails & s'inscrire</button>
-                    </div>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>{title}</h3>
+                    <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>{desc}</p>
                   </div>
                 </Reveal>
               ))}
             </div>
-          )}
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section style={{ padding: '120px 5%', background: T.bg2, borderTop: `1px solid ${T.border}`, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 700, height: 700, borderRadius: '50%', background: 'radial-gradient(circle,rgba(79,142,247,0.07) 0%,transparent 65%)', pointerEvents: 'none' }} />
-        <Reveal>
-          <div style={{ position: 'relative', zIndex: 1, maxWidth: 640, margin: '0 auto' }}>
-            <h2 style={{ fontSize: 'clamp(36px,5vw,60px)', fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1.08, marginBottom: 20 }}>
-              Prêt à faire passer votre agence<br />au niveau <span style={{ color: T.gold }}>supérieur ?</span>
-            </h2>
-            <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.4)', lineHeight: 1.75, marginBottom: 48, maxWidth: 500, margin: '0 auto 48px' }}>
-              Marketing + Cloud + DevOps — tout depuis DigiPip.
-            </p>
-            <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '17px 48px', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Démarrer gratuitement →</button>
-              <button className="btn-ghost" onClick={() => navigate('/login')} style={{ background: 'transparent', color: T.white, border: `1px solid rgba(255,255,255,0.15)`, padding: '17px 36px', borderRadius: 12, fontSize: 16, cursor: 'pointer', fontFamily: T.font }}>Voir la démo</button>
-            </div>
+            <Reveal>
+              <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: '20px 28px', display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap', justifyContent: 'center' }}>
+                {[['git push',T.blue],['npm test ✓',T.purple],['npm build ✓',T.green],['deploy ✓',T.gold],['🟢 Live',T.green]].map(([l,c],i) => (
+                  <React.Fragment key={i}>
+                    <div style={{ background: c+'14', border: `1px solid ${c}30`, borderRadius: 8, padding: '10px 16px', textAlign: 'center' }}>
+                      <code style={{ fontSize: 12, color: c, fontWeight: 600 }}>{l}</code>
+                    </div>
+                    {i < 4 && <span style={{ color: 'rgba(255,255,255,0.2)', padding: '0 8px', fontSize: 16 }}>→</span>}
+                  </React.Fragment>
+                ))}
+              </div>
+            </Reveal>
           </div>
-        </Reveal>
-      </section>
+        </section>
 
-      {/* FOOTER */}
-      <footer style={{ background: '#050810', borderTop: `1px solid ${T.border}`, padding: '36px 5%' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 30, height: 30, background: T.gold, borderRadius: 7 }} />
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 800 }}>Digi<span style={{ color: T.gold }}>Pip</span></div>
-              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)' }}>by DigiLab Solutions</div>
-            </div>
+        {/* CAMPAGNES */}
+        <section id="campagnes" style={{ padding: '120px 5%' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <Reveal>
+              <div style={{ textAlign: 'center', marginBottom: 56 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 20, padding: '6px 16px', marginBottom: 20 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: T.green, display: 'block', boxShadow: `0 0 6px ${T.green}` }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: T.green, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Live — Campagnes Actives</span>
+                </div>
+                <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 14 }}>Inscrivez-vous à nos campagnes</h2>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 16, maxWidth: 440, margin: '0 auto' }}>Campagnes Email, SMS et Push de nos agences partenaires.</p>
+              </div>
+            </Reveal>
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: 60, color: 'rgba(255,255,255,0.3)' }}>
+                <div style={{ width: 34, height: 34, border: '3px solid rgba(245,166,35,0.15)', borderTop: `3px solid ${T.gold}`, borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+                Chargement...
+              </div>
+            ) : campagnes.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 80 }}>
+                <div style={{ fontSize: 48, opacity: 0.15, marginBottom: 16 }}>📢</div>
+                <p style={{ color: 'rgba(255,255,255,0.25)' }}>Aucune campagne disponible.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 22 }}>
+                {campagnes.map((c,idx) => (
+                  <Reveal key={c.id} delay={idx*60}>
+                    <div className="camp-card" onClick={() => setSelected(c)} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+                      <div style={{ height: 190, overflow: 'hidden', position: 'relative' }}>
+                        <img src={CAMP_IMGS[c.type?.toLowerCase()] || CAMP_IMGS.email} alt={c.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.src = `https://picsum.photos/seed/${c.id}/600/400`; }} />
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,transparent 40%,rgba(20,28,46,0.9))' }} />
+                      </div>
+                      <div style={{ padding: '20px 22px 24px' }}>
+                        {c.client?.name && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>🏢 {c.client.name}</div>}
+                        <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 18, lineHeight: 1.35 }}>{c.title}</h3>
+                        <button style={{ width: '100%', padding: '12px', background: T.gold, color: '#111', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: T.font, transition: 'background .2s' }}
+                          onMouseEnter={e => e.currentTarget.style.background = T.goldDk}
+                          onMouseLeave={e => e.currentTarget.style.background = T.gold}
+                        >Voir détails & s'inscrire</button>
+                      </div>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+            )}
           </div>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>© 2026 DigiPip — DigiLab Solutions</span>
-          <button onClick={() => navigate('/login')} style={{ background: 'transparent', color: T.gold, border: `1px solid rgba(245,166,35,0.25)`, padding: '8px 18px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Se connecter →</button>
-        </div>
-      </footer>
+        </section>
 
-      {/* AI CHATBOT */}
+        {/* CTA */}
+        <section style={{ padding: '120px 5%', background: 'rgba(13,20,32,0.7)', backdropFilter: 'blur(12px)', borderTop: `1px solid ${T.border}`, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+          <Reveal>
+            <div style={{ position: 'relative', zIndex: 1, maxWidth: 640, margin: '0 auto' }}>
+              <h2 style={{ fontSize: 'clamp(36px,5vw,60px)', fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1.08, marginBottom: 20 }}>
+                Prêt à faire passer votre agence<br />au niveau <span style={{ color: T.gold }}>supérieur ?</span>
+              </h2>
+              <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.4)', lineHeight: 1.75, marginBottom: 48, maxWidth: 500, margin: '0 auto 48px' }}>
+                Marketing + Cloud + DevOps — tout depuis DigiPip.
+              </p>
+              <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '17px 48px', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Démarrer gratuitement →</button>
+                <button className="btn-ghost" onClick={() => navigate('/login')} style={{ background: 'transparent', color: T.white, border: `1px solid rgba(255,255,255,0.15)`, padding: '17px 36px', borderRadius: 12, fontSize: 16, cursor: 'pointer', fontFamily: T.font }}>Voir la démo</button>
+              </div>
+            </div>
+          </Reveal>
+        </section>
+
+        {/* FOOTER */}
+        <footer style={{ background: 'rgba(5,8,16,0.9)', backdropFilter: 'blur(12px)', borderTop: `1px solid ${T.border}`, padding: '36px 5%' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 30, height: 30, background: T.gold, borderRadius: 7 }} />
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 800 }}>Digi<span style={{ color: T.gold }}>Pip</span></div>
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)' }}>by DigiLab Solutions</div>
+              </div>
+            </div>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>© 2026 DigiPip — DigiLab Solutions</span>
+            <button onClick={() => navigate('/login')} style={{ background: 'transparent', color: T.gold, border: `1px solid rgba(245,166,35,0.25)`, padding: '8px 18px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Se connecter →</button>
+          </div>
+        </footer>
+
+      </div>{/* fin wrapper zIndex:1 */}
+
+      {/* AI CHATBOT — en dehors du wrapper pour rester au-dessus de tout */}
       <AIChatbot />
 
       {selected && <Modal camp={selected} onClose={() => setSelected(null)} />}
