@@ -3,24 +3,25 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import PrivateRoute from './components/PrivateRoute';
 import Layout from './Layout';
 import NotFound from './pages/NotFound';
-import Profile  from './pages/Profile';
+import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import HomePage from './pages/HomePage';
 import PublicCampagnes from './pages/PublicCampagnes';
 
-const Login      = lazy(() => import('./pages/Login'));
-const Dashboard  = lazy(() => import('./pages/Dashboard'));
-const Clients    = lazy(() => import('./pages/Clients'));
-const Campagnes  = lazy(() => import('./pages/Campagnes'));
-const Contacts   = lazy(() => import('./pages/Contacts'));
-const Segments   = lazy(() => import('./pages/Segments'));
-const Reporting  = lazy(() => import('./pages/Reporting'));
-const Users      = lazy(() => import('./pages/Users'));
-const Monitoring = lazy(() => import('./pages/Monitoring'));
-const Analytics  = lazy(() => import('./pages/Analytics'));
-const AccessDenied = lazy(() => import('./pages/AccessDenied'));
-const PipelineStatus  = lazy(() => import('./pages/PipelineStatus'));
-const MesCampagnes = lazy(() => import('./pages/MesCampagnes'));
+const Login         = lazy(() => import('./pages/Login'));
+const Dashboard     = lazy(() => import('./pages/Dashboard'));
+const Clients       = lazy(() => import('./pages/Clients'));
+const Campagnes     = lazy(() => import('./pages/Campagnes'));
+const Contacts      = lazy(() => import('./pages/Contacts'));
+const Segments      = lazy(() => import('./pages/Segments'));
+const Reporting     = lazy(() => import('./pages/Reporting'));
+const Users         = lazy(() => import('./pages/Users'));
+const Monitoring    = lazy(() => import('./pages/Monitoring'));
+const Analytics     = lazy(() => import('./pages/Analytics'));
+const AccessDenied  = lazy(() => import('./pages/AccessDenied'));
+const PipelineStatus = lazy(() => import('./pages/PipelineStatus'));
+const MesCampagnes  = lazy(() => import('./pages/MesCampagnes'));
+const CampagneDetail = lazy(() => import('./pages/CampagneDetail')); // Assure-toi que ce fichier existe
 
 const Loading = () => (
   <div style={{
@@ -48,72 +49,105 @@ function App() {
     <BrowserRouter>
       <Suspense fallback={<Loading />}>
         <Routes>
-          {/* ✅ Homepage publique — doit être en premier, sans Navigate */}
+          {/* ====================== PAGES PUBLIQUES ====================== */}
           <Route path="/" element={<HomePage />} />
-
-          {/* Pages publiques */}
-          <Route path="/Login"         element={<Login />} />
+          <Route path="/Login" element={<Login />} />
           <Route path="/access-denied" element={<AccessDenied />} />
           <Route path="/campagnes-public" element={<PublicCampagnes />} />
-          {/* Pages privées */}
+
+          {/* ====================== PAGES PRIVÉES ====================== */}
+
+          {/* Dashboard - Accessible à tous */}
           <Route path="/dashboard" element={
-            <PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>
+            <PrivateRoute>
+              <Layout><Dashboard /></Layout>
+            </PrivateRoute>
           }/>
+
+          {/* Profil & Paramètres - Accessible à tous */}
           <Route path="/profile" element={
-            <PrivateRoute><Layout><Profile /></Layout></PrivateRoute>
+            <PrivateRoute>
+              <Layout><Profile /></Layout>
+            </PrivateRoute>
           }/>
+
           <Route path="/settings" element={
-            <PrivateRoute><Layout><Settings /></Layout></PrivateRoute>
-          }/>
-          <Route path="/clients" element={
-            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
-              <Layout><Clients /></Layout>
+            <PrivateRoute>
+              <Layout><Settings /></Layout>
             </PrivateRoute>
           }/>
-          <Route path="/users" element={
-            <PrivateRoute roles={['ADMIN']}>
-              <Layout><Users /></Layout>
+
+          {/* Mes Campagnes - Accessible au Client */}
+          <Route path="/mes-campagnes" element={
+            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING', 'CLIENT']}>
+              <Layout><MesCampagnes /></Layout>
             </PrivateRoute>
           }/>
+
+          {/* Détail Campagne + Inscription */}
+          <Route path="/campagne/:id" element={
+            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING', 'CLIENT']}>
+              <Layout><CampagneDetail /></Layout>
+            </PrivateRoute>
+          }/>
+
+          {/* Routes pour Responsable Marketing + Admin */}
           <Route path="/campagnes" element={
-            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
+            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING', 'CLIENT']}>
               <Layout><Campagnes /></Layout>
             </PrivateRoute>
           }/>
+
           <Route path="/contacts" element={
-            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
+            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING', 'CLIENT']}>
               <Layout><Contacts /></Layout>
             </PrivateRoute>
           }/>
+
           <Route path="/segments" element={
-            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
+            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING', 'CLIENT']}>
               <Layout><Segments /></Layout>
             </PrivateRoute>
           }/>
+
           <Route path="/reporting" element={
             <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
               <Layout><Reporting /></Layout>
             </PrivateRoute>
           }/>
+
+          {/* Routes réservées à l'Admin uniquement */}
+          <Route path="/clients" element={
+            <PrivateRoute roles={['ADMIN']}>
+              <Layout><Clients /></Layout>
+            </PrivateRoute>
+          }/>
+
+          <Route path="/users" element={
+            <PrivateRoute roles={['ADMIN']}>
+              <Layout><Users /></Layout>
+            </PrivateRoute>
+          }/>
+
           <Route path="/monitoring" element={
             <PrivateRoute roles={['ADMIN']}>
               <Layout><Monitoring /></Layout>
             </PrivateRoute>
           }/>
+
           <Route path="/analytics" element={
             <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
               <Layout><Analytics /></Layout>
             </PrivateRoute>
           }/>
+
           <Route path="/pipeline" element={
             <PrivateRoute roles={['ADMIN']}>
               <Layout><PipelineStatus /></Layout>
             </PrivateRoute>
           }/>
-          <Route path="/mes-campagnes" element={
-  <PrivateRoute><Layout><MesCampagnes /></Layout></PrivateRoute>
-}/>
 
+          {/* Route 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
