@@ -85,7 +85,7 @@ function App() {
           }/>
 
           {/* Détail Campagne + Inscription */}
-          <Route path="/campagne/:id" element={
+          <Route path="/campagnes/:id" element={
             <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING', 'CLIENT']}>
               <Layout><CampagneDetail /></Layout>
             </PrivateRoute>
