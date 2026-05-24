@@ -449,53 +449,144 @@ function Modal({ camp, onClose }) {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone]       = useState(false);
+  const [step, setStep]       = useState(token ? 'form' : 'auth'); // 'auth' | 'form' | 'done'
+  const [form, setForm]       = useState({
+    name:  localStorage.getItem('userName')  || '',
+    email: localStorage.getItem('userEmail') || '',
+    phone: '',
+  });
+  const [errors, setErrors] = useState({});
   const tc = TYPE_CFG[camp.type?.toLowerCase()] || TYPE_CFG.email;
 
-  const submit = async () => {
-    if (!token) { navigate('/login'); return; }
-    setLoading(true);
-    try { await api.post(`/api/campagnes/${camp.id}/inscrire`); setDone(true); }
-    catch (e) { alert(e.response?.data?.message || e.message); }
-    finally { setLoading(false); }
+  const validate = () => {
+    const e = {};
+    if (!form.name.trim())  e.name  = 'Requis';
+    if (!form.email.trim()) e.email = 'Requis';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Email invalide';
+    if (!form.phone.trim()) e.phone = 'Requis';
+    setErrors(e);
+    return !Object.keys(e).length;
   };
 
+  const submit = async () => {
+    if (!validate()) return;
+    setLoading(true);
+    try {
+      await api.post(`/api/campagnes/${camp.id}/inscrire`, {
+        name:  form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+      });
+      setDone(true);
+    } catch (e) {
+      const msg = e.response?.data?.message || e.response?.data?.error || e.message;
+      setErrors({ global: msg });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputStyle = (key) => ({
+    width: '100%', padding: '11px 14px',
+    background: 'rgba(255,255,255,0.05)',
+    border: `1px solid ${errors[key] ? '#ef4444' : 'rgba(255,255,255,0.12)'}`,
+    borderRadius: 10, fontSize: 13, color: '#fff',
+    fontFamily: T.font, outline: 'none',
+    transition: 'border .2s',
+    boxSizing: 'border-box',
+  });
+
   return (
-    <div onClick={e => e.target === e.currentTarget && onClose()} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 20, width: '100%', maxWidth: 500, overflow: 'hidden', boxShadow: '0 40px 80px rgba(0,0,0,0.6)', animation: 'mIn 0.3s ease' }}>
-        <div style={{ padding: '24px 28px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div onClick={e => e.target === e.currentTarget && onClose()}
+      style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', backdropFilter:'blur(8px)', zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+      <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:20, width:'100%', maxWidth:460, overflow:'hidden', boxShadow:'0 40px 80px rgba(0,0,0,0.6)', animation:'mIn 0.3s ease' }}>
+
+        {/* Header */}
+        <div style={{ padding:'22px 26px', borderBottom:`1px solid ${T.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: T.gold, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 4 }}>{tc.icon} {tc.label}</div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: T.white, margin: 0 }}>{camp.title}</h2>
+            <div style={{ fontSize:11, fontWeight:700, color:tc.color, letterSpacing:'0.15em', textTransform:'uppercase', marginBottom:4 }}>{tc.icon} {tc.label}</div>
+            <h2 style={{ fontSize:18, fontWeight:700, color:'#fff', margin:0 }}>{camp.title}</h2>
           </div>
-          <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: 'none', color: T.gray, cursor: 'pointer', fontSize: 18 }}>✕</button>
+          <button onClick={onClose} style={{ width:32, height:32, borderRadius:8, background:'rgba(255,255,255,0.06)', border:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:16 }}>✕</button>
         </div>
-        <div style={{ padding: 28 }}>
-          {done ? (
-            <div style={{ textAlign: 'center', padding: '16px 0' }}>
-              <div style={{ fontSize: 52, marginBottom: 16 }}>🎉</div>
-              <h3 style={{ color: T.green, margin: '0 0 8px', fontSize: 20 }}>Inscription réussie !</h3>
-              <button onClick={onClose} style={{ marginTop: 16, background: T.gold, color: '#111', border: 'none', padding: '12px 32px', borderRadius: 10, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Fermer</button>
-            </div>
-          ) : !token ? (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 44, marginBottom: 16 }}>🔒</div>
-              <p style={{ color: T.gray, marginBottom: 24, lineHeight: 1.6 }}>Connectez-vous pour vous inscrire.</p>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={onClose} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: 'none', color: T.gray, cursor: 'pointer' }}>Annuler</button>
-                <button onClick={() => navigate('/login')} style={{ flex: 2, padding: 12, borderRadius: 10, border: 'none', background: T.gold, color: '#111', fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Se connecter →</button>
+
+        <div style={{ padding:'24px 26px' }}>
+          {/* ── PAS CONNECTÉ ── */}
+          {!token ? (
+            <div style={{ textAlign:'center' }}>
+              <div style={{ fontSize:40, marginBottom:14 }}>🔒</div>
+              <p style={{ color:'rgba(255,255,255,0.5)', marginBottom:22, lineHeight:1.6, fontSize:14 }}>
+                Connectez-vous pour vous inscrire à cette campagne.
+              </p>
+              <div style={{ display:'flex', gap:10 }}>
+                <button onClick={onClose} style={{ flex:1, padding:12, borderRadius:10, border:`1px solid ${T.border}`, background:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontFamily:T.font }}>Annuler</button>
+                <button onClick={() => navigate('/login')} style={{ flex:2, padding:12, borderRadius:10, border:'none', background:T.gold, color:'#111', fontWeight:700, cursor:'pointer', fontFamily:T.font }}>Se connecter →</button>
               </div>
             </div>
+
+          /* ── SUCCÈS ── */
+          ) : done ? (
+            <div style={{ textAlign:'center', padding:'8px 0' }}>
+              <div style={{ fontSize:48, marginBottom:14 }}>🎉</div>
+              <h3 style={{ color:'#10b981', margin:'0 0 8px', fontSize:18 }}>Inscription réussie !</h3>
+              <p style={{ color:'rgba(255,255,255,0.45)', fontSize:13, lineHeight:1.6, marginBottom:20 }}>
+                Vous êtes inscrit à <strong style={{color:'#fff'}}>{camp.title}</strong>.
+              </p>
+              <button onClick={onClose} style={{ background:T.gold, color:'#111', border:'none', padding:'12px 32px', borderRadius:10, fontWeight:700, cursor:'pointer', fontFamily:T.font }}>Fermer</button>
+            </div>
+
+          /* ── FORMULAIRE ── */
           ) : (
-            <div>
-              <p style={{ color: T.gray, lineHeight: 1.6, marginBottom: 24, fontSize: 14 }}>{camp.description || "Campagne marketing multi-canal avec suivi des performances en temps réel."}</p>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={onClose} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: 'none', color: T.gray, cursor: 'pointer', fontFamily: T.font }}>Annuler</button>
-                <button onClick={submit} disabled={loading} style={{ flex: 2, padding: 12, borderRadius: 10, border: 'none', background: T.gold, color: '#111', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, fontFamily: T.font }}>
-                  {loading ? 'Inscription...' : "✓ S'inscrire"}
+            <>
+              <p style={{ color:'rgba(255,255,255,0.4)', fontSize:13, lineHeight:1.6, marginBottom:20 }}>
+                {camp.description || 'Campagne marketing multi-canal avec suivi des performances en temps réel.'}
+              </p>
+
+              {errors.global && (
+                <div style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#ef4444' }}>
+                  ⚠ {errors.global}
+                </div>
+              )}
+
+              {/* Nom */}
+              <div style={{ marginBottom:14 }}>
+                <label style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.45)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.05em' }}>Nom complet *</label>
+                <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Jean Dupont" style={inputStyle('name')}
+                  onFocus={e=>e.target.style.borderColor='rgba(245,166,35,0.5)'}
+                  onBlur={e=>e.target.style.borderColor=errors.name?'#ef4444':'rgba(255,255,255,0.12)'}
+                />
+                {errors.name && <div style={{ fontSize:11, color:'#ef4444', marginTop:4 }}>⚠ {errors.name}</div>}
+              </div>
+
+              {/* Email */}
+              <div style={{ marginBottom:14 }}>
+                <label style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.45)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.05em' }}>Email *</label>
+                <input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="jean@exemple.com" style={inputStyle('email')}
+                  onFocus={e=>e.target.style.borderColor='rgba(245,166,35,0.5)'}
+                  onBlur={e=>e.target.style.borderColor=errors.email?'#ef4444':'rgba(255,255,255,0.12)'}
+                />
+                {errors.email && <div style={{ fontSize:11, color:'#ef4444', marginTop:4 }}>⚠ {errors.email}</div>}
+              </div>
+
+              {/* Téléphone */}
+              <div style={{ marginBottom:22 }}>
+                <label style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.45)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.05em' }}>Téléphone *</label>
+                <input type="tel" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} placeholder="+216 XX XXX XXX" style={inputStyle('phone')}
+                  onFocus={e=>e.target.style.borderColor='rgba(245,166,35,0.5)'}
+                  onBlur={e=>e.target.style.borderColor=errors.phone?'#ef4444':'rgba(255,255,255,0.12)'}
+                />
+                {errors.phone && <div style={{ fontSize:11, color:'#ef4444', marginTop:4 }}>⚠ {errors.phone}</div>}
+              </div>
+
+              {/* Actions */}
+              <div style={{ display:'flex', gap:10 }}>
+                <button onClick={onClose} style={{ flex:1, padding:12, borderRadius:10, border:`1px solid ${T.border}`, background:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontFamily:T.font }}>Annuler</button>
+                <button onClick={submit} disabled={loading} style={{ flex:2, padding:12, borderRadius:10, border:'none', background:loading?'#888':T.gold, color:'#111', fontWeight:700, cursor:loading?'not-allowed':'pointer', opacity:loading?0.7:1, fontFamily:T.font, transition:'all .2s' }}>
+                  {loading ? '⏳ Inscription...' : "✓ S'inscrire"}
                 </button>
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -503,7 +594,6 @@ function Modal({ camp, onClose }) {
     </div>
   );
 }
-
 /* ══════════════════════════════════════════════════════════════
    HOMEPAGE
 ══════════════════════════════════════════════════════════════ */
