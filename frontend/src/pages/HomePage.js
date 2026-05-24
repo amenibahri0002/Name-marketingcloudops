@@ -469,9 +469,9 @@ function Modal({ camp, onClose }) {
     return !Object.keys(e).length;
   };
 
- const submit = async () => {
+const submit = async () => {
   if (!token) {
-    // Sauvegarder l'ID et rediriger vers login
+    // ✅ Sauvegarder la destination et rediriger vers login
     sessionStorage.setItem('redirect_after_login', `/campagne/${camp.id}`);
     navigate('/login');
     return;
@@ -492,6 +492,7 @@ function Modal({ camp, onClose }) {
     setLoading(false);
   }
 };
+ 
 
   const inputStyle = (key) => ({
     width: '100%', padding: '11px 14px',
