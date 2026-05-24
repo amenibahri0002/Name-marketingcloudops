@@ -469,9 +469,9 @@ function Modal({ camp, onClose }) {
     return !Object.keys(e).length;
   };
 
-const submit = async () => {
+ const submit = async () => {
   if (!token) {
-    // ✅ Sauvegarder la destination et rediriger vers login
+    // Sauvegarder l'ID et rediriger vers login
     sessionStorage.setItem('redirect_after_login', `/campagne/${camp.id}`);
     navigate('/login');
     return;
@@ -492,7 +492,6 @@ const submit = async () => {
     setLoading(false);
   }
 };
- 
 
   const inputStyle = (key) => ({
     width: '100%', padding: '11px 14px',
@@ -521,16 +520,23 @@ const submit = async () => {
         <div style={{ padding:'24px 26px' }}>
           {/* ── PAS CONNECTÉ ── */}
           {!token ? (
-            <div style={{ textAlign:'center' }}>
-              <div style={{ fontSize:40, marginBottom:14 }}>🔒</div>
-              <p style={{ color:'rgba(255,255,255,0.5)', marginBottom:22, lineHeight:1.6, fontSize:14 }}>
-                Connectez-vous pour vous inscrire à cette campagne.
-              </p>
-              <div style={{ display:'flex', gap:10 }}>
-                <button onClick={onClose} style={{ flex:1, padding:12, borderRadius:10, border:`1px solid ${T.border}`, background:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontFamily:T.font }}>Annuler</button>
-                <button onClick={() => navigate('/login')} style={{ flex:2, padding:12, borderRadius:10, border:'none', background:T.gold, color:'#111', fontWeight:700, cursor:'pointer', fontFamily:T.font }}>Se connecter →</button>
-              </div>
-            </div>
+             <div style={{ textAlign:'center' }}>
+    <div style={{ fontSize:40, marginBottom:14 }}>🔒</div>
+    <p style={{ color:'rgba(255,255,255,0.5)', marginBottom:22, fontSize:14, lineHeight:1.6 }}>
+      Connectez-vous pour vous inscrire à cette campagne.
+    </p>
+    <div style={{ display:'flex', gap:10 }}>
+      <button onClick={onClose} style={{ flex:1, padding:12, borderRadius:10, border:`1px solid ${T.border}`, background:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontFamily:T.font }}>
+        Annuler
+      </button>
+      <button onClick={() => {
+        sessionStorage.setItem('redirect_after_login', `/campagne/${camp.id}`);
+        navigate('/login');
+      }} style={{ flex:2, padding:12, borderRadius:10, border:'none', background:T.gold, color:'#111', fontWeight:700, cursor:'pointer', fontFamily:T.font }}>
+        Se connecter →
+      </button>
+    </div>
+  </div>
 
           /* ── SUCCÈS ── */
           ) : done ? (
