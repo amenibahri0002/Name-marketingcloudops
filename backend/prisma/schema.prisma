@@ -4,6 +4,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+
 
 }
 
@@ -23,7 +25,7 @@ model Client {
   id        Int        @id @default(autoincrement())
   name      String     @db.VarChar(255)
   email     String     @unique @db.VarChar(255)
-  phone     String?    @db.VarChar(50)  // ✅ Ajoute cette ligne
+  phone     String?    @db.VarChar(50) 
   fcmToken   String?
   createdAt DateTime?  @default(now()) @db.Timestamp(6)
   campagnes Campagne[]
