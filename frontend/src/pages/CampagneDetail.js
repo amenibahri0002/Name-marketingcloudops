@@ -141,20 +141,27 @@ export default function CampagneDetail() {
   };
 
   const handleSubmit = async () => {
-    const e = validate();
-    if (Object.keys(e).length) { setErrors(e); return; }
-    setErrors({});
-    setSubmitting(true);
-    try {
-      await api.post(`/api/campagnes/${id}/inscrire`, form);
-      setDone(true);
-      setIsInscrit(true);
-    } catch (err) {
-      setErrors({ global: err.response?.data?.message || 'Erreur lors de l\'inscription. Réessayez.' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const e = validate();
+  if (Object.keys(e).length) { setErrors(e); return; }
+  setErrors({});
+  setSubmitting(true);
+  try {
+    // ✅ Envoyer name, email, phone — correspond au schéma Prisma
+    await api.post(`/api/campagnes/${id}/inscrire`, {
+      name:  form.nom,        // ← map "nom" → "name"
+      email: form.email,
+      phone: form.telephone,  // ← map "telephone" → "phone"
+    });
+    setDone(true);
+    setIsInscrit(true);
+  } catch (err) {
+    const msg = err.response?.data?.message || err.response?.data?.error || 'Erreur lors de l\'inscription.';
+    setErrors({ global: msg });
+  } finally {
+    setSubmitting(false);
+  }
+};
+ 
 
   if (loading) return (
     <div style={{ minHeight:'100vh', background:T.bg, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:T.font }}>

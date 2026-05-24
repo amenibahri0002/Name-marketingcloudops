@@ -48,22 +48,38 @@ router.post('/:id/inscrire', authMiddleware, async (req, res) => {
   try {
     const campagneId = parseInt(req.params.id)
     const userId     = req.user.id
-
+ 
+    // ✅ Récupérer name, email, phone depuis le body
+    const { name, email, phone } = req.body
+ 
+    // Validation
+    if (!name?.trim())  return res.status(400).json({ message: 'Le nom est requis' })
+    if (!email?.trim()) return res.status(400).json({ message: "L'email est requis" })
+    if (!phone?.trim()) return res.status(400).json({ message: 'Le téléphone est requis' })
+ 
     const campagne = await prisma.campagne.findUnique({ where: { id: campagneId } })
     if (!campagne) return res.status(404).json({ message: 'Campagne introuvable' })
-
+ 
     // Vérifier si déjà inscrit
     const existing = await prisma.inscription.findFirst({
       where: { userId, campagneId }
     })
     if (existing) return res.status(400).json({ message: 'Vous êtes déjà inscrit à cette campagne' })
-
+ 
+    // ✅ Créer avec tous les champs requis
     const inscription = await prisma.inscription.create({
-      data: { userId, campagneId }
+      data: {
+        userId,
+        campagneId,
+        name:  name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+      }
     })
-
+ 
     res.status(201).json({ message: 'Inscription réussie', inscription })
   } catch (err) {
+    console.error('[INSCRIRE ERROR]', err)
     res.status(500).json({ error: err.message })
   }
 })
