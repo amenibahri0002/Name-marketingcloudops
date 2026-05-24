@@ -19,9 +19,19 @@ export default function Login() {
         `${process.env.REACT_APP_API_URL || 'https://marketingcloudops-backend.onrender.com'}/api/auth/login`,
         { email, password }
       );
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      navigate('/dashboard');
+      localStorage.setItem('token',     res.data.token);
+      localStorage.setItem('user',      JSON.stringify(res.data.user));
+      localStorage.setItem('userName',  res.data.user?.name  || '');
+      localStorage.setItem('userEmail', res.data.user?.email || '');
+
+      // ✅ Rediriger vers la campagne si l'utilisateur venait d'en cliquer une
+      const redirect = sessionStorage.getItem('redirect_after_login');
+      if (redirect) {
+        sessionStorage.removeItem('redirect_after_login');
+        navigate(redirect);
+      } else {
+        navigate('/dashboard');
+      }
     } catch {
       setError('Email ou mot de passe incorrect.');
     }
@@ -52,18 +62,11 @@ export default function Login() {
         .back-link:hover { color: #f5a623; }
       `}</style>
 
-      <div className="login-card" style={{
-        width: '100%',
-        maxWidth: 420,
-      }}>
+      <div className="login-card" style={{ width: '100%', maxWidth: 420 }}>
 
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center',
-            justifyContent: 'center', gap: 10, marginBottom: 8,
-          }}>
-            {/* Logo mark */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
             <div style={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
               <div style={{ position: 'absolute', top: 0, left: 0, width: 22, height: 22, background: '#f5a623', borderRadius: 6 }} />
               <div style={{ position: 'absolute', bottom: 0, right: 0, width: 16, height: 16, background: 'rgba(245,166,35,0.35)', borderRadius: 4 }} />
@@ -78,24 +81,10 @@ export default function Login() {
         </div>
 
         {/* Card */}
-        <div style={{
-          background: '#1a1612',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 18,
-          padding: '36px 32px',
-          boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
-        }}>
+        <div style={{ background: '#1a1612', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, padding: '36px 32px', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
 
-          {/* Error */}
           {error && (
-            <div style={{
-              background: 'rgba(239,68,68,0.08)',
-              border: '1px solid rgba(239,68,68,0.2)',
-              borderRadius: 10, padding: '12px 16px',
-              marginBottom: 24, color: '#ef4444',
-              fontSize: 13, fontWeight: 500,
-              display: 'flex', alignItems: 'center', gap: 8,
-            }}>
+            <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '12px 16px', marginBottom: 24, color: '#ef4444', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
@@ -107,11 +96,7 @@ export default function Login() {
 
             {/* Email */}
             <div>
-              <label style={{
-                display: 'block', fontSize: 12, fontWeight: 600,
-                color: 'rgba(255,255,255,0.5)', marginBottom: 8,
-                letterSpacing: '0.04em',
-              }}>Email</label>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginBottom: 8, letterSpacing: '0.04em' }}>Email</label>
               <input
                 className="login-input"
                 type="email" required
@@ -133,11 +118,7 @@ export default function Login() {
 
             {/* Password */}
             <div>
-              <label style={{
-                display: 'block', fontSize: 12, fontWeight: 600,
-                color: 'rgba(255,255,255,0.5)', marginBottom: 8,
-                letterSpacing: '0.04em',
-              }}>Mot de passe</label>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginBottom: 8, letterSpacing: '0.04em' }}>Mot de passe</label>
               <div style={{ position: 'relative' }}>
                 <input
                   className="login-input"
@@ -156,16 +137,8 @@ export default function Login() {
                     transition: 'border-color .2s, box-shadow .2s',
                   }}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPass(p => !p)}
-                  style={{
-                    position: 'absolute', right: 14, top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'rgba(255,255,255,0.3)', padding: 0, lineHeight: 1,
-                    transition: 'color .2s',
-                  }}
+                <button type="button" onClick={() => setShowPass(p => !p)}
+                  style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', padding: 0, lineHeight: 1, transition: 'color .2s' }}
                   onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
                   onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
                 >
@@ -179,21 +152,8 @@ export default function Login() {
             </div>
 
             {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="login-btn"
-              style={{
-                width: '100%', padding: '14px',
-                background: '#f5a623', color: '#0f0e0c',
-                border: 'none', borderRadius: 10,
-                fontSize: 14, fontWeight: 700,
-                cursor: 'pointer', fontFamily: 'inherit',
-                transition: 'background .2s',
-                display: 'flex', alignItems: 'center',
-                justifyContent: 'center', gap: 10,
-                marginTop: 4,
-              }}
+            <button type="submit" disabled={loading} className="login-btn"
+              style={{ width: '100%', padding: '14px', background: '#f5a623', color: '#0f0e0c', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'background .2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 4 }}
             >
               {loading ? (
                 <>
@@ -205,13 +165,11 @@ export default function Login() {
           </form>
         </div>
 
-        {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
           <a href="/" className="back-link">← Retour à l'accueil</a>
           <span style={{ color: 'rgba(255,255,255,0.1)' }}>·</span>
           <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>DigiPip © 2026</span>
         </div>
-
       </div>
     </div>
   );

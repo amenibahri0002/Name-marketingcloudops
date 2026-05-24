@@ -469,23 +469,29 @@ function Modal({ camp, onClose }) {
     return !Object.keys(e).length;
   };
 
-  const submit = async () => {
-    if (!validate()) return;
-    setLoading(true);
-    try {
-      await api.post(`/api/campagnes/${camp.id}/inscrire`, {
-        name:  form.name.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-      });
-      setDone(true);
-    } catch (e) {
-      const msg = e.response?.data?.message || e.response?.data?.error || e.message;
-      setErrors({ global: msg });
-    } finally {
-      setLoading(false);
-    }
-  };
+ const submit = async () => {
+  if (!token) {
+    // Sauvegarder l'ID et rediriger vers login
+    sessionStorage.setItem('redirect_after_login', `/campagne/${camp.id}`);
+    navigate('/login');
+    return;
+  }
+  if (!validate()) return;
+  setLoading(true);
+  try {
+    await api.post(`/api/campagnes/${camp.id}/inscrire`, {
+      name:  form.name.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+    });
+    setDone(true);
+  } catch (e) {
+    const msg = e.response?.data?.message || e.response?.data?.error || e.message;
+    setErrors({ global: msg });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const inputStyle = (key) => ({
     width: '100%', padding: '11px 14px',
