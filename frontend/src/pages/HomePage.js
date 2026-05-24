@@ -44,12 +44,13 @@ function AuroraBackground() {
     let t = 0;
 
     const orbs = [
-      { baseX: 0.15, baseY: 0.20, rx: 0.18, ry: 0.12, freq: 0.22, phase: 0.00, r: 520, color: [79,  142, 247], alpha: 0.07 },
-      { baseX: 0.85, baseY: 0.15, rx: 0.14, ry: 0.10, freq: 0.17, phase: 1.10, r: 460, color: [124,  58, 237], alpha: 0.06 },
-      { baseX: 0.50, baseY: 0.50, rx: 0.20, ry: 0.15, freq: 0.13, phase: 2.20, r: 580, color: [245, 166,  35], alpha: 0.05 },
-      { baseX: 0.80, baseY: 0.75, rx: 0.16, ry: 0.12, freq: 0.19, phase: 3.50, r: 500, color: [ 16, 185, 129], alpha: 0.06 },
-      { baseX: 0.20, baseY: 0.80, rx: 0.14, ry: 0.10, freq: 0.25, phase: 4.80, r: 440, color: [124,  58, 237], alpha: 0.05 },
-      { baseX: 0.60, baseY: 0.25, rx: 0.12, ry: 0.08, freq: 0.30, phase: 0.70, r: 380, color: [ 79, 142, 247], alpha: 0.04 },
+      { baseX: 0.15, baseY: 0.25, rx: 0.20, ry: 0.15, freq: 0.22, phase: 0.00, r: 750, color: [79,  142, 247], alpha: 0.38 },
+      { baseX: 0.85, baseY: 0.15, rx: 0.16, ry: 0.12, freq: 0.17, phase: 1.10, r: 700, color: [124,  58, 237], alpha: 0.35 },
+      { baseX: 0.50, baseY: 0.60, rx: 0.22, ry: 0.18, freq: 0.13, phase: 2.20, r: 800, color: [245, 166,  35], alpha: 0.22 },
+      { baseX: 0.80, baseY: 0.78, rx: 0.18, ry: 0.14, freq: 0.19, phase: 3.50, r: 720, color: [ 16, 185, 129], alpha: 0.28 },
+      { baseX: 0.20, baseY: 0.75, rx: 0.16, ry: 0.12, freq: 0.25, phase: 4.80, r: 650, color: [124,  58, 237], alpha: 0.30 },
+      { baseX: 0.65, baseY: 0.20, rx: 0.14, ry: 0.10, freq: 0.30, phase: 0.70, r: 600, color: [ 79, 142, 247], alpha: 0.32 },
+      { baseX: 0.35, baseY: 0.45, rx: 0.18, ry: 0.14, freq: 0.18, phase: 5.50, r: 680, color: [160,  60, 255], alpha: 0.25 },
     ];
 
     const resize = () => {
@@ -80,21 +81,15 @@ function AuroraBackground() {
       orbs.forEach(o => {
         const cx = (o.baseX + Math.sin(t * o.freq + o.phase)           * o.rx) * W;
         const cy = (o.baseY + Math.cos(t * o.freq * 0.7 + o.phase + 1) * o.ry) * H;
-        const radius = o.r * (1 + Math.sin(t * o.freq * 1.3 + o.phase) * 0.08);
+        const radius = o.r * (1 + Math.sin(t * o.freq * 1.3 + o.phase) * 0.10);
         const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-        grad.addColorStop(0,   `rgba(${o.color.join(',')},${o.alpha})`);
-        grad.addColorStop(0.4, `rgba(${o.color.join(',')},${o.alpha * 0.5})`);
-        grad.addColorStop(1,   `rgba(${o.color.join(',')},0)`);
+        grad.addColorStop(0,    `rgba(${o.color.join(',')},${o.alpha})`);
+        grad.addColorStop(0.25, `rgba(${o.color.join(',')},${(o.alpha * 0.6).toFixed(3)})`);
+        grad.addColorStop(0.55, `rgba(${o.color.join(',')},${(o.alpha * 0.2).toFixed(3)})`);
+        grad.addColorStop(1,    `rgba(${o.color.join(',')},0)`);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, W, H);
       });
-
-      const vignette = ctx.createLinearGradient(0, 0, 0, H);
-      vignette.addColorStop(0,   'rgba(8,12,20,0)');
-      vignette.addColorStop(0.7, 'rgba(8,12,20,0)');
-      vignette.addColorStop(1,   'rgba(8,12,20,0.6)');
-      ctx.fillStyle = vignette;
-      ctx.fillRect(0, 0, W, H);
 
       t += 0.008;
       animRef.current = requestAnimationFrame(draw);
@@ -640,7 +635,7 @@ export default function HomePage() {
         </section>
 
         {/* TECH TICKER */}
-        <div style={{ background: 'rgba(13,20,32,0.85)', backdropFilter: 'blur(12px)', borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, padding: '16px 0' }}>
+        <div style={{ background: 'rgba(8,12,20,0.35)', backdropFilter: 'blur(20px)', borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, padding: '16px 0' }}>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 48, flexWrap: 'wrap', padding: '0 5%' }}>
             {['React','Node.js','Firebase','Twilio','Vercel','Render','Prisma','PostgreSQL','GitHub Actions'].map(t => (
               <span key={t} style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.06em' }}>{t}</span>
@@ -705,7 +700,7 @@ export default function HomePage() {
         </section>
 
         {/* DEVOPS */}
-        <section id="devops" style={{ padding: '80px 5% 120px', background: 'rgba(13,20,32,0.7)', backdropFilter: 'blur(12px)', borderTop: `1px solid ${T.border}` }}>
+        <section id="devops" style={{ padding: '80px 5% 120px', background: 'rgba(8,12,20,0.30)', backdropFilter: 'blur(20px)', borderTop: `1px solid ${T.border}` }}>
           <div style={{ maxWidth: 1200, margin: '0 auto' }}>
             <Reveal>
               <div style={{ textAlign: 'center', marginBottom: 56 }}>
@@ -790,7 +785,7 @@ export default function HomePage() {
         </section>
 
         {/* CTA */}
-        <section style={{ padding: '120px 5%', background: 'rgba(13,20,32,0.7)', backdropFilter: 'blur(12px)', borderTop: `1px solid ${T.border}`, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        <section style={{ padding: '120px 5%', background: 'rgba(8,12,20,0.30)', backdropFilter: 'blur(20px)', borderTop: `1px solid ${T.border}`, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
           <Reveal>
             <div style={{ position: 'relative', zIndex: 1, maxWidth: 640, margin: '0 auto' }}>
               <h2 style={{ fontSize: 'clamp(36px,5vw,60px)', fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1.08, marginBottom: 20 }}>
@@ -808,7 +803,7 @@ export default function HomePage() {
         </section>
 
         {/* FOOTER */}
-        <footer style={{ background: 'rgba(5,8,16,0.9)', backdropFilter: 'blur(12px)', borderTop: `1px solid ${T.border}`, padding: '36px 5%' }}>
+        <footer style={{ background: 'rgba(5,8,16,0.45)', backdropFilter: 'blur(20px)', borderTop: `1px solid ${T.border}`, padding: '36px 5%' }}>
           <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 30, height: 30, background: T.gold, borderRadius: 7 }} />
