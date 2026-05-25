@@ -866,7 +866,12 @@ export default function HomePage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 22 }}>
                 {campagnes.map((c,idx) => (
                   <Reveal key={c.id} delay={idx*60}>
-                    <div className="camp-card" onClick={() => setSelected(c)} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+                    <div className="camp-card" onClick={() => {if (!localStorage.getItem('token')) { sessionStorage.setItem('redirect_after_login', `/campagne/${c.id}`);
+                       navigate('/login');
+                         } else {
+                           setSelected(c);
+  }
+}} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
                       <div style={{ height: 190, overflow: 'hidden', position: 'relative' }}>
                         <img src={CAMP_IMGS[c.type?.toLowerCase()] || CAMP_IMGS.email} alt={c.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.src = `https://picsum.photos/seed/${c.id}/600/400`; }} />
                         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,transparent 40%,rgba(20,28,46,0.9))' }} />
