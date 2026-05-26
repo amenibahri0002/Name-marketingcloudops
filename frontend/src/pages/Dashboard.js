@@ -153,7 +153,7 @@ export default function Dashboard() {
     const u = JSON.parse(localStorage.getItem('user') || '{}');
     setUser(u);
     Promise.all([
-      api.get('/api/dashboard/stats').catch(() => ({ data: {} })),
+      api.get('/api/stats').catch(() => ({ data: {} })),
       api.get('/api/campagnes').catch(() => ({ data: [] })),
     ]).then(([s, c]) => {
       setStats(s.data);
