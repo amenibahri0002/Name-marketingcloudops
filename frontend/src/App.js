@@ -23,7 +23,7 @@ const PipelineStatus      = lazy(() => import('./pages/PipelineStatus'));
 const MesCampagnes        = lazy(() => import('./pages/MesCampagnes'));
 const CampagneDetail      = lazy(() => import('./pages/CampagneDetail'));
 const CampagneAdminDetail = lazy(() => import('./pages/CampagneAdminDetail'));
-const Register = lazy(() => import('./pages/Register'));
+const Register            = lazy(() => import('./pages/Register'));
 
 const Loading = () => (
   <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#080c14', fontFamily:"'Inter',sans-serif" }}>
@@ -42,17 +42,24 @@ function App() {
         <Routes>
 
           {/* ── PUBLIQUES ── */}
-          <Route path="/"                 element={<HomePage />} />
-          <Route path="/login"            element={<Login />} />
-          <Route path="/access-denied"    element={<AccessDenied />} />
+          <Route path="/"              element={<HomePage />} />
+          <Route path="/login"         element={<Login />} />
+          <Route path="/register"      element={<Register />} />
+          <Route path="/access-denied" element={<AccessDenied />} />
           <Route path="/campagnes-public" element={<PublicCampagnes />} />
-          <Route path="/register" element={<Register />} />
 
-          {/* ── FLUX CAMPAGNE (visiteur → login → inscription) ── */}
-          <Route path="/campagnes"        element={<MesCampagnes />} />
-          <Route path="/campagnes/:id"    element={<CampagneDetail />} />
+          {/* ── FLUX CLIENT : voir et s'inscrire aux campagnes ── */}
+          <Route path="/campagnes"     element={<MesCampagnes />} />
+          <Route path="/campagnes/:id" element={<CampagneDetail />} />
 
-          {/* ── DASHBOARD ADMIN inscrits (protégé) ── */}
+          {/* ── GESTION CAMPAGNES (Admin + Responsable Marketing) ── */}
+          <Route path="/gestion-campagnes" element={
+            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
+              <Layout><Campagnes /></Layout>
+            </PrivateRoute>
+          } />
+
+          {/* ── DETAIL ADMIN campagne ── */}
           <Route path="/admin/campagnes/:id" element={
             <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
               <CampagneAdminDetail />
@@ -68,11 +75,6 @@ function App() {
           } />
           <Route path="/settings" element={
             <PrivateRoute><Layout><Settings /></Layout></PrivateRoute>
-          } />
-          <Route path="/mes-campagnes" element={
-            <PrivateRoute roles={['ADMIN','RESPONSABLE_MARKETING','CLIENT']}>
-              <Layout><MesCampagnes /></Layout>
-            </PrivateRoute>
           } />
           <Route path="/contacts" element={
             <PrivateRoute roles={['ADMIN','RESPONSABLE_MARKETING','CLIENT']}>
@@ -90,7 +92,9 @@ function App() {
             </PrivateRoute>
           } />
           <Route path="/clients" element={
-            <PrivateRoute roles={['ADMIN']}><Layout><Clients /></Layout></PrivateRoute>
+            <PrivateRoute roles={['ADMIN','RESPONSABLE_MARKETING']}>
+              <Layout><Clients /></Layout>
+            </PrivateRoute>
           } />
           <Route path="/users" element={
             <PrivateRoute roles={['ADMIN']}><Layout><Users /></Layout></PrivateRoute>
