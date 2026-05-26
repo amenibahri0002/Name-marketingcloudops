@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -163,6 +163,14 @@ export default function Login() {
               ) : 'Se connecter'}
             </button>
           </form>
+
+          {/* Lien vers register */}
+          <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'rgba(255,255,255,0.3)' }}>
+            Pas encore de compte ?{' '}
+            <Link to="/register" style={{ color: '#f5a623', textDecoration: 'none', fontWeight: 600 }}>
+              S'inscrire
+            </Link>
+          </p>
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>

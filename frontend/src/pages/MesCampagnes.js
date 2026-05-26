@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import api from '../api';
 
 const T = {
@@ -69,9 +69,14 @@ export default function MesCampagnes() {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
+  // ── Auth immédiate ──
+  const token = localStorage.getItem('token');
+  if (!token) {
+    sessionStorage.setItem('redirect_after_login', '/campagnes');
+    return <Navigate to="/login" replace />;
+  }
+
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) { navigate('/login'); return; }
     Promise.all([
       api.get('/api/campagnes/public'),
       api.get('/api/campagnes/mes-inscriptions').catch(() => ({ data: [] })),
@@ -178,7 +183,7 @@ export default function MesCampagnes() {
                   <div
                     key={c.id}
                     className="camp-card"
-                    onClick={() => navigate(`/campagnes/${c.id}`)}
+                    onClick={() => { window.location.href = `/campagnes/${c.id}`; }}
                     style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:18, overflow:'hidden', boxShadow:'0 4px 24px rgba(0,0,0,0.25)', animation:`fadeUp 0.5s ease ${idx*60}ms both` }}
                   >
                     {/* Image */}
@@ -208,13 +213,15 @@ export default function MesCampagnes() {
                       <h3 style={{ fontSize:16,fontWeight:700,marginBottom:8,lineHeight:1.35,color:T.white }}>{c.title}</h3>
                       {c.description && <p style={{ fontSize:13,color:T.gray,lineHeight:1.55,marginBottom:14,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden' }}>{c.description}</p>}
                       <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                        <button style={{
-                          flex:1, padding:'11px', borderRadius:10, border:'none',
-                          background: isInscrit ? 'rgba(16,185,129,0.12)' : T.gold,
-                          color: isInscrit ? T.green : '#111',
-                          fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:T.font,
-                          border: isInscrit ? '1px solid rgba(16,185,129,0.3)' : 'none',
-                        }}>
+                        <button
+                          onClick={e => { e.stopPropagation(); window.location.href = `/campagnes/${c.id}`; }}
+                          style={{
+                            flex:1, padding:'11px', borderRadius:10,
+                            background: isInscrit ? 'rgba(16,185,129,0.12)' : T.gold,
+                            color: isInscrit ? T.green : '#111',
+                            fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:T.font,
+                            border: isInscrit ? '1px solid rgba(16,185,129,0.3)' : 'none',
+                          }}>
                           {isInscrit ? '✓ Déjà inscrit — Voir' : 'Voir & S\'inscrire →'}
                         </button>
                       </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import api from '../api';
 
 const T = {
@@ -102,21 +102,20 @@ export default function CampagneDetail() {
   const [isInscrit, setIsInscrit] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const [form, setForm] = useState({ nom:'', email:'', telephone:'' });
+  const [form, setForm] = useState({
+    nom:       localStorage.getItem('userName')  || '',
+    email:     localStorage.getItem('userEmail') || '',
+    telephone: '',
+  });
+
+  // ── Vérification auth IMMÉDIATE ──
+  const token = localStorage.getItem('token');
+if (!token) {
+  sessionStorage.setItem('redirect_after_login', `/campagnes/${id}`);
+  return <Navigate to="/login" replace />;
+}
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      // Sauvegarder la destination pour redirection post-login
-      sessionStorage.setItem('redirect_after_login', `/campagnes/${id}`);
-      navigate('/login');
-      return;
-    }
-    // Pré-remplir depuis le profil stocké
-    const userName = localStorage.getItem('userName') || '';
-    const userEmail = localStorage.getItem('userEmail') || '';
-    setForm(f => ({ ...f, nom: userName, email: userEmail }));
-
     Promise.all([
       api.get(`/api/campagnes/${id}`),
       api.get('/api/campagnes/mes-inscriptions').catch(()=>({data:[]})),
@@ -141,27 +140,20 @@ export default function CampagneDetail() {
   };
 
   const handleSubmit = async () => {
-  const e = validate();
-  if (Object.keys(e).length) { setErrors(e); return; }
-  setErrors({});
-  setSubmitting(true);
-  try {
-    // ✅ Envoyer name, email, phone — correspond au schéma Prisma
-    await api.post(`/api/campagnes/${id}/inscrire`, {
-      name:  form.nom,        // ← map "nom" → "name"
-      email: form.email,
-      phone: form.telephone,  // ← map "telephone" → "phone"
-    });
-    setDone(true);
-    setIsInscrit(true);
-  } catch (err) {
-    const msg = err.response?.data?.message || err.response?.data?.error || 'Erreur lors de l\'inscription.';
-    setErrors({ global: msg });
-  } finally {
-    setSubmitting(false);
-  }
-};
- 
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+    setErrors({});
+    setSubmitting(true);
+    try {
+      await api.post(`/api/campagnes/${id}/inscrire`, form);
+      setDone(true);
+      setIsInscrit(true);
+    } catch (err) {
+      setErrors({ global: err.response?.data?.message || 'Erreur lors de l\'inscription. Réessayez.' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) return (
     <div style={{ minHeight:'100vh', background:T.bg, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:T.font }}>

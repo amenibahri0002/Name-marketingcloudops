@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const API = process.env.REACT_APP_API_URL || 'https://marketingcloudops-backend.onrender.com';
@@ -12,6 +13,7 @@ const TYPE_STYLE = {
 export default function PublicCampagnes() {
   const [campagnes, setCampagnes] = useState([]);
   const [loading,   setLoading]   = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     axios.get(`${API}/api/campagnes/public`)
@@ -52,7 +54,10 @@ export default function PublicCampagnes() {
             {campagnes.map(c => {
               const t = TYPE_STYLE[c.type?.toLowerCase()] || TYPE_STYLE.email;
               return (
-                <div key={c.id} style={{
+                <div key={c.id}
+                  onClick={() => navigate(`/campagnes/${c.id}`)}
+                  style={{
+                  cursor: 'pointer',
                   background: '#ffffff', borderRadius: 16,
                   border: '1.5px solid #e5e9f2',
                   padding: '22px 24px',
