@@ -86,7 +86,7 @@ const DEPLOYMENTS = [
   {
     name:    'Frontend MarketingCloudOps',
     service: 'Vercel',
-    url:     'https://marketingcloudops-frontend.vercel.app',
+    url:     'https://digipip.vercel.app',
     icon:    '▲',
     color:   '#000000',
     bg:      'rgba(0,0,0,0.06)',
@@ -104,7 +104,7 @@ const DEPLOYMENTS = [
   {
     name:    'Backend TechEvent',
     service: 'Render',
-    url:     'https://techevent-app.onrender.com/api/health',
+    url:     'https://marketingcloudops-backend.onrender.com/api/health',
     icon:    '⬡',
     color:   '#46E3B7',
     bg:      'rgba(70,227,183,0.08)',
