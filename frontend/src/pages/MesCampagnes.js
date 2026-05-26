@@ -75,7 +75,13 @@ export default function MesCampagnes() {
     sessionStorage.setItem('redirect_after_login', '/campagnes');
     return <Navigate to="/login" replace />;
   }
-
+// ✅ Rediriger ADMIN et RESPONSABLE_MARKETING vers la gestion
+try {
+  const payload = JSON.parse(atob(token.split('.')[1]));
+  if (payload.role === 'ADMIN' || payload.role === 'RESPONSABLE_MARKETING') {
+    return <Navigate to="/gestion-campagnes" replace />;
+  }
+} catch(e) {}
   useEffect(() => {
     Promise.all([
       api.get('/api/campagnes/public'),

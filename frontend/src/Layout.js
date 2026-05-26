@@ -19,28 +19,27 @@ const adminMenu = [
 
 const marketingMenu = [
   { section: 'Campagnes', items: [
-    { path: '/dashboard', icon: '⬛', label: 'Dashboard' },
-    { path: '/campagnes', icon: '📧', label: 'Campagnes' },
-    { path: '/mes-campagnes', icon: '📢', label: 'Mes Campagnes' },
+    { path: '/dashboard',      icon: '⬛', label: 'Dashboard'          },
+    { path: '/campagnes',  icon: '📢', label: 'Campagnes' },
   ]},
   { section: 'Gestion', items: [
     { path: '/contacts', icon: '👥', label: 'Contacts' },
-    { path: '/clients', icon: '🏢', label: 'Clients' },
+    { path: '/clients',  icon: '🏢', label: 'Clients'  },
     { path: '/segments', icon: '🎯', label: 'Segments' },
   ]},
   { section: 'Analytics', items: [
     { path: '/reporting', icon: '📊', label: 'Suivi' },
-    { path: '/analytics', icon: '📈', label: 'KPIs' },
+    { path: '/analytics', icon: '📈', label: 'KPIs'  },
   ]},
 ];
 
 const clientMenu = [
   { section: 'Accueil', items: [
-    { path: '/dashboard', icon: '⬛', label: 'Dashboard' },
+    { path: '/dashboard',  icon: '⬛', label: 'Dashboard' },
   ]},
-  { section: 'Mes Campagnes', items: [
-    { path: '/mes-campagnes', icon: '📢', label: 'Mes Campagnes' },
-    { path: '/reporting', icon: '📊', label: 'Résultats' },
+  { section: 'Campagnes', items: [
+    { path: '/campagnes',  icon: '📢', label: 'Mes Campagnes' },
+    { path: '/reporting',  icon: '📊', label: 'Résultats'     },
   ]},
   { section: 'Mes Données', items: [
     { path: '/contacts', icon: '👥', label: 'Mes Contacts' },
