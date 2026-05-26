@@ -30,7 +30,14 @@ export default function Login() {
         sessionStorage.removeItem('redirect_after_login');
         navigate(redirect);
       } else {
-        navigate('/dashboard');
+        // Redirection selon le rôle
+        const role = res.data.user?.role;
+        if (role === 'ADMIN' || role === 'RESPONSABLE_MARKETING') {
+          navigate('/dashboard');
+        } else {
+          // CLIENT → page campagnes publiques
+          navigate('/campagnes');
+        }
       }
     } catch {
       setError('Email ou mot de passe incorrect.');
