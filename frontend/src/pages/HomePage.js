@@ -738,7 +738,7 @@ export default function HomePage() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 32 }}>
-            {[['#marketing','Marketing'],['#cloud','Cloud'],['#devops','DevOps'],['#campagnes','Campagnes'],['#contact','Contact']].map(([h,l]) => (
+            [['#marketing','Marketing'],['#services','Services'],['#devops','DevOps'],['#campagnes','Campagnes'],['#contact','Contact']](([h,l]) => (
               <a key={l} className="nav-a" href={h}>{l}</a>
             ))}
           </div>
@@ -857,6 +857,103 @@ export default function HomePage() {
             </div>
           </Reveal>
         </section>
+        {/* SERVICES MARKETING */}
+<section id="services" style={{ padding: '120px 5%' }}>
+  <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+    <Reveal>
+      <div style={{ textAlign: 'center', marginBottom: 56 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(79,142,247,0.08)', border: '1px solid rgba(79,142,247,0.2)', borderRadius: 20, padding: '6px 16px', marginBottom: 20 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: T.blue, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Nos Services</span>
+        </div>
+        <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 14 }}>
+          Services <span style={{ color: T.gold }}>Marketing Digital</span>
+        </h2>
+        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 16, maxWidth: 500, margin: '0 auto' }}>
+          Tout ce dont votre agence a besoin pour lancer, gérer et optimiser ses campagnes.
+        </p>
+      </div>
+    </Reveal>
+
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 20 }}>
+      {[
+        {
+          icon: '✉️', color: T.blue, title: 'Email Marketing',
+          desc: 'Créez et envoyez des campagnes email professionnelles avec tracking des ouvertures, clics et conversions en temps réel.',
+          features: ['Templates personnalisés', 'A/B Testing', 'Taux d\'ouverture live', 'SMTP sécurisé'],
+          img: 'https://images.unsplash.com/photo-1596526131083-e8c633964948?w=600&q=80',
+        },
+        {
+          icon: '💬', color: T.green, title: 'SMS Marketing',
+          desc: 'Atteignez vos clients directement sur leur mobile avec des messages SMS personnalisés via Twilio.',
+          features: ['Envoi en masse', 'Personnalisation', 'Taux de livraison 98%', 'Réponses automatiques'],
+          img: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600&q=80',
+        },
+        {
+          icon: '🔔', color: T.gold, title: 'Push Notifications',
+          desc: 'Envoyez des notifications push instantanées sur tous les appareils via Firebase Cloud Messaging.',
+          features: ['Multi-plateforme', 'Ciblage précis', 'Notifications riches', 'Analytics intégrés'],
+          img: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&q=80',
+        },
+        {
+          icon: '🎯', color: T.purple, title: 'Segmentation Avancée',
+          desc: 'Segmentez votre audience par comportement, localisation, historique d\'achat pour des campagnes ultra-ciblées.',
+          features: ['Segments dynamiques', 'Ciblage comportemental', 'Import CSV', 'Tags & filtres'],
+          img: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=80',
+        },
+        {
+          icon: '📊', color: '#f97316', title: 'Analytics & KPIs',
+          desc: 'Suivez les performances de vos campagnes en temps réel avec des tableaux de bord détaillés.',
+          features: ['Dashboard temps réel', 'ROI calculé', 'Rapports PDF', 'Comparaison canaux'],
+          img: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=80',
+        },
+        {
+          icon: '🤖', color: '#ec4899', title: 'Assistant IA',
+          desc: 'Bénéficiez d\'un assistant IA propulsé par Claude pour optimiser vos campagnes et répondre à vos questions.',
+          features: ['Suggestions automatiques', 'Optimisation contenu', 'Support 24/7', 'Propulsé par Claude'],
+          img: 'https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=600&q=80',
+        },
+      ].map((s, i) => (
+        <Reveal key={i} delay={i * 80}>
+          <div className="feat-card" style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
+            {/* Image */}
+            <div style={{ height: 160, overflow: 'hidden', position: 'relative' }}>
+              <img src={s.img} alt={s.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s' }}
+                onMouseEnter={e => e.target.style.transform = 'scale(1.05)'}
+                onMouseLeave={e => e.target.style.transform = 'scale(1)'}
+              />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(20,28,46,0.95))' }} />
+              <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', border: `1px solid ${s.color}40`, borderRadius: 20, padding: '4px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 14 }}>{s.icon}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: s.color }}>{s.title}</span>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '20px 22px 24px' }}>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.65, marginBottom: 16 }}>{s.desc}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
+                {s.features.map((f, j) => (
+                  <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 16, height: 16, borderRadius: 4, background: s.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ width: 5, height: 5, borderRadius: '50%', background: s.color }} />
+                    </div>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{f}</span>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => navigate('/login')} style={{ width: '100%', padding: '10px', background: s.color + '18', color: s.color, border: `1px solid ${s.color}30`, borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: T.font, transition: 'all .2s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = s.color; e.currentTarget.style.color = '#111'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = s.color + '18'; e.currentTarget.style.color = s.color; }}
+              >
+                Découvrir →
+              </button>
+            </div>
+          </div>
+        </Reveal>
+      ))}
+    </div>
+  </div>
+</section>
 
         {/* DEVOPS */}
         <section id="devops" style={{ padding: '80px 5% 120px', background: 'rgba(8,12,20,0.30)', backdropFilter: 'blur(20px)', borderTop: `1px solid ${T.border}` }}>
