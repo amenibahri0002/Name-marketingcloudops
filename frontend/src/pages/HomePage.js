@@ -738,7 +738,7 @@ export default function HomePage() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 32 }}>
-            [['#marketing','Marketing'],['#services','Services'],['#devops','DevOps'],['#campagnes','Campagnes'],['#contact','Contact']](([h,l]) => (
+             {[['#marketing','Marketing'],['#services','Services'],['#devops','DevOps'],['#campagnes','Campagnes'],['#contact','Contact']].map(([h,l]) => (
               <a key={l} className="nav-a" href={h}>{l}</a>
             ))}
           </div>
