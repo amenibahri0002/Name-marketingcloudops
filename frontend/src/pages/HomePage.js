@@ -614,11 +614,10 @@ function ContactForm() {
               onFocus={() => setFocused('subject')} onBlur={() => setFocused(null)}
               style={{ ...inputStyle('subject'), cursor: 'pointer' }}
             >
-              <option value="">— Choisir —</option>
-              <option value="demo">Demande de démo</option>
-              <option value="pricing">Tarifs & offres</option>
+              <option value="demo">Demander une démo DigiPip</option>
+              <option value="pricing">Tarifs & abonnements</option>
               <option value="support">Support technique</option>
-              <option value="partnership">Partenariat</option>
+              <option value="agency">Intégration pour mon agence</option>
               <option value="other">Autre</option>
             </select>
           </div>
@@ -960,7 +959,7 @@ export default function HomePage() {
           <span style={{ fontSize: 11, fontWeight: 700, color: T.gold, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Contact</span>
         </div>
         <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 14 }}>
-          Contactez <span style={{ color: T.gold }}>DigiLab Solutions</span>
+          Contactez <span style={{ color: T.gold }}>DigiPip</span>
         </h2>
         <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 16, maxWidth: 480, margin: '0 auto' }}>
           Une question sur la plateforme ? Notre équipe vous répond sous 24h.
@@ -972,8 +971,8 @@ export default function HomePage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {[
             { icon: '📞', label: 'Téléphone', value: '017-50050088', color: T.green },
-            { icon: '✉️', label: 'Email', value: 'contact@digilabsolutions.tn', color: T.blue },
-            { icon: '🌐', label: 'Site web', value: 'digilabsolutions.tn', color: T.gold },
+            { icon: '✉️', label: 'Email', value: 'contact@digipip.tn', color: T.blue },
+            { icon: '🌐', label: 'Site web', value: 'digipip.vercel.app', color: T.gold },
             { icon: '📍', label: 'Adresse', value: 'Tunisie', color: T.purple },
           ].map((info, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: '18px 20px' }}>
