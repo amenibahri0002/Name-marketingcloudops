@@ -1022,19 +1022,127 @@ export default function HomePage() {
         </section>
 
         {/* FOOTER */}
-        <footer style={{ background: 'rgba(5,8,16,0.45)', backdropFilter: 'blur(20px)', borderTop: `1px solid ${T.border}`, padding: '36px 5%' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 30, height: 30, background: T.gold, borderRadius: 7 }} />
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 800 }}>Digi<span style={{ color: T.gold }}>Pip</span></div>
-                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)' }}>by DigiLab Solutions</div>
-              </div>
-            </div>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>© 2026 DigiPip — DigiLab Solutions</span>
-            <button onClick={() => navigate('/login')} style={{ background: 'transparent', color: T.gold, border: `1px solid rgba(245,166,35,0.25)`, padding: '8px 18px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Se connecter →</button>
+<footer style={{ background: 'rgba(5,8,16,0.95)', backdropFilter: 'blur(20px)', borderTop: `1px solid ${T.border}`, padding: '64px 5% 32px' }}>
+  <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+
+    {/* Top footer */}
+    <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1.2fr', gap: 48, marginBottom: 56 }}>
+
+      {/* Logo + Description */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+          <div style={{ width: 38, height: 38, background: T.gold, borderRadius: 9, position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{ position: 'absolute', top: 5, left: 5, width: 16, height: 16, background: 'rgba(255,255,255,0.9)', borderRadius: 3 }} />
+            <div style={{ position: 'absolute', bottom: 5, right: 5, width: 11, height: 11, background: 'rgba(255,255,255,0.5)', borderRadius: 2 }} />
           </div>
-        </footer>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: T.white }}>Digi<span style={{ color: T.gold }}>Pip</span></div>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.06em' }}>by DigiLab Solutions</div>
+          </div>
+        </div>
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.75, marginBottom: 22, maxWidth: 280 }}>
+          DigiPip est une plateforme cloud tout-en-un pour agences marketing. Gérez vos campagnes Email, SMS et Push, votre infrastructure cloud et votre pipeline DevOps depuis un seul dashboard.
+        </p>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {[
+            { icon: '🐙', label: 'GitHub', url: 'https://github.com/amenibahri0002' },
+            { icon: '💼', label: 'LinkedIn', url: '#' },
+            { icon: '🌐', label: 'DigiLab', url: 'https://digilabsolutions.tn' },
+          ].map((s, i) => (
+            <a key={i} href={s.url} target="_blank" rel="noreferrer"
+              style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, textDecoration: 'none', transition: 'all .2s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,166,35,0.12)'; e.currentTarget.style.borderColor = 'rgba(245,166,35,0.3)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = T.border; }}
+              title={s.label}
+            >{s.icon}</a>
+          ))}
+        </div>
+      </div>
+
+      {/* Liens rapides */}
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: T.white, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>Plateforme</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[
+            ['#marketing', 'Marketing Digital'],
+            ['#cloud', 'Cloud Infrastructure'],
+            ['#devops', 'Pipeline DevOps'],
+            ['#campagnes', 'Campagnes'],
+            ['#contact', 'Contact'],
+          ].map(([href, label]) => (
+            <a key={label} href={href}
+              style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', transition: 'color .2s' }}
+              onMouseEnter={e => e.currentTarget.style.color = T.gold}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+            >{label}</a>
+          ))}
+        </div>
+      </div>
+
+      {/* Fonctionnalités */}
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: T.white, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>Fonctionnalités</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[
+            'Campagnes Email',
+            'SMS Marketing',
+            'Push Notifications',
+            'Analytics & KPIs',
+            'Monitoring Live',
+            'CI/CD GitHub Actions',
+          ].map(label => (
+            <span key={label} style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>{label}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Contact */}
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: T.white, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>Contact</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {[
+            { icon: '📍', text: 'Route Bouzayen Km 5, Immeuble El Bachir 4ème étage, Sfax, Tunisie 3000' },
+            { icon: '✉️', text: 'Contact@digilabsolutions.tn' },
+            { icon: '📞', text: '+216 22 044 105' },
+            { icon: '🌐', text: 'digilabsolutions.tn' },
+          ].map((item, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{item.icon}</span>
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>{item.text}</span>
+            </div>
+          ))}
+        </div>
+        <button onClick={() => navigate('/login')} style={{ marginTop: 20, width: '100%', padding: '11px', background: T.gold, color: '#111', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: T.font, transition: 'background .2s' }}
+          onMouseEnter={e => e.currentTarget.style.background = T.goldDk}
+          onMouseLeave={e => e.currentTarget.style.background = T.gold}
+        >
+          Démarrer gratuitement →
+        </button>
+      </div>
+    </div>
+
+    {/* Divider */}
+    <div style={{ height: 1, background: T.border, marginBottom: 28 }} />
+
+    {/* Bottom footer */}
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>© 2026 DigiPip — by DigiLab Solutions. Tous droits réservés.</span>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {[
+          { icon: '⚛️', label: 'React' },
+          { icon: '🟢', label: 'Node.js' },
+          { icon: '▲', label: 'Vercel' },
+          { icon: '🐘', label: 'PostgreSQL' },
+        ].map((t, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}`, borderRadius: 6, padding: '4px 10px' }}>
+            <span style={{ fontSize: 11 }}>{t.icon}</span>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>{t.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</footer>
 
       </div>{/* fin wrapper zIndex:1 */}
 
