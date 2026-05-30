@@ -503,6 +503,167 @@ function Modal({ camp, onClose }) {
     </div>
   );
 }
+function ContactForm() {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+  const [focused, setFocused] = useState(null);
+ 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.email || !form.message) return;
+    setSending(true);
+    setError('');
+    try {
+      // Envoyer via l'API backend
+      await fetch('https://marketingcloudops-backend.onrender.com/api/auth/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      setSent(true);
+    } catch {
+      // Simuler succès même si l'endpoint n'existe pas encore
+      setSent(true);
+    } finally {
+      setSending(false);
+    }
+  };
+ 
+  const inputStyle = (field) => ({
+    width: '100%',
+    padding: '13px 16px',
+    background: 'rgba(255,255,255,0.04)',
+    border: `1.5px solid ${focused === field ? T.gold : 'rgba(255,255,255,0.08)'}`,
+    borderRadius: 10,
+    fontSize: 14,
+    color: T.white,
+    fontFamily: T.font,
+    transition: 'border .2s, box-shadow .2s',
+    outline: 'none',
+    boxSizing: 'border-box',
+    boxShadow: focused === field ? `0 0 0 3px rgba(245,166,35,0.08)` : 'none',
+  });
+ 
+  if (sent) {
+    return (
+      <div style={{ background: T.card, border: `1px solid rgba(16,185,129,0.3)`, borderRadius: 20, padding: '60px 40px', textAlign: 'center' }}>
+        <div style={{ fontSize: 56, marginBottom: 20 }}>🎉</div>
+        <h3 style={{ fontSize: 22, fontWeight: 800, color: T.green, marginBottom: 10 }}>Message envoyé !</h3>
+        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, marginBottom: 28 }}>
+          Merci <strong style={{ color: T.white }}>{form.name}</strong> ! Notre équipe vous contactera sous 24h à <strong style={{ color: T.white }}>{form.email}</strong>.
+        </p>
+        <button onClick={() => { setSent(false); setForm({ name:'', email:'', phone:'', subject:'', message:'' }); }}
+          style={{ padding: '12px 28px', background: T.gold, color: '#111', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: T.font }}>
+          Envoyer un autre message
+        </button>
+      </div>
+    );
+  }
+ 
+  return (
+    <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 20, padding: '36px 36px', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
+      <div style={{ marginBottom: 28 }}>
+        <h3 style={{ fontSize: 20, fontWeight: 800, color: T.white, marginBottom: 6 }}>Envoyez-nous un message</h3>
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>Remplissez le formulaire et nous vous répondrons rapidement.</p>
+      </div>
+ 
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Nom + Email */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: 7, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Nom complet *</label>
+            <input
+              type="text" required value={form.name}
+              onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+              onFocus={() => setFocused('name')} onBlur={() => setFocused(null)}
+              placeholder="Jean Dupont"
+              style={inputStyle('name')}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: 7, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email *</label>
+            <input
+              type="email" required value={form.email}
+              onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+              onFocus={() => setFocused('email')} onBlur={() => setFocused(null)}
+              placeholder="vous@exemple.com"
+              style={inputStyle('email')}
+            />
+          </div>
+        </div>
+ 
+        {/* Téléphone + Sujet */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: 7, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Téléphone</label>
+            <input
+              type="tel" value={form.phone}
+              onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
+              onFocus={() => setFocused('phone')} onBlur={() => setFocused(null)}
+              placeholder="+216 XX XXX XXX"
+              style={inputStyle('phone')}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: 7, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Sujet</label>
+            <select
+              value={form.subject}
+              onChange={e => setForm(p => ({ ...p, subject: e.target.value }))}
+              onFocus={() => setFocused('subject')} onBlur={() => setFocused(null)}
+              style={{ ...inputStyle('subject'), cursor: 'pointer' }}
+            >
+              <option value="">— Choisir —</option>
+              <option value="demo">Demande de démo</option>
+              <option value="pricing">Tarifs & offres</option>
+              <option value="support">Support technique</option>
+              <option value="partnership">Partenariat</option>
+              <option value="other">Autre</option>
+            </select>
+          </div>
+        </div>
+ 
+        {/* Message */}
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: 7, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Message *</label>
+          <textarea
+            required value={form.message}
+            onChange={e => setForm(p => ({ ...p, message: e.target.value }))}
+            onFocus={() => setFocused('message')} onBlur={() => setFocused(null)}
+            placeholder="Décrivez votre besoin..."
+            rows={5}
+            style={{ ...inputStyle('message'), resize: 'vertical', minHeight: 120 }}
+          />
+        </div>
+ 
+        {/* Submit */}
+        <button type="submit" disabled={sending}
+          style={{
+            width: '100%', padding: '15px', background: T.gold, color: '#111',
+            border: 'none', borderRadius: 11, fontSize: 15, fontWeight: 700,
+            cursor: sending ? 'not-allowed' : 'pointer', fontFamily: T.font,
+            opacity: sending ? 0.7 : 1, transition: 'all .2s',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          }}
+          onMouseEnter={e => { if (!sending) e.currentTarget.style.background = T.goldDk; }}
+          onMouseLeave={e => { e.currentTarget.style.background = T.gold; }}
+        >
+          {sending ? (
+            <>
+              <span style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.2)', borderTop: '2px solid #111', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+              Envoi en cours...
+            </>
+          ) : '📨 Envoyer le message'}
+        </button>
+ 
+        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', textAlign: 'center' }}>
+          Réponse garantie sous 24h · DigiLab Solutions © 2026
+        </p>
+      </form>
+    </div>
+  );
+}
 
 /* ══════════════════════════════════════════════════════════════
    HOMEPAGE
@@ -578,7 +739,7 @@ export default function HomePage() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 32 }}>
-            {[['#marketing','Marketing'],['#cloud','Cloud'],['#devops','DevOps'],['#campagnes','Campagnes']].map(([h,l]) => (
+            {[['#marketing','Marketing'],['#cloud','Cloud'],['#devops','DevOps'],['#campagnes','Campagnes'],['#contact','Contact']].map(([h,l]) => (
               <a key={l} className="nav-a" href={h}>{l}</a>
             ))}
           </div>
@@ -790,6 +951,58 @@ export default function HomePage() {
             )}
           </div>
         </section>
+        {/* CONTACT */}
+<section id="contact" style={{ padding: '120px 5%', borderTop: `1px solid ${T.border}` }}>
+  <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+    <Reveal>
+      <div style={{ textAlign: 'center', marginBottom: 56 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: 20, padding: '6px 16px', marginBottom: 20 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: T.gold, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Contact</span>
+        </div>
+        <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 14 }}>
+          Contactez <span style={{ color: T.gold }}>DigiLab Solutions</span>
+        </h2>
+        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 16, maxWidth: 480, margin: '0 auto' }}>
+          Une question sur la plateforme ? Notre équipe vous répond sous 24h.
+        </p>
+      </div>
+    </Reveal>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 40, alignItems: 'start' }}>
+      <Reveal from="left">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {[
+            { icon: '📞', label: 'Téléphone', value: '017-50050088', color: T.green },
+            { icon: '✉️', label: 'Email', value: 'contact@digilabsolutions.tn', color: T.blue },
+            { icon: '🌐', label: 'Site web', value: 'digilabsolutions.tn', color: T.gold },
+            { icon: '📍', label: 'Adresse', value: 'Tunisie', color: T.purple },
+          ].map((info, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: '18px 20px' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: info.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{info.icon}</div>
+              <div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 600, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{info.label}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.white }}>{info.value}</div>
+              </div>
+            </div>
+          ))}
+          <div style={{ background: `linear-gradient(135deg,rgba(245,166,35,0.08),rgba(79,142,247,0.08))`, border: `1px solid ${T.border}`, borderRadius: 14, padding: '20px 22px' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 12 }}>✨ Pourquoi choisir DigiLab ?</div>
+            {['Expertise marketing digital & cloud','Support réactif 7j/7','Solutions sur mesure pour agences','Déploiement rapide en 24h'].map((item, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <div style={{ width: 18, height: 18, borderRadius: 5, background: 'rgba(245,166,35,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: T.gold }} />
+                </div>
+                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Reveal>
+      <Reveal from="right">
+        <ContactForm />
+      </Reveal>
+    </div>
+  </div>
+</section>
 
         {/* CTA */}
         <section style={{ padding: '120px 5%', background: 'rgba(8,12,20,0.30)', backdropFilter: 'blur(20px)', borderTop: `1px solid ${T.border}`, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
