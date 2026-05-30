@@ -19,6 +19,7 @@ const Users               = lazy(() => import('./pages/Users'));
 const Monitoring          = lazy(() => import('./pages/Monitoring'));
 const Analytics           = lazy(() => import('./pages/Analytics'));
 const AccessDenied        = lazy(() => import('./pages/AccessDenied'));
+const DevOpsCentral = lazy(() => import('./pages/DevOpsCentral'));
 const PipelineStatus      = lazy(() => import('./pages/PipelineStatus'));
 const MesCampagnes        = lazy(() => import('./pages/MesCampagnes'));
 const CampagneDetail      = lazy(() => import('./pages/CampagneDetail'));
@@ -105,6 +106,11 @@ function App() {
           <Route path="/analytics" element={
             <PrivateRoute roles={['ADMIN','RESPONSABLE_MARKETING']}>
               <Layout><Analytics /></Layout>
+            </PrivateRoute>
+          } />
+          <Route path="/devops-central" element={
+            <PrivateRoute roles={['ADMIN','RESPONSABLE_MARKETING']}>
+              <Layout><DevOpsCentral /></Layout>
             </PrivateRoute>
           } />
           <Route path="/pipeline" element={
