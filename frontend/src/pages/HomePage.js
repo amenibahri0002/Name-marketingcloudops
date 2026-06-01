@@ -174,19 +174,27 @@ Sois utile, précis et concis (max 3 phrases par réponse).`;
     setLoading(true);
 
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          system: SYSTEM,
-          messages: newHistory,
-        }),
-      });
+const response = await fetch('https://api.anthropic.com/v1/messages', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 1000,
+    system: SYSTEM,
+    messages: newHistory,
+  }),
+});
+const data = await response.json();
+const reply = data.content?.[0]?.text || "Désolé, réessayez.";
 
-      const data = await response.json();
-      const reply = data.content?.[0]?.text || "Désolé, je n'ai pas pu répondre. Réessayez.";
+// PAR ceci :
+const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://marketingcloudops-backend.onrender.com'}/api/chat`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ messages: newHistory }),
+});
+const data = await response.json();
+const reply = data.reply || "Désolé, réessayez.";
 
       setMsgs(prev => [...prev, { role: 'assistant', content: reply }]);
       setHistory(prev => [...prev, { role: 'assistant', content: reply }]);

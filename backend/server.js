@@ -27,6 +27,7 @@ app.use(express.urlencoded({ extended: true }))
 app.use(helmetMiddleware)
 app.use(globalLimiter)
 app.use(compression())
+app.use('/api/chat', require('./routes/chat'));
 
 const authRoutes = require('./routes/auth')
 app.use('/api/auth', authRoutes)
