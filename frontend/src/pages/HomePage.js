@@ -1111,8 +1111,8 @@ export default function HomePage() {
                 Marketing + Cloud + DevOps — tout depuis DigiPip.
               </p>
               <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '17px 48px', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Démarrer gratuitement →</button>
-                <button className="btn-ghost" onClick={() => navigate('/login')} style={{ background: 'transparent', color: T.white, border: `1px solid rgba(255,255,255,0.15)`, padding: '17px 36px', borderRadius: 12, fontSize: 16, cursor: 'pointer', fontFamily: T.font }}>Voir la démo</button>
+                <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '17px 48px', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>S'inscrire maintenant →</button>
+                <button className="btn-ghost" onClick={() => navigate('/login')} style={{ background: 'transparent', color: T.white, border: `1px solid rgba(255,255,255,0.15)`, padding: '17px 36px', borderRadius: 12, fontSize: 16, cursor: 'pointer', fontFamily: T.font }}>Découvrir nos fonctionnalités ↓</button>
               </div>
             </div>
           </Reveal>
