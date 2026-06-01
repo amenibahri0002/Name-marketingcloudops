@@ -768,7 +768,7 @@ export default function HomePage() {
               </p>
               <div style={{ display: 'flex', gap: 14, marginBottom: 48, flexWrap: 'wrap' }}>
                 <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '15px 36px', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>S'inscrire maintenant →</button>
-                <button className="btn-ghost" onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })} style={{ background: 'transparent', color: T.white, border: `1px solid rgba(255,255,255,0.15)`, padding: '15px 28px', borderRadius: 10, fontSize: 15, cursor: 'pointer', fontFamily: T.font }}>Voir la démo ▶</button>
+                <button className="btn-ghost" onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })} style={{ background: 'transparent', color: T.white, border: `1px solid rgba(255,255,255,0.15)`, padding: '15px 28px', borderRadius: 10, fontSize: 15, cursor: 'pointer', fontFamily: T.font }}>Découvrir nos fonctionnalités ↓</button>
               </div>
               <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
                 {[['📊','Marketing Digital',T.blue],['☁️','Cloud Scalable',T.purple],['⚙️','DevOps CI/CD',T.gold]].map(([icon,label,color],i) => (
@@ -1112,7 +1112,7 @@ export default function HomePage() {
               </p>
               <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '17px 48px', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>S'inscrire maintenant →</button>
-                <button className="btn-ghost" onClick={() => navigate('/login')} style={{ background: 'transparent', color: T.white, border: `1px solid rgba(255,255,255,0.15)`, padding: '17px 36px', borderRadius: 12, fontSize: 16, cursor: 'pointer', fontFamily: T.font }}>Découvrir nos fonctionnalités ↓</button>
+                <button className="btn-ghost" onClick={() => navigate('/login')} style={{ background: 'transparent', color: T.white, border: `1px solid rgba(255,255,255,0.15)`, padding: '17px 36px', borderRadius: 12, fontSize: 16, cursor: 'pointer', fontFamily: T.font }}>Découvrir notre plateforme</button>
               </div>
             </div>
           </Reveal>
