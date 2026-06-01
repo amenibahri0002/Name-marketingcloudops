@@ -21,12 +21,12 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'messages requis' });
   }
   try {
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      systemInstruction: {
-        parts: [{ text: SYSTEM }],   // ← format correct pour Gemini
-      },
-    });
+  const model = genAI.getGenerativeModel({
+  model: 'gemini-2.0-flash',  // ← remplacez gemini-1.5-flash par gemini-2.0-flash
+  systemInstruction: {
+    parts: [{ text: SYSTEM }],
+  },
+});
 
     const history = messages.slice(0, -1).map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
