@@ -1213,7 +1213,7 @@ export default function HomePage() {
           onMouseEnter={e => e.currentTarget.style.background = T.goldDk}
           onMouseLeave={e => e.currentTarget.style.background = T.gold}
         >
-          Démarrer gratuitement →
+          S'inscrire maintenant →
         </button>
       </div>
     </div>
@@ -1224,19 +1224,6 @@ export default function HomePage() {
     {/* Bottom footer */}
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
       <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>© 2026 DigiPip — by DigiLab Solutions. Tous droits réservés.</span>
-      <div style={{ display: 'flex', gap: 8 }}>
-        {[
-          { icon: '⚛️', label: 'React' },
-          { icon: '🟢', label: 'Node.js' },
-          { icon: '▲', label: 'Vercel' },
-          { icon: '🐘', label: 'PostgreSQL' },
-        ].map((t, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}`, borderRadius: 6, padding: '4px 10px' }}>
-            <span style={{ fontSize: 11 }}>{t.icon}</span>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>{t.label}</span>
-          </div>
-        ))}
-      </div>
     </div>
   </div>
 </footer>
