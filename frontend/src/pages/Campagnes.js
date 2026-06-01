@@ -345,7 +345,7 @@ export default function Campagnes() {
   const handleSend = async id => {
     if (!window.confirm('Envoyer cette campagne maintenant ?')) return;
     setActionId(id);
-    try { await api.post(`/api/emails/send/${id}`); fetchAll(); }
+    try { await api.post(`/api/campagnes/send/${id}`); fetchAll(); }
     catch { alert("Erreur lors de l'envoi"); }
     finally { setActionId(null); }
   };
