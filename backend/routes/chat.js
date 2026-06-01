@@ -1,8 +1,8 @@
 const express = require('express');
-const router = express.Router();
-const Anthropic = require('@anthropic-ai/sdk');
+const router  = express.Router();
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const SYSTEM = `Tu es l'assistant IA de DigiPip, plateforme cloud marketing dédiée aux agences.
 Réponds en français, de façon concise et professionnelle (max 3 phrases).
@@ -21,15 +21,27 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'messages requis' });
   }
   try {
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 500,
-      system: SYSTEM,
-      messages,
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      systemInstruction: {
+        parts: [{ text: SYSTEM }],   // ← format correct pour Gemini
+      },
     });
-    res.json({ reply: response.content[0].text });
+
+    const history = messages.slice(0, -1).map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
+    const chat = model.startChat({ history });
+
+    const lastMessage = messages[messages.length - 1].content;
+    const result = await chat.sendMessage(lastMessage);
+    const reply  = result.response.text();
+
+    res.json({ reply });
   } catch (err) {
-    console.error('[CHAT ERROR]', err.message);
+    console.error('[GEMINI ERROR]', err.message);
     res.status(500).json({ error: err.message });
   }
 });
