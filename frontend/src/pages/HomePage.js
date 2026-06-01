@@ -744,7 +744,7 @@ export default function HomePage() {
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn-ghost" onClick={() => navigate('/login')} style={{ background: 'transparent', color: T.white, border: `1px solid rgba(255,255,255,0.15)`, padding: '9px 20px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: T.font }}>Se connecter</button>
-            <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '9px 22px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Démarrer gratuitement →</button>
+            <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '9px 22px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}> S'inscrire maintenant →</button>
           </div>
         </nav>
 
