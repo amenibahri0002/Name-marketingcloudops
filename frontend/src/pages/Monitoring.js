@@ -84,7 +84,7 @@ function StatusDot({ ok, size = 8 }) {
 /* ─── Déploiements externes (Vercel + Render) ─────────────────── */
 const DEPLOYMENTS = [
   {
-    name:    'Frontend MarketingCloudOps',
+    name:    'Frontend DigiPip',
     service: 'Vercel',
     url:     'https://digipip.vercel.app',
     icon:    '▲',
@@ -93,16 +93,7 @@ const DEPLOYMENTS = [
     type:    'frontend',
   },
   {
-    name:    'Backend MarketingCloudOps',
-    service: 'Render',
-    url:     'https://marketingcloudops-backend.onrender.com/api/health',
-    icon:    '⬡',
-    color:   '#46E3B7',
-    bg:      'rgba(70,227,183,0.08)',
-    type:    'backend',
-  },
-  {
-    name:    'Backend TechEvent',
+    name:    'Backend DigiPip',
     service: 'Render',
     url:     'https://marketingcloudops-backend.onrender.com/api/health',
     icon:    '⬡',
