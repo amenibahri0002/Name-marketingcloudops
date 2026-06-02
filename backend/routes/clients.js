@@ -39,5 +39,21 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+router.put('/:id', async (req, res) => {
+  try {
+    const { name, email, phone } = req.body
+    const client = await prisma.client.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        ...(name  !== undefined && { name }),
+        ...(email !== undefined && { email }),
+        ...(phone !== undefined && { phone }),
+      }
+    })
+    res.json(client)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 
 module.exports = router
