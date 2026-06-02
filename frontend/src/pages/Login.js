@@ -70,18 +70,47 @@ export default function Login() {
       `}</style>
 
       <div className="login-card" style={{ width: '100%', maxWidth: 420 }}>
+        <div style={{ padding: '1.8rem 1.5rem 1.4rem', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
 
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
-            <div style={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, width: 22, height: 22, background: '#f5a623', borderRadius: 6 }} />
-              <div style={{ position: 'absolute', bottom: 0, right: 0, width: 16, height: 16, background: 'rgba(245,166,35,0.35)', borderRadius: 4 }} />
-            </div>
-            <span style={{ fontSize: 24, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
-              Digi<span style={{ color: '#f5a623' }}>Pip</span>
-            </span>
+        <div style={{
+            width: 42,
+            height: 42,
+            background: 'linear-gradient(135deg, #f5a623, #d97706)',
+            borderRadius: '50% 40% 65% 45%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 24,
+            color: 'white',
+            boxShadow: '0 4px 15px rgba(14, 165, 233, 0.5)',
+            flexShrink: 0,
+            position: 'relative'
+          }}>
+            ☁️
+            <div style={{
+              position: 'absolute',
+              top: 6,
+              left: 8,
+              width: 12,
+              height: 12,
+              background: 'rgba(255,255,255,0.6)',
+              borderRadius: '50%',
+              filter: 'blur(2px)'
+            }} /> 
           </div>
+          <div>
+            <div style={{ 
+              fontFamily: "'Montserrat', sans-serif", 
+              fontSize: '1.45rem', 
+              fontWeight: 800, 
+              color: 'white',
+              letterSpacing: '-0.5px'
+            }}>
+              Digi<span style={{ color: '#f5a623' }}>Pip</span>
+            </div>
+            </div>
+            
           <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, marginTop: 4 }}>
             Connectez-vous à votre espace
           </p>

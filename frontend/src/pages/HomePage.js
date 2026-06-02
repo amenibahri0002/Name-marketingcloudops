@@ -720,9 +720,10 @@ export default function HomePage() {
         `}</style>
 
         {/* NAVBAR */}
+    
         <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: 68, background: scrolled ? 'rgba(8,12,20,0.97)' : 'transparent', backdropFilter: scrolled ? 'blur(20px)' : 'none', borderBottom: scrolled ? `1px solid ${T.border}` : '1px solid transparent', transition: 'all 0.35s', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 5%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, background: T.gold, borderRadius: 8, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>    
+             <div style={{ width: 36, height: 36, background: T.gold, borderRadius: 8, position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: 4, left: 4, width: 16, height: 16, background: 'rgba(255,255,255,0.9)', borderRadius: 3 }} />
               <div style={{ position: 'absolute', bottom: 4, right: 4, width: 11, height: 11, background: 'rgba(255,255,255,0.5)', borderRadius: 2 }} />
             </div>
@@ -1122,14 +1123,33 @@ export default function HomePage() {
       {/* Logo + Description */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-          <div style={{ width: 38, height: 38, background: T.gold, borderRadius: 9, position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
-            <div style={{ position: 'absolute', top: 5, left: 5, width: 16, height: 16, background: 'rgba(255,255,255,0.9)', borderRadius: 3 }} />
-            <div style={{ position: 'absolute', bottom: 5, right: 5, width: 11, height: 11, background: 'rgba(255,255,255,0.5)', borderRadius: 2 }} />
-          </div>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: T.white }}>Digi<span style={{ color: T.gold }}>Pip</span></div>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.06em' }}>by DigiLab Solutions</div>
-          </div>
+          <div style={{
+            width: 42,
+            height: 42,
+            background: 'linear-gradient(135deg, #f5a623, #d97706)',
+            borderRadius: '50% 40% 65% 45%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 24,
+            color: 'white',
+            boxShadow: '0 4px 15px rgba(14, 165, 233, 0.5)',
+            flexShrink: 0,
+            position: 'relative'
+          }}>
+            ☁️
+            <div style={{
+              position: 'absolute',
+              top: 6,
+              left: 8,
+              width: 12,
+              height: 12,
+              background: 'rgba(255,255,255,0.6)',
+              borderRadius: '50%',
+              filter: 'blur(2px)'
+            }} />
+            </div>
+          <span style={{ fontSize: 18, fontWeight: 800, color: T.white, letterSpacing: '-0.02em' }}>DigiPip</span>
         </div>
         <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.75, marginBottom: 22, maxWidth: 280 }}>
           DigiPip est une plateforme cloud tout-en-un pour agences marketing. Gérez vos campagnes Email, SMS et Push, votre infrastructure cloud et votre pipeline DevOps depuis un seul dashboard.

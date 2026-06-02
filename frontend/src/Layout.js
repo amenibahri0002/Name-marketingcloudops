@@ -14,34 +14,32 @@ const adminMenu = [
     { path: '/pipeline', icon: '⚙️', label: 'Pipeline DevOps' },
     { path: '/reporting', icon: '📊', label: 'Reporting' },
     { path: '/analytics', icon: '📈', label: 'Analytics' },
-    { path: '/devops-central', icon: '🔄', label: 'DevOps Central' },
   ]},
 ];
 
 const marketingMenu = [
   { section: 'Campagnes', items: [
-    { path: '/dashboard',      icon: '⬛', label: 'Dashboard'          },
-    { path: '/campagnes',  icon: '📢', label: 'Campagnes' },
+    { path: '/dashboard', icon: '⬛', label: 'Dashboard' },
+    { path: '/campagnes', icon: '📢', label: 'Campagnes' },
   ]},
   { section: 'Gestion', items: [
     { path: '/contacts', icon: '👥', label: 'Contacts' },
-    { path: '/clients',  icon: '🏢', label: 'Clients'  },
+    { path: '/clients', icon: '🏢', label: 'Clients' },
     { path: '/segments', icon: '🎯', label: 'Segments' },
-    { path: '/devops-central', icon: '🔄', label: 'DevOps Central' },
   ]},
   { section: 'Analytics', items: [
     { path: '/reporting', icon: '📊', label: 'Suivi' },
-    { path: '/analytics', icon: '📈', label: 'KPIs'  },
+    { path: '/analytics', icon: '📈', label: 'KPIs' },
   ]},
 ];
 
 const clientMenu = [
   { section: 'Accueil', items: [
-    { path: '/dashboard',  icon: '⬛', label: 'Dashboard' },
+    { path: '/dashboard', icon: '⬛', label: 'Dashboard' },
   ]},
-  { section: 'Campagnes', items: [
-    { path: '/campagnes',  icon: '📢', label: 'Mes Campagnes' },
-    { path: '/reporting',  icon: '📊', label: 'Résultats'     },
+  { section: 'Mes Campagnes', items: [
+    { path: '/campagnes', icon: '📢', label: 'Mes Campagnes' },
+    { path: '/reporting', icon: '📊', label: 'Résultats' },
   ]},
   { section: 'Mes Données', items: [
     { path: '/contacts', icon: '👥', label: 'Mes Contacts' },
@@ -83,6 +81,7 @@ function Layout({ children }) {
         setUserRole(payload.role || 'CLIENT');
       } catch (e) {}
     }
+
     const user = localStorage.getItem('user');
     if (user) {
       try {
@@ -102,16 +101,16 @@ function Layout({ children }) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const menuGroups = userRole === 'ADMIN'
-    ? adminMenu
-    : userRole === 'RESPONSABLE_MARKETING'
-      ? marketingMenu
+  const menuGroups = userRole === 'ADMIN' 
+    ? adminMenu 
+    : userRole === 'RESPONSABLE_MARKETING' 
+      ? marketingMenu 
       : clientMenu;
 
   const allPages = menuGroups.flatMap(g => g.items);
 
-  const searchResults = search.length > 1
-    ? allPages.filter(p => p.label.toLowerCase().includes(search.toLowerCase()))
+  const searchResults = search.length > 1 
+    ? allPages.filter(p => p.label.toLowerCase().includes(search.toLowerCase())) 
     : [];
 
   const logout = () => {
@@ -134,15 +133,49 @@ function Layout({ children }) {
 
       {/* ==================== SIDEBAR ==================== */}
       <aside style={{ width: 248, flexShrink: 0, background: dark, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-
-        {/* Logo */}
+        
+        {/* ==================== LOGO DIGIPIP (Cloud Style) ==================== */}
         <div style={{ padding: '1.8rem 1.5rem 1.4rem', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <div style={{ width: 36, height: 36, position: 'relative', flexShrink: 0 }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: 22, height: 22, background: gold, borderRadius: 5 }} />
-            <div style={{ position: 'absolute', bottom: 0, right: 0, width: 16, height: 16, background: 'rgba(245,166,35,0.4)', borderRadius: 4 }} />
+          <div style={{
+            width: 42,
+            height: 42,
+            background: 'linear-gradient(135deg, #f5a623, #d97706)',
+            borderRadius: '50% 40% 65% 45%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 24,
+            color: 'white',
+            boxShadow: '0 4px 15px rgba(14, 165, 233, 0.5)',
+            flexShrink: 0,
+            position: 'relative'
+          }}>
+            ☁️
+            <div style={{
+              position: 'absolute',
+              top: 6,
+              left: 8,
+              width: 12,
+              height: 12,
+              background: 'rgba(255,255,255,0.6)',
+              borderRadius: '50%',
+              filter: 'blur(2px)'
+            }} />
           </div>
-          <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>
-            Digi<span style={{ color: gold }}>Pip</span>
+
+          <div>
+            <div style={{ 
+              fontFamily: "'Montserrat', sans-serif", 
+              fontSize: '1.45rem', 
+              fontWeight: 800, 
+              color: 'white',
+              letterSpacing: '-0.5px'
+            }}>
+              Digi<span style={{ color: '#f5a623' }}>Pip</span>
+            </div>
+            <div style={{ fontSize: 10.5, color: '#f5a623', marginTop: -2, fontFamily: 'monospace', fontWeight: 500 }}>
+              CLOUD MARKETING
+            </div>
           </div>
         </div>
 
@@ -192,6 +225,7 @@ function Layout({ children }) {
               <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{roleInfo.label}</div>
             </div>
           </div>
+
           <button onClick={logout} style={{ width: '100%', padding: '0.6rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', fontWeight: 600, cursor: 'pointer' }}>
             Déconnexion
           </button>
@@ -207,8 +241,9 @@ function Layout({ children }) {
             <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1a160e' }}>{currentLabel}</div>
             <div style={{ fontSize: '0.7rem', color: '#9c8f7a' }}>Espace {roleInfo.label}</div>
           </div>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {/* Search, Notifications, Profile ... */}
+            {/* Search, Notifications, Profile ... (tu peux ajouter ici) */}
           </div>
         </div>
 
