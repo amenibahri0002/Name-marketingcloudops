@@ -24,18 +24,15 @@ export default function Login() {
       localStorage.setItem('userName',  res.data.user?.name  || '');
       localStorage.setItem('userEmail', res.data.user?.email || '');
 
-      // ✅ Rediriger vers la campagne si l'utilisateur venait d'en cliquer une
       const redirect = sessionStorage.getItem('redirect_after_login');
       if (redirect) {
         sessionStorage.removeItem('redirect_after_login');
         navigate(redirect);
       } else {
-        // Redirection selon le rôle
         const role = res.data.user?.role;
         if (role === 'ADMIN' || role === 'RESPONSABLE_MARKETING') {
           navigate('/dashboard');
         } else {
-          // CLIENT → page campagnes publiques
           navigate('/campagnes');
         }
       }
@@ -70,54 +67,51 @@ export default function Login() {
       `}</style>
 
       <div className="login-card" style={{ width: '100%', maxWidth: 420 }}>
-        <div style={{ padding: '1.8rem 1.5rem 1.4rem', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
 
-        {/* Logo */}
-        <div style={{
-            width: 42,
-            height: 42,
-            background: 'linear-gradient(135deg, #f5a623, #d97706)',
-            borderRadius: '50% 40% 65% 45%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 24,
-            color: 'white',
-            boxShadow: '0 4px 15px rgba(14, 165, 233, 0.5)',
-            flexShrink: 0,
-            position: 'relative'
-          }}>
-            ☁️
+        {/* ── HEADER LOGO ── */}
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+            {/* Logo nuage — même que footer */}
             <div style={{
-              position: 'absolute',
-              top: 6,
-              left: 8,
-              width: 12,
-              height: 12,
-              background: 'rgba(255,255,255,0.6)',
-              borderRadius: '50%',
-              filter: 'blur(2px)'
-            }} /> 
-          </div>
-          <div>
-            <div style={{ 
-              fontFamily: "'Montserrat', sans-serif", 
-              fontSize: '1.45rem', 
-              fontWeight: 800, 
-              color: 'white',
-              letterSpacing: '-0.5px'
+              width: 42, height: 42,
+              background: 'linear-gradient(135deg, #f5a623, #d97706)',
+              borderRadius: '50% 40% 65% 45%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 22, color: 'white',
+              boxShadow: '0 4px 15px rgba(245,166,35,0.4)',
+              flexShrink: 0, position: 'relative',
             }}>
-              Digi<span style={{ color: '#f5a623' }}>Pip</span>
+              ☁️
+              <div style={{
+                position: 'absolute', top: 6, left: 8,
+                width: 12, height: 12,
+                background: 'rgba(255,255,255,0.6)',
+                borderRadius: '50%', filter: 'blur(2px)',
+              }} />
             </div>
+            {/* Texte DigiPip */}
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
+                Digi<span style={{ color: '#f5a623' }}>Pip</span>
+              </div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.06em' }}>
+                by DigiLab Solutions
+              </div>
             </div>
-            
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, marginTop: 4 }}>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, marginTop: 6 }}>
             Connectez-vous à votre espace
           </p>
         </div>
 
-        {/* Card */}
-        <div style={{ background: '#1a1612', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, padding: '36px 32px', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
+        {/* ── CARD ── */}
+        <div style={{
+          background: '#1a1612',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 18,
+          padding: '36px 32px',
+          boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+        }}>
 
           {error && (
             <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '12px 16px', marginBottom: 24, color: '#ef4444', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -196,11 +190,11 @@ export default function Login() {
                   <span style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.25)', borderTop: '2px solid #0f0e0c', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
                   Connexion...
                 </>
-              ) : 'Se connecter'}
+              ) : 'Se connecter →'}
             </button>
           </form>
 
-          {/* Lien vers register */}
+          {/* Lien register */}
           <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'rgba(255,255,255,0.3)' }}>
             Pas encore de compte ?{' '}
             <Link to="/register" style={{ color: '#f5a623', textDecoration: 'none', fontWeight: 600 }}>
@@ -209,11 +203,13 @@ export default function Login() {
           </p>
         </div>
 
+        {/* ── FOOTER ── */}
         <div style={{ textAlign: 'center', marginTop: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
           <a href="/" className="back-link">← Retour à l'accueil</a>
           <span style={{ color: 'rgba(255,255,255,0.1)' }}>·</span>
           <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>DigiPip © 2026</span>
         </div>
+
       </div>
     </div>
   );
