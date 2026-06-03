@@ -145,8 +145,11 @@ if (!token) {
     setErrors({});
     setSubmitting(true);
     try {
-      await api.post(`/api/campagnes/${id}/inscrire`, form);
-      setDone(true);
+await api.post(`/api/campagnes/${id}/inscrire`, {
+  name: form.nom,
+  email: form.email,
+  telephone: form.telephone,
+});      setDone(true);
       setIsInscrit(true);
     } catch (err) {
       setErrors({ global: err.response?.data?.message || 'Erreur lors de l\'inscription. Réessayez.' });
