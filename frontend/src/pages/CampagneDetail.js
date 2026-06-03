@@ -323,9 +323,9 @@ await api.post(`/api/campagnes/${id}/inscrire`, {
                     </div>
                   )}
 
-                  <Field label="Nom complet" name="nom" value={form.nom}
-                    onChange={e=>setForm({...form,nom:e.target.value})}
-                    placeholder="Jean Dupont" error={errors.nom} icon="👤" required />
+                  <Field label="Nom complet" name="name" value={form.name}
+                    onChange={e=>setForm({...form,name:e.target.value})}
+                    placeholder="Jean Dupont" error={errors.name} icon="👤" required />
 
                   <Field label="Adresse email" name="email" type="email" value={form.email}
                     onChange={e=>setForm({...form,email:e.target.value})}
