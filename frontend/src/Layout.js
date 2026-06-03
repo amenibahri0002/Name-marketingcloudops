@@ -14,6 +14,7 @@ const adminMenu = [
     { path: '/pipeline', icon: '⚙️', label: 'Pipeline DevOps' },
     { path: '/reporting', icon: '📊', label: 'Reporting' },
     { path: '/analytics', icon: '📈', label: 'Analytics' },
+    { path: '/devops-central', icon: '🔄', label: 'DevOps Central' },
   ]},
 ];
 
@@ -26,6 +27,7 @@ const marketingMenu = [
     { path: '/contacts', icon: '👥', label: 'Contacts' },
     { path: '/clients', icon: '🏢', label: 'Clients' },
     { path: '/segments', icon: '🎯', label: 'Segments' },
+    { path: '/devops-central', icon: '🔄', label: 'DevOps Central' },
   ]},
   { section: 'Analytics', items: [
     { path: '/reporting', icon: '📊', label: 'Suivi' },
