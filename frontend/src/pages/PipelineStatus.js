@@ -1,582 +1,647 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 
-const T = {
-  bg:        '#05080f',
-  bgCard:    '#0a101b',
-  bgCard2:   '#0f1827',
-  border:    '#1a2538',
-  borderHi:  '#f5a623',
-  gold:      '#f5a623',
-  green:     '#22c55e',
-  red:       '#ef4444',
-  blue:      '#38bdf8',
-  purple:    '#a78bfa',
-  text:      '#b8ccd8',
-  textHi:    '#e2f0ff',
-  muted:     '#64748b',
-  mono:      "'JetBrains Mono', monospace",
-  sans:      "'Plus Jakarta Sans', sans-serif",
+/* ═══════════════════════════════════════════
+   DESIGN SYSTEM — Cloud Operations Center
+═══════════════════════════════════════════ */
+const C = {
+  bg:       '#0a0e1a',
+  surface:  '#151e32',
+  surface2: '#1e293b',
+  surface3: '#27354f',
+  border:   '#334155',
+  borderDk: '#475569',
+  text:     '#f1f5f9',
+  textMid:  '#cbd5e1',
+  muted:    '#64748b',
+  gold:     '#fbbf24',
+  green:    '#34d399',
+  greenDk:  '#059669',
+  red:      '#f87171',
+  blue:     '#60a5fa',
+  blueDk:   '#3b82f6',
+  blueLt:   '#1e3a8a',
+  purple:   '#a78bfa',
+  cyan:     '#22d3ee',
+  orange:   '#fb923c',
+  pink:     '#f472b6',
+  mono:     "'JetBrains Mono', monospace",
+  sans:     "'Inter', sans-serif",
 };
 
-const STATUS = {
-  sent:      { label:'DEPLOYED', color:T.green,  bg:T.greenDim, dot:T.green,  icon:'✓', pulse:true  },
-  active:    { label:'LIVE',     color:T.green,  bg:T.greenDim, dot:T.green,  icon:'●', pulse:true  },
-  draft:     { label:'BUILDING', color:T.gold,   bg:T.goldDim,  dot:T.gold,   icon:'◎', pulse:false },
-  scheduled: { label:'QUEUED',   color:T.blue,   bg:T.blueDim,  dot:T.blue,   icon:'◷', pulse:false },
-  failed:    { label:'FAILED',   color:T.red,    bg:T.redDim,   dot:T.red,    icon:'✕', pulse:false },
-};
-
-const TYPE = {
-  email: { icon:'✉',  label:'Email', color:T.blue,   grad:'linear-gradient(135deg,#0f2744,#0a1628)' },
-  sms:   { icon:'💬', label:'SMS',   color:T.green,  grad:'linear-gradient(135deg,#0a2818,#061510)' },
-  push:  { icon:'🔔', label:'Push',  color:T.purple, grad:'linear-gradient(135deg,#1a1030,#0e0820)' },
-};
-
-const STEPS = ['Source','Build','Test','Preview','Deploy'];
-
-function getStage(status) {
-  if (status==='sent'||status==='active') return 5;
-  if (status==='scheduled') return 3;
-  if (status==='draft'||status==='failed') return 2;
-  return 1;
-}
-
-function seed(id, n) { return ((id*17+n*31)%100); }
-
+/* ═══════════════════════════════════════════
+   UTILITAIRES
+═══════════════════════════════════════════ */
+function seed(id, n) { return ((id * 17 + n * 31) % 100); }
 function genCloud(id) {
   return {
-    cpu:      40 + seed(id,1)%50,
-    mem:      30 + seed(id,2)%55,
-    latency:  12 + seed(id,3)%88,
-    uptime:   (99 + (seed(id,4)%2===0 ? 0.9 : 0.7)).toFixed(1),
-    region:   ['eu-west-1','us-east-1','ap-south-1','eu-central-1'][seed(id,5)%4],
-    replicas: 1 + seed(id,6)%3,
-    buildMs:  900 + seed(id,7)*28,
-    version:  `v${1+seed(id,8)%4}.${seed(id,9)%10}.${seed(id,10)%20}`,
-    commits:  3 + seed(id,11)%12,
+    cpu: 40 + seed(id, 1) % 50,
+    mem: 30 + seed(id, 2) % 55,
+    latency: 12 + seed(id, 3) % 88,
+    uptime: (99 + (seed(id, 4) % 2 === 0 ? 0.9 : 0.7)).toFixed(2),
+    region: ['eu-west-1', 'us-east-1', 'ap-south-1', 'eu-central-1'][seed(id, 5) % 4],
+    replicas: 1 + seed(id, 6) % 3,
+    buildMs: 900 + seed(id, 7) * 28,
+    version: `v${1 + seed(id, 8) % 4}.${seed(id, 9) % 10}.${seed(id, 10) % 20}`,
+    commits: 3 + seed(id, 11) % 12,
+    network: 45 + seed(id, 12) % 40,
+    disk: 20 + seed(id, 13) % 60,
+    requests: 1200 + seed(id, 14) * 80,
+    errors: seed(id, 15) % 5,
   };
 }
 
-/* ── Pulse dot ── */
-function Dot({ color, size=8 }) {
+function useCountUp(target, duration = 1500) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    const t0 = performance.now();
+    const tick = (now) => {
+      const p = Math.min((now - t0) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      setVal(Math.floor(target * ease));
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [target, duration]);
+  return val;
+}
+
+/* ═══════════════════════════════════════════
+   COMPOSANTS DE BASE
+═══════════════════════════════════════════ */
+function PulseDot({ color, size = 8 }) {
   return (
-    <span style={{ position:'relative', display:'inline-flex', width:size, height:size, flexShrink:0 }}>
-      <span style={{ position:'absolute', inset:0, borderRadius:'50%', background:color, opacity:0.35, animation:'ping 1.6s ease infinite' }}/>
-      <span style={{ width:size, height:size, borderRadius:'50%', background:color, display:'block' }}/>
+    <span style={{ position: 'relative', display: 'inline-flex', width: size, height: size }}>
+      <span style={{ position: 'absolute', inset: -3, borderRadius: '50%', background: color, opacity: 0.3, animation: 'ping 2s cubic-bezier(0,0,0.2,1) infinite' }} />
+      <span style={{ width: size, height: size, borderRadius: '50%', background: color, display: 'block', position: 'relative', zIndex: 1 }} />
     </span>
   );
 }
 
-/* ── Mini progress bar ── */
-function Bar({ val, color }) {
+function Badge({ label, color, bg }) {
   return (
-    <div style={{ height:3, borderRadius:2, background:'rgba(255,255,255,0.05)', overflow:'hidden', flex:1 }}>
-      <div style={{ height:'100%', borderRadius:2, width:`${Math.min(val,100)}%`, background:val>80?T.red:val>60?T.gold:color, transition:'width 1.2s ease' }}/>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, color, background: bg, whiteSpace: 'nowrap', border: `1px solid ${color}20` }}>
+      {label}
+    </span>
+  );
+}
+
+function CircularGauge({ value, max = 100, color, size = 50, stroke = 5, label }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const p = Math.min(value / max, 1);
+  const col = value > 80 ? C.red : value > 60 ? C.gold : color;
+  
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={C.surface3} strokeWidth={stroke} />
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={col} strokeWidth={stroke}
+          strokeDasharray={c} strokeDashoffset={c * (1 - p)} strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 1.2s ease-out' }} />
+      </svg>
+      <span style={{ fontSize: 10, fontWeight: 700, color: col, fontFamily: C.mono }}>{value}%</span>
+      {label && <span style={{ fontSize: 8, color: C.muted, fontFamily: C.mono, textTransform: 'uppercase' }}>{label}</span>}
     </div>
   );
 }
 
-/* ══════════════════════════════════════════
-   CAMPAIGN VISUAL PREVIEW
-   Mini navigateur qui rend la campagne
-══════════════════════════════════════════ */
-function CampaignVisualPreview({ camp, detail }) {
-  const data    = detail || camp;
-  const type    = TYPE[data.type?.toLowerCase()] || TYPE.email;
-  const status  = STATUS[data.status] || STATUS.draft;
-  const isLive  = data.status==='sent'||data.status==='active';
-  const previewUrl = `${(data.title||'campagne').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')}-${String(data.id||1).padStart(4,'0')}.digipip.app`;
-  const [copied, setCopied] = useState(false);
+function GlassCard({ children, style = {}, onClick }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      style={{ background: C.surface, borderRadius: 12, border: `1px solid ${hovered ? C.borderDk : C.border}`, overflow: 'hidden', transition: 'all 0.2s', boxShadow: hovered ? '0 8px 24px rgba(0,0,0,0.3)' : '0 1px 4px rgba(0,0,0,0.1)', cursor: onClick ? 'pointer' : 'default', ...style }}>
+      {children}
+    </div>
+  );
+}
 
-  const copy = (e) => {
-    e.stopPropagation();
-    navigator.clipboard?.writeText('https://'+previewUrl);
-    setCopied(true);
-    setTimeout(()=>setCopied(false),2000);
-  };
+/* ═══════════════════════════════════════════
+   DONNÉES
+═══════════════════════════════════════════ */
+const REGIONS = [
+  { id: 'eu-west-1', name: 'Europe (Paris)', flag: '🇫🇷', status: 'active', cpu: 45, mem: 62, lat: 18, uptime: '99.99' },
+  { id: 'us-east-1', name: 'US East (Virginia)', flag: '🇺🇸', status: 'active', cpu: 38, mem: 55, lat: 42, uptime: '99.97' },
+  { id: 'ap-south-1', name: 'Asia (Mumbai)', flag: '🇮🇳', status: 'active', cpu: 52, mem: 48, lat: 85, uptime: '99.94' },
+  { id: 'eu-central-1', name: 'Europe (Frankfurt)', flag: '🇩🇪', status: 'standby', cpu: 12, mem: 20, lat: 22, uptime: '100.0' },
+];
+
+const SERVICES = [
+  { id: 'vercel', name: 'Frontend', icon: '▲', color: C.blue, status: 'up', latency: 18, region: 'us-east-1' },
+  { id: 'render', name: 'API Backend', icon: '⬡', color: C.green, status: 'up', latency: 42, region: 'eu-west-1' },
+  { id: 'neon', name: 'PostgreSQL', icon: '🐘', color: C.cyan, status: 'up', latency: 8, region: 'eu-central-1' },
+  { id: 'redis', name: 'Cache Redis', icon: '⚡', color: C.orange, status: 'up', latency: 3, region: 'eu-west-1' },
+  { id: 'firebase', name: 'Push FCM', icon: '🔥', color: C.red, status: 'down', latency: 0, region: '—' },
+  { id: 'nodemailer', name: 'Email SMTP', icon: '📧', color: C.purple, status: 'warn', latency: 312, region: 'us-east-1' },
+];
+
+const PIPELINE_STEPS = [
+  { id: 'source', label: 'Source', icon: '</>' },
+  { id: 'build', label: 'Build', icon: '🔨' },
+  { id: 'test', label: 'Test', icon: '🧪' },
+  { id: 'preview', label: 'Preview', icon: '👁' },
+  { id: 'deploy', label: 'Deploy', icon: '🚀' },
+];
+
+const ENVIRONMENTS = [
+  { name: 'Development', status: 'active', color: C.blue, pods: 4, lastDeploy: '2h ago', branch: 'dev' },
+  { name: 'Staging', status: 'active', color: C.gold, pods: 6, lastDeploy: '5h ago', branch: 'staging' },
+  { name: 'Production', status: 'active', color: C.green, pods: 10, lastDeploy: '1d ago', branch: 'main' },
+];
+
+const SECURITY_SCORES = [
+  { label: 'Auth JWT', score: 'A+', status: 'Actif', detail: 'HS256 · Exp: 7j', color: C.green },
+  { label: 'HTTPS / SSL', score: 'A+', status: 'Actif', detail: 'TLS 1.3', color: C.green },
+  { label: 'Rate Limiting', score: 'A', status: 'Actif', detail: '100 req/min', color: C.green },
+  { label: 'Audit Logs', score: 'B', status: 'Partiel', detail: 'Console', color: C.gold },
+];
+
+/* ═══════════════════════════════════════════
+   TABS NAVIGATION
+═══════════════════════════════════════════ */
+const TABS = [
+  { id: 'overview', icon: '☁️', label: 'Vue d\'ensemble' },
+  { id: 'infrastructure', icon: '🏗️', label: 'Infrastructure' },
+  { id: 'cicd', icon: '🔄', label: 'CI/CD' },
+  { id: 'monitoring', icon: '📊', label: 'Monitoring' },
+  { id: 'storage', icon: '💾', label: 'Stockage' },
+  { id: 'costs', icon: '💰', label: 'Coûts' },
+  { id: 'logs', icon: '📝', label: 'Logs' },
+  { id: 'environments', icon: '🌐', label: 'Environnements' },
+  { id: 'security', icon: '🔐', label: 'Sécurité' },
+];
+
+/* ═══════════════════════════════════════════
+   SECTION 1: OVERVIEW
+═══════════════════════════════════════════ */
+function OverviewSection({ camps }) {
+  const deployed = camps.filter(c => c.status === 'sent' || c.status === 'active').length;
+  const uptimeAnim = useCountUp(parseFloat(99.97) * 100, 2000);
 
   return (
-    <div style={{ borderRadius:14, overflow:'hidden', border:`1px solid ${T.border}`, background:T.bg }}>
-
-      {/* ── Browser chrome ── */}
-      <div style={{ background:'#0e1820', padding:'9px 14px', borderBottom:`1px solid ${T.border}`, display:'flex', alignItems:'center', gap:10 }}>
-        {/* Traffic lights */}
-        <div style={{ display:'flex', gap:5, flexShrink:0 }}>
-          {[T.red,'#f5a623',T.green].map((c,i)=>(
-            <div key={i} style={{ width:10, height:10, borderRadius:'50%', background:c, opacity:0.7 }}/>
-          ))}
-        </div>
-        {/* URL bar */}
-        <div style={{
-          flex:1, display:'flex', alignItems:'center', gap:7,
-          background:'rgba(255,255,255,0.04)', borderRadius:6,
-          padding:'4px 10px', border:`1px solid ${T.border}`,
-          cursor:'pointer',
-        }} onClick={copy}>
-          <span style={{ fontSize:9, color:isLive?T.green:T.gold }}>{isLive?'🔒':'⚠'}</span>
-          <span style={{ fontSize:10, color:T.text, fontFamily:T.mono, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-            https://{previewUrl}
-          </span>
-          <span style={{ fontSize:9, color:copied?T.green:T.muted, fontFamily:T.mono, flexShrink:0, transition:'color 0.2s' }}>
-            {copied?'✓':' ⎘'}
-          </span>
-        </div>
-        {/* Live badge */}
-        <div style={{ display:'flex', alignItems:'center', gap:5, flexShrink:0 }}>
-          {isLive && <Dot color={T.green} size={6}/>}
-          <span style={{ fontSize:9, fontFamily:T.mono, color:status.color }}>{status.label}</span>
-        </div>
+    <div>
+      {/* Hero Metrics */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
+        {[
+          { icon: '☁️', label: 'Régions actives', value: 3, color: C.blue, sub: 'Multi-cloud' },
+          { icon: '⚡', label: 'Uptime global', value: `${(uptimeAnim / 100).toFixed(2)}%`, color: C.green, sub: 'SLA 99.9%' },
+          { icon: '📦', label: 'Déployées', value: deployed, color: C.gold, sub: `${camps.length} total` },
+          { icon: '🔥', label: 'Req/min', value: 2847, color: C.purple, sub: 'Pic: 8.2k' },
+        ].map((card, i) => (
+          <GlassCard key={i} style={{ padding: '18px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ fontSize: 20 }}>{card.icon}</div>
+              <PulseDot color={card.color} size={6} />
+            </div>
+            <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: C.mono, marginBottom: 4 }}>{card.label}</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: card.color, fontFamily: C.mono, lineHeight: 1 }}>{card.value}</div>
+            <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{card.sub}</div>
+          </GlassCard>
+        ))}
       </div>
 
-      {/* ── Rendered campaign page ── */}
-      <div style={{ background:type.grad, position:'relative', overflow:'hidden', minHeight:220 }}>
-
-        {/* Noise texture overlay */}
-        <div style={{
-          position:'absolute', inset:0, opacity:0.03,
-          backgroundImage:`url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-        }}/>
-
-        {/* Grid lines */}
-        <div style={{
-          position:'absolute', inset:0, opacity:0.07,
-          backgroundImage:`linear-gradient(${type.color}22 1px,transparent 1px),linear-gradient(90deg,${type.color}22 1px,transparent 1px)`,
-          backgroundSize:'32px 32px',
-        }}/>
-
-        {/* Glow blob */}
-        <div style={{
-          position:'absolute', top:-40, right:-40, width:180, height:180,
-          borderRadius:'50%', background:`radial-gradient(circle,${type.color}25,transparent 70%)`,
-          filter:'blur(30px)',
-        }}/>
-
-        <div style={{ position:'relative', padding:'22px 24px' }}>
-
-          {/* Nav bar */}
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <div style={{ width:6, height:6, borderRadius:2, background:T.gold }}/>
-              <div style={{ width:4, height:4, borderRadius:1, background:`${T.gold}66` }}/>
-              <span style={{ fontSize:11, fontWeight:800, color:'white', letterSpacing:1, fontFamily:T.sans }}>
-                Digi<span style={{ color:T.gold }}>Pip</span>
+      {/* Services Status */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+        {SERVICES.map(svc => (
+          <GlassCard key={svc.id}>
+            <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: 20 }}>{svc.icon}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{svc.name}</div>
+                <div style={{ fontSize: 9, color: C.muted, fontFamily: C.mono }}>{svc.region}</div>
+              </div>
+              <Badge 
+                label={svc.status === 'up' ? 'OK' : svc.status === 'warn' ? 'WARN' : 'DOWN'} 
+                color={svc.status === 'up' ? C.green : svc.status === 'warn' ? C.gold : C.red} 
+                bg={`${svc.status === 'up' ? C.green : svc.status === 'warn' ? C.gold : C.red}15`}
+              />
+            </div>
+            <div style={{ padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 10, color: C.muted, fontFamily: C.mono }}>Latency</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: svc.latency > 100 ? C.red : C.green, fontFamily: C.mono }}>
+                {svc.latency > 0 ? `${svc.latency}ms` : '—'}
               </span>
             </div>
-            <div style={{ display:'flex', gap:10 }}>
-              {['Accueil','Programme','Contact'].map(l=>(
-                <span key={l} style={{ fontSize:9, color:'rgba(255,255,255,0.4)', fontFamily:T.sans }}>{l}</span>
-              ))}
-            </div>
-          </div>
-
-          {/* Hero content */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:16, alignItems:'start' }}>
-            <div>
-              {/* Type pill */}
-              <div style={{
-                display:'inline-flex', alignItems:'center', gap:5,
-                padding:'3px 10px', borderRadius:20, marginBottom:10,
-                background:`${type.color}20`, border:`1px solid ${type.color}40`,
-              }}>
-                <span style={{ fontSize:9, color:type.color, fontFamily:T.mono }}>{type.icon} {type.label.toUpperCase()}</span>
-                {isLive && <><span style={{ width:1, height:10, background:`${type.color}40`}}/>
-                <Dot color={T.green} size={5}/><span style={{ fontSize:9, color:T.green, fontFamily:T.mono }}>LIVE</span></>}
-              </div>
-
-              {/* Title */}
-              <h2 style={{
-                margin:'0 0 8px', fontSize:16, fontWeight:800, lineHeight:1.2,
-                color:'white', fontFamily:T.sans,
-                textShadow:`0 0 40px ${type.color}44`,
-              }}>{data.title}</h2>
-
-              {/* Description snippet */}
-              <p style={{ margin:'0 0 14px', fontSize:10, color:'rgba(255,255,255,0.5)', lineHeight:1.6, fontFamily:T.sans, maxWidth:280 }}>
-                {(data.description||"Campagne marketing déployée sur DigiPip. Rejoignez des milliers de participants.").slice(0,90)}…
-              </p>
-
-              {/* Date */}
-              {(data.dateScheduled||data.date) && (
-                <div style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 10px', borderRadius:20, background:'rgba(56,189,248,0.1)', border:`1px solid ${T.blue}33`, marginBottom:14 }}>
-                  <span style={{ fontSize:9, color:T.blue, fontFamily:T.mono }}>
-                    📅 {new Date(data.dateScheduled||data.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}
-                  </span>
-                </div>
-              )}
-
-              {/* CTA buttons (miniature) */}
-              <div style={{ display:'flex', gap:7 }}>
-                <div style={{ padding:'6px 14px', borderRadius:7, background:T.gold, display:'flex', alignItems:'center' }}>
-                  <span style={{ fontSize:9, fontWeight:800, color:'#0d0a00', fontFamily:T.sans }}>S'inscrire</span>
-                </div>
-                <div style={{ padding:'6px 12px', borderRadius:7, background:'rgba(255,255,255,0.06)', border:`1px solid rgba(255,255,255,0.12)` }}>
-                  <span style={{ fontSize:9, color:'rgba(255,255,255,0.6)', fontFamily:T.sans }}>Programme →</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Stats card (right) */}
-            <div style={{
-              background:'rgba(0,0,0,0.4)', borderRadius:10, padding:'12px 14px',
-              border:`1px solid rgba(255,255,255,0.08)`, minWidth:110,
-              backdropFilter:'blur(10px)',
-            }}>
-              <div style={{ fontSize:9, color:T.gold, fontFamily:T.mono, marginBottom:10, letterSpacing:0.5 }}>DÉTAILS</div>
-              {[
-                { label:'Type',     val:(data.type||'multi').toUpperCase(), color:type.color },
-                { label:'Statut',   val:status.label, color:status.color },
-                { label:'Audience', val:'12 500',  color:'white' },
-                { label:'Places',   val:'47 dispo', color:T.green },
-              ].map(({label,val,color})=>(
-                <div key={label} style={{ marginBottom:6 }}>
-                  <div style={{ fontSize:8, color:'rgba(255,255,255,0.3)', fontFamily:T.mono }}>{label}</div>
-                  <div style={{ fontSize:10, fontWeight:700, color, fontFamily:T.sans }}>{val}</div>
-                </div>
-              ))}
-              <div style={{
-                marginTop:10, padding:'7px', borderRadius:6, background:'#3b82f6',
-                textAlign:'center',
-              }}>
-                <span style={{ fontSize:9, fontWeight:700, color:'white', fontFamily:T.sans }}>Participer</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Client badge */}
-          {data.client?.name && (
-            <div style={{ marginTop:14, display:'flex', alignItems:'center', gap:6 }}>
-              <div style={{ width:14, height:14, borderRadius:3, background:`${type.color}30`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8 }}>🏢</div>
-              <span style={{ fontSize:9, color:'rgba(255,255,255,0.35)', fontFamily:T.sans }}>{data.client.name}</span>
-            </div>
-          )}
-        </div>
+          </GlassCard>
+        ))}
       </div>
 
-      {/* ── Status bar ── */}
-      <div style={{
-        padding:'7px 14px', background:'rgba(0,0,0,0.3)',
-        display:'flex', alignItems:'center', justifyContent:'space-between',
-        borderTop:`1px solid ${T.border}`,
-      }}>
-        <span style={{ fontSize:9, color:T.muted, fontFamily:T.mono }}>
-          {isLive ? `✓ Deployed · ${genCloud(data.id||1).buildMs}ms` : `◎ ${status.label}`}
-        </span>
-        <span style={{ fontSize:9, color:T.muted, fontFamily:T.mono }}>
-          {genCloud(data.id||1).region} · {genCloud(data.id||1).version}
-        </span>
+      {/* Region Map */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        {REGIONS.map(r => (
+          <GlassCard key={r.id}>
+            <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: 24 }}>{r.flag}</span>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{r.name}</div>
+                <div style={{ fontSize: 9, color: C.muted, fontFamily: C.mono }}>{r.id}</div>
+              </div>
+              <PulseDot color={r.status === 'active' ? C.green : C.gold} size={5} style={{ marginLeft: 'auto' }} />
+            </div>
+            <div style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
+              <CircularGauge value={r.cpu} color={C.blue} size={40} stroke={4} label="CPU" />
+              <CircularGauge value={r.mem} color={C.purple} size={40} stroke={4} label="MEM" />
+            </div>
+          </GlassCard>
+        ))}
       </div>
     </div>
   );
 }
 
-/* ══════════════════════════════════════════
-   DEPLOYMENT CARD
-══════════════════════════════════════════ */
-function DeployCard({ camp, idx }) {
-  const [open,    setOpen]    = useState(false);
-  const [detail,  setDetail]  = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [logOpen, setLogOpen] = useState(false);
-  const [hovered, setHovered] = useState(false);
-
-  const status = STATUS[camp.status] || STATUS.draft;
-  const type   = TYPE[camp.type?.toLowerCase()] || TYPE.email;
-  const m      = genCloud(camp.id || idx+1);
-  const stage  = getStage(camp.status);
-  const isLive = camp.status==='sent'||camp.status==='active';
-
-  const togglePreview = () => {
-    if (!open && !detail) {
-      setLoading(true);
-      api.get(`/api/campagnes/${camp.id}`)
-        .then(r => setDetail(r.data))
-        .catch(() => setDetail(camp))
-        .finally(() => setLoading(false));
-    }
-    setOpen(o => !o);
-  };
-
-  const logs = isLive ? [
-    {t:'cmd',    v:`$ git push origin main`},
-    {t:'info',   v:`Triggered deployment #${10+camp.id}`},
-    {t:'info',   v:`Installing dependencies...`},
-    {t:'success',v:`Build completed in ${m.buildMs}ms`},
-    {t:'info',   v:`Deploying to ${m.region} ×${m.replicas}`},
-    {t:'success',v:`Health check passed — ${m.latency}ms`},
-    {t:'success',v:`Ready! ${m.version} is live ✓`},
-  ] : camp.status==='failed' ? [
-    {t:'cmd',    v:`$ git push origin main`},
-    {t:'info',   v:`Build started...`},
-    {t:'error',  v:`ERROR: Template validation failed`},
-    {t:'error',  v:`Deployment failed — rollback done`},
-  ] : [
-    {t:'warn',   v:`Queued — waiting for scheduler`},
-    {t:'info',   v:`Initializing build environment...`},
-  ];
-
-  const logColors = { cmd:T.blue, info:T.muted, success:T.green, warn:T.gold, error:T.red };
+/* ═══════════════════════════════════════════
+   SECTION 2: INFRASTRUCTURE
+═══════════════════════════════════════════ */
+function InfrastructureSection() {
+  const [selectedVM, setSelectedVM] = useState(null);
 
   return (
-    <div
-      onMouseEnter={()=>setHovered(true)}
-      onMouseLeave={()=>setHovered(false)}
-      style={{
-        background: hovered ? T.bgCard2 : T.bgCard,
-        borderRadius:18, border:`1px solid ${hovered ? T.borderHi+'60' : T.border}`,
-        overflow:'hidden', transition:'all 0.25s',
-        transform: hovered ? 'translateY(-2px)' : 'none',
-        boxShadow: hovered ? `0 16px 48px rgba(0,0,0,0.5),0 0 0 1px ${T.gold}18` : '0 2px 16px rgba(0,0,0,0.4)',
-        animation:`up 0.45s ease ${idx*70}ms both`,
-        fontFamily:T.sans,
-      }}
-    >
-      {/* ── Header ── */}
-      <div style={{ padding:'14px 18px', borderBottom:`1px solid ${T.border}`, display:'flex', alignItems:'center', gap:10, background:'rgba(0,0,0,0.25)' }}>
-        <Dot color={status.dot} size={7}/>
-        <span style={{ fontSize:10, fontWeight:700, fontFamily:T.mono, color:type.color, background:`${type.color}15`, padding:'2px 8px', borderRadius:4, border:`1px solid ${type.color}25` }}>
-          {type.icon} {type.label.toUpperCase()}
-        </span>
-        <span style={{ flex:1, fontSize:13, fontWeight:700, color:T.textHi, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-          {camp.title}
-        </span>
-        <span style={{ fontSize:10, fontWeight:800, fontFamily:T.mono, color:status.color, background:status.bg, padding:'3px 10px', borderRadius:5, border:`1px solid ${status.color}30` }}>
-          {status.icon} {status.label}
-        </span>
-      </div>
-
-      {/* ── Visual Preview Toggle ── */}
-      <div
-        onClick={togglePreview}
-        style={{
-          padding:'12px 18px', borderBottom:`1px solid ${T.border}`,
-          display:'flex', alignItems:'center', gap:10,
-          cursor:'pointer', transition:'background 0.2s',
-          background: open ? 'rgba(245,166,35,0.04)' : 'rgba(255,255,255,0.015)',
-        }}
-        onMouseEnter={e => e.currentTarget.style.background='rgba(245,166,35,0.06)'}
-        onMouseLeave={e => e.currentTarget.style.background = open ? 'rgba(245,166,35,0.04)' : 'rgba(255,255,255,0.015)'}
-      >
-        {/* Mini thumbnail placeholder / live preview */}
-        <div style={{
-          width:64, height:40, borderRadius:6, overflow:'hidden', flexShrink:0,
-          border:`1px solid ${open ? T.gold+'40' : T.border}`,
-          background: TYPE[camp.type?.toLowerCase()]?.grad || TYPE.email.grad,
-          position:'relative', display:'flex', alignItems:'center', justifyContent:'center',
-        }}>
-          {/* grid lines */}
-          <div style={{ position:'absolute', inset:0, backgroundImage:`linear-gradient(${type.color}20 1px,transparent 1px),linear-gradient(90deg,${type.color}20 1px,transparent 1px)`, backgroundSize:'8px 8px' }}/>
-          <span style={{ fontSize:16, position:'relative', zIndex:1 }}>{type.icon}</span>
-          {isLive && (
-            <div style={{ position:'absolute', top:3, right:3 }}>
-              <Dot color={T.green} size={5}/>
-            </div>
-          )}
-        </div>
-
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:11, fontWeight:600, color: open ? T.gold : T.text, marginBottom:2, transition:'color 0.2s' }}>
-            {open ? '▾ Masquer l\'aperçu' : '▸ Voir l\'aperçu de déploiement'}
-          </div>
-          <div style={{ fontSize:10, color:T.muted, fontFamily:T.mono }}>
-            {(camp.title||'campagne').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')}-{String(camp.id||1).padStart(4,'0')}.digipip.app
-          </div>
-        </div>
-
-        <div style={{
-          padding:'5px 12px', borderRadius:7, fontSize:10, fontFamily:T.mono,
-          background: open ? T.goldDim : 'rgba(255,255,255,0.04)',
-          border:`1px solid ${open ? T.gold+'40' : T.border}`,
-          color: open ? T.gold : T.muted, transition:'all 0.2s', flexShrink:0,
-        }}>
-          {open ? 'CLOSE' : '⊞ PREVIEW'}
-        </div>
-      </div>
-
-      {/* ── Preview panel (expandable) ── */}
-      {open && (
-        <div style={{ padding:'14px 18px', borderBottom:`1px solid ${T.border}`, animation:'down 0.3s ease' }}>
-          {loading ? (
-            <div style={{ height:180, borderRadius:12, background:T.bgCard, display:'flex', alignItems:'center', justifyContent:'center', border:`1px solid ${T.border}` }}>
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
-                <div style={{ width:24, height:24, borderRadius:'50%', border:`2px solid ${T.border}`, borderTopColor:T.gold, animation:'spin 0.8s linear infinite' }}/>
-                <span style={{ fontSize:10, color:T.muted, fontFamily:T.mono }}>Loading preview...</span>
+    <div>
+      <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
+        {REGIONS.map(region => (
+          <GlassCard key={region.id} style={{ flex: 1, minWidth: 260 }}>
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 28 }}>{region.flag}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{region.name}</div>
+                  <div style={{ fontSize: 10, color: C.muted, fontFamily: C.mono }}>{region.id}</div>
+                </div>
               </div>
+              <PulseDot color={region.status === 'active' ? C.green : C.gold} size={7} />
             </div>
-          ) : (
-            <CampaignVisualPreview camp={camp} detail={detail}/>
-          )}
-        </div>
-      )}
+            <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                { id: 'vm-1', type: 'API Server', cpu: 45, mem: 62, color: C.blue },
+                { id: 'vm-2', type: 'Worker', cpu: 38, mem: 55, color: C.blue },
+                { id: 'vm-3', type: 'Redis', cpu: 12, mem: 20, color: C.orange },
+              ].map(vm => (
+                <div key={vm.id} onClick={() => setSelectedVM(vm.id)}
+                  style={{ padding: '10px 12px', borderRadius: 8, background: selectedVM === vm.id ? `${vm.color}20` : C.surface2, border: `1.5px solid ${selectedVM === vm.id ? vm.color : C.border}`, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <PulseDot color={vm.color} size={8} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{vm.type}</div>
+                    <div style={{ fontSize: 9, color: C.muted, fontFamily: C.mono }}>{vm.id}</div>
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: vm.color, fontFamily: C.mono }}>{vm.cpu}%</div>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-      {/* ── CI/CD Pipeline ── */}
-      <div style={{ padding:'14px 18px', borderBottom:`1px solid ${T.border}`, display:'flex', alignItems:'center' }}>
-        {STEPS.map((step,i)=>{
-          const done    = i < stage;
-          const current = i===stage-1 && !isLive;
-          const failed  = camp.status==='failed' && i===stage-1;
+/* ═══════════════════════════════════════════
+   SECTION 3: CI/CD
+═══════════════════════════════════════════ */
+function CICDSection({ camps }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {camps.slice(0, 5).map((camp, idx) => {
+          const m = genCloud(camp.id || idx + 1);
+          const stage = camp.status === 'sent' || camp.status === 'active' ? 5 : camp.status === 'scheduled' ? 3 : 2;
+          const isLive = camp.status === 'sent' || camp.status === 'active';
+
           return (
-            <React.Fragment key={step}>
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, flex:1 }}>
-                <div style={{
-                  width:24, height:24, borderRadius:'50%',
-                  background: failed?T.redDim : done?T.greenDim : current?T.goldDim : 'rgba(255,255,255,0.03)',
-                  border:`2px solid ${failed?T.red:done?T.green:current?T.gold:T.border}`,
-                  display:'flex', alignItems:'center', justifyContent:'center',
-                  fontSize:9, fontFamily:T.mono,
-                  color:failed?T.red:done?T.green:current?T.gold:T.muted,
-                  boxShadow: done?`0 0 8px ${T.green}30`:current?`0 0 8px ${T.gold}30`:'none',
-                }}>{failed?'✕':done?'✓':current?'◎':i+1}</div>
-                <span style={{ fontSize:8, color:done?T.green:current?T.gold:T.muted, fontFamily:T.mono }}>{step.toUpperCase()}</span>
+            <GlassCard key={camp.id} style={{ padding: '16px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: C.blueLt, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+                  📦
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{camp.title}</div>
+                  <div style={{ fontSize: 10, color: C.muted, fontFamily: C.mono }}>{camp.client?.name || '—'} · {m.version}</div>
+                </div>
+                <Badge 
+                  label={isLive ? 'Deployed' : camp.status === 'scheduled' ? 'Queued' : 'Draft'} 
+                  color={isLive ? C.green : camp.status === 'scheduled' ? C.blue : C.gold} 
+                  bg={isLive ? `${C.green}15` : camp.status === 'scheduled' ? `${C.blue}15` : `${C.gold}15`}
+                />
               </div>
-              {i<STEPS.length-1 && (
-                <div style={{ height:2, flex:1, marginBottom:14, background: i<stage-1 ? T.green : T.border, transition:'background 0.5s' }}/>
-              )}
-            </React.Fragment>
+
+              {/* Pipeline Steps */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                {PIPELINE_STEPS.map((step, i) => {
+                  const done = i < stage;
+                  const current = i === stage - 1 && !isLive;
+                  const sc = done ? C.green : current ? C.gold : C.border;
+                  return (
+                    <React.Fragment key={step.id}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: done ? `${C.green}20` : current ? `${C.gold}20` : C.surface2, border: `2px solid ${sc}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: sc }}>
+                          {done ? '✓' : current ? '◐' : step.icon}
+                        </div>
+                        <span style={{ fontSize: 9, color: done ? C.green : current ? C.gold : C.muted, fontWeight: 600, textTransform: 'uppercase' }}>{step.label}</span>
+                      </div>
+                      {i < PIPELINE_STEPS.length - 1 && (
+                        <div style={{ height: 2, flex: 1, marginBottom: 16, background: i < stage - 1 ? C.green : C.border }} />
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+
+              <div style={{ marginTop: 12, padding: '10px 14px', background: '#020617', borderRadius: 8, fontFamily: C.mono, fontSize: 10, color: C.green, lineHeight: 1.6 }}>
+                <div style={{ color: C.muted, marginBottom: 4 }}>$ git push origin main</div>
+                <div>✓ Build completed in {m.buildMs}ms</div>
+                <div>✓ Deployed to {m.region} ×{m.replicas} replicas</div>
+                <div>✓ Health check passed — {m.latency}ms</div>
+              </div>
+            </GlassCard>
           );
         })}
       </div>
+    </div>
+  );
+}
 
-      {/* ── Cloud metrics ── */}
-      <div style={{ padding:'12px 18px', borderBottom:`1px solid ${T.border}` }}>
-        <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
-          {[
-            {l:'Region',   v:m.region,         c:T.blue  },
-            {l:'Version',  v:m.version,         c:T.purple},
-            {l:'Replicas', v:`×${m.replicas}`,  c:T.gold  },
-            {l:'Build',    v:`${m.buildMs}ms`,  c:T.text  },
-            {l:'Uptime',   v:`${m.uptime}%`,    c:T.green },
-          ].map(({l,v,c})=>(
-            <div key={l} style={{ display:'flex', flexDirection:'column', gap:2, padding:'6px 10px', borderRadius:7, background:'rgba(255,255,255,0.025)', border:`1px solid ${T.border}` }}>
-              <span style={{ fontSize:8, color:T.muted, fontFamily:T.mono, letterSpacing:0.8 }}>{l.toUpperCase()}</span>
-              <span style={{ fontSize:11, fontWeight:700, color:c, fontFamily:T.mono }}>{v}</span>
+/* ═══════════════════════════════════════════
+   SECTION 4: MONITORING
+═══════════════════════════════════════════ */
+function MonitoringSection() {
+  const data = [35, 52, 41, 68, 79, 55, 43, 91, 87, 72, 66, 84, 95, 88, 76, 63, 71, 83, 78, 90, 85, 92, 88, 96];
+
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+        {[
+          { icon: '🟢', label: 'API Backend', status: 'Opérationnel', latency: '42ms', uptime: '99.94%', color: C.green },
+          { icon: '🟢', label: 'Frontend', status: 'Opérationnel', latency: '18ms', uptime: '99.99%', color: C.green },
+          { icon: '🟢', label: 'PostgreSQL', status: 'Opérationnel', latency: '8ms', uptime: '99.97%', color: C.green },
+          { icon: '🟡', label: 'Email SMTP', status: 'Dégradé', latency: '312ms', uptime: '98.12%', color: C.gold },
+          { icon: '🟢', label: 'Auth JWT', status: 'Opérationnel', latency: '5ms', uptime: '100%', color: C.green },
+          { icon: '🔴', label: 'Push Firebase', status: 'Non configuré', latency: '—', uptime: '—', color: C.red },
+        ].map((svc, i) => (
+          <GlassCard key={i}>
+            <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 16 }}>{svc.icon}</span>
+              <Badge label={svc.status} color={svc.color} bg={`${svc.color}15`} />
+            </div>
+            <div style={{ padding: '12px 16px' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 10 }}>{svc.label}</div>
+              <div style={{ display: 'flex', gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: 9, color: C.muted, textTransform: 'uppercase', fontFamily: C.mono }}>Latence</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: svc.color, fontFamily: C.mono }}>{svc.latency}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 9, color: C.muted, textTransform: 'uppercase', fontFamily: C.mono }}>Uptime</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: svc.color, fontFamily: C.mono }}>{svc.uptime}</div>
+                </div>
+              </div>
+            </div>
+          </GlassCard>
+        ))}
+      </div>
+
+      {/* Traffic Graph */}
+      <GlassCard style={{ padding: '20px' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>Trafic Réseau — 24h</div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 120 }}>
+          {data.map((v, i) => (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, height: '100%', justifyContent: 'flex-end' }}>
+              <div style={{ width: '100%', height: `${v}%`, borderRadius: '2px 2px 0 0', background: C.blue, opacity: 0.8, minWidth: 3 }} />
+              <div style={{ width: '100%', height: `${v * 0.6}%`, borderRadius: '2px 2px 0 0', background: C.cyan, opacity: 0.6, minWidth: 3 }} />
             </div>
           ))}
         </div>
-        {[{l:'CPU',val:m.cpu,c:T.blue},{l:'MEM',val:m.mem,c:T.purple}].map(({l,val,c})=>(
-          <div key={l} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:5 }}>
-            <span style={{ fontSize:9, fontFamily:T.mono, color:T.muted, width:26, flexShrink:0 }}>{l}</span>
-            <Bar val={val} color={c}/>
-            <span style={{ fontSize:9, fontFamily:T.mono, color:val>80?T.red:T.muted, width:28, textAlign:'right' }}>{val}%</span>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Logs toggle + Footer ── */}
-      <div>
-        <button
-          onClick={()=>setLogOpen(o=>!o)}
-          style={{
-            width:'100%', padding:'9px 18px',
-            background:'none', border:'none', borderBottom: logOpen?`1px solid ${T.border}`:'none',
-            cursor:'pointer', display:'flex', alignItems:'center', gap:8,
-            color:T.muted, fontFamily:T.mono, fontSize:10, transition:'color 0.15s',
-          }}
-          onMouseEnter={e=>e.currentTarget.style.color=T.text}
-          onMouseLeave={e=>e.currentTarget.style.color=T.muted}
-        >
-          <span>{logOpen?'▾':'▸'}</span>
-          <span>Build logs</span>
-          <span style={{ marginLeft:'auto', color:isLive?T.green:camp.status==='failed'?T.red:T.gold }}>
-            {isLive?`✓ ${m.commits} commits`:`${status.label}`}
-          </span>
-        </button>
-        {logOpen && (
-          <div style={{ padding:'10px 18px 14px', background:'rgba(0,0,0,0.35)', animation:'down 0.2s ease', maxHeight:140, overflowY:'auto' }}>
-            {logs.map((l,i)=>(
-              <div key={i} style={{ fontFamily:T.mono, fontSize:10, color:logColors[l.t]||T.muted, lineHeight:1.75, animation:`fadeIn 0.2s ease ${i*35}ms both` }}>
-                <span style={{ color:T.border, marginRight:8, userSelect:'none' }}>
-                  {l.t==='cmd'?'$':l.t==='success'?'✓':l.t==='error'?'✕':l.t==='warn'?'⚠':' '}
-                </span>{l.v}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div style={{ padding:'11px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(0,0,0,0.2)' }}>
-        <span style={{ fontSize:10, color:T.muted, fontFamily:T.mono }}>
-          {camp.client?.name && `🏢 ${camp.client.name}`}
-          {camp.dateScheduled && ` · 🕐 ${new Date(camp.dateScheduled).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}`}
-        </span>
-        <button
-          onClick={togglePreview}
-          style={{
-            padding:'6px 14px', borderRadius:7, fontSize:10, fontFamily:T.mono,
-            background: open ? T.goldDim : 'rgba(255,255,255,0.04)',
-            border:`1px solid ${open ? T.gold+'50' : T.border}`,
-            color: open ? T.gold : T.muted,
-            cursor:'pointer', transition:'all 0.2s', letterSpacing:0.3,
-          }}
-        >{open ? '✕ Close preview' : '⊞ Open preview'}</button>
-      </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+          {['00h', '06h', '12h', '18h', '24h'].map(t => (
+            <span key={t} style={{ fontSize: 9, color: C.muted, fontFamily: C.mono }}>{t}</span>
+          ))}
+        </div>
+      </GlassCard>
     </div>
   );
 }
 
-/* ══════════════════════════════════════════
-   INFRA OVERVIEW PANEL
-══════════════════════════════════════════ */
-function InfraPanel({ camps }) {
-  const deployed = camps.filter(c=>c.status==='sent'||c.status==='active').length;
-  const building = camps.filter(c=>c.status==='draft'||c.status==='scheduled').length;
-  const failed   = camps.filter(c=>c.status==='failed').length;
-  const total    = camps.length;
-  const uptime   = total>0 ? (99.1+(deployed/(total||1))*0.8).toFixed(2) : '—';
-  const regions  = ['eu-west-1','us-east-1','ap-south-1'];
+/* ═══════════════════════════════════════════
+   SECTION 5: STORAGE
+═══════════════════════════════════════════ */
+function StorageSection() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+      {[
+        { icon: '🗃️', label: 'PostgreSQL (Neon)', used: 68, total: '10 GB', color: C.blue, iops: '1.2k' },
+        { icon: '📁', label: 'Static Files (CDN)', used: 23, total: '50 GB', color: C.green, iops: '8.5k' },
+        { icon: '📊', label: 'Logs (Grafana)', used: 41, total: '20 GB', color: C.purple, iops: '450' },
+        { icon: '💬', label: 'Redis Cache', used: 15, total: '2 GB', color: C.gold, iops: '12k' },
+      ].map(({ icon, label, used, total, color, iops }) => (
+        <GlassCard key={label}>
+          <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>{icon}</span>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{label}</div>
+                <div style={{ fontSize: 9, color: C.muted, fontFamily: C.mono }}>{iops} IOPS</div>
+              </div>
+            </div>
+            <span style={{ fontSize: 10, color: C.muted, fontFamily: C.mono }}>{total}</span>
+          </div>
+          <div style={{ height: 5, borderRadius: 3, background: C.surface3, marginBottom: 6, overflow: 'hidden' }}>
+            <div style={{ height: '100%', borderRadius: 3, width: `${used}%`, background: used > 80 ? C.red : color, transition: 'width 1s' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 16px 14px' }}>
+            <span style={{ fontSize: 10, color: C.muted, fontFamily: C.mono }}>{used}% utilisé</span>
+            <span style={{ fontSize: 10, color: used > 80 ? C.red : C.green, fontFamily: C.mono, fontWeight: 600 }}>{used > 80 ? '⚠ Critique' : '✓ Normal'}</span>
+          </div>
+        </GlassCard>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   SECTION 6: COSTS
+═══════════════════════════════════════════ */
+function CostsSection() {
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+        {[
+          { label: 'Budget mensuel', value: '€1,240', used: '62%', color: C.blue, trend: '+8%' },
+          { label: 'Coût par envoi', value: '€0.002', used: '45%', color: C.green, trend: '-3%' },
+          { label: 'Forecast', value: '€1,480', used: '74%', color: C.gold, trend: 'Alert' },
+        ].map((card, i) => (
+          <GlassCard key={i} style={{ padding: '18px' }}>
+            <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase', fontFamily: C.mono, marginBottom: 6 }}>{card.label}</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: card.color, fontFamily: C.mono, lineHeight: 1 }}>{card.value}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, alignItems: 'center' }}>
+              <span style={{ fontSize: 10, color: C.muted }}>Utilisé: {card.used}</span>
+              <span style={{ fontSize: 10, color: card.trend.includes('+') ? C.red : C.green, fontWeight: 600 }}>{card.trend}</span>
+            </div>
+          </GlassCard>
+        ))}
+      </div>
+
+      <GlassCard style={{ padding: '20px' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 16 }}>Répartition des coûts</div>
+        {[
+          { label: 'Compute (Render + Vercel)', cost: '€520', pct: 42, color: C.blue },
+          { label: 'Database (Neon PostgreSQL)', cost: '€310', pct: 25, color: C.cyan },
+          { label: 'Storage (CDN + Logs)', cost: '€240', pct: 19, color: C.purple },
+          { label: 'Email (Nodemailer)', cost: '€170', pct: 14, color: C.gold },
+        ].map(item => (
+          <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <div style={{ width: 100, fontSize: 11, color: C.text }}>{item.label}</div>
+            <div style={{ flex: 1, height: 6, borderRadius: 3, background: C.surface3, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${item.pct}%`, background: item.color, borderRadius: 3 }} />
+            </div>
+            <div style={{ width: 60, fontSize: 11, fontWeight: 700, color: item.color, fontFamily: C.mono, textAlign: 'right' }}>{item.cost}</div>
+          </div>
+        ))}
+      </GlassCard>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   SECTION 7: LOGS
+═══════════════════════════════════════════ */
+function LogsSection() {
+  const [logs, setLogs] = useState([
+    { time: '16:42:01', level: 'info', service: 'api-server', message: 'POST /api/campagnes 201 Created' },
+    { time: '16:41:58', level: 'success', service: 'worker', message: 'Campagne #42 envoyée à 12,500 contacts' },
+    { time: '16:41:45', level: 'warn', service: 'redis', message: 'Memory usage > 75%' },
+    { time: '16:40:12', level: 'error', service: 'email-smtp', message: 'Timeout connecting to Gmail SMTP' },
+    { time: '16:39:33', level: 'info', service: 'nginx', message: 'GET /dashboard 200 OK' },
+  ]);
+
+  const logColors = { info: C.blue, success: C.green, warn: C.gold, error: C.red };
 
   return (
-    <div style={{ background:T.bgCard, borderRadius:16, border:`1px solid ${T.border}`, padding:'18px 22px', marginBottom:22, fontFamily:T.sans }}>
-      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
-        <div style={{ width:30, height:30, borderRadius:8, background:T.blueDim, border:`1px solid ${T.blue}30`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>☁</div>
-        <div>
-          <div style={{ fontSize:13, fontWeight:700, color:T.textHi }}>Cloud Infrastructure</div>
-          <div style={{ fontSize:10, color:T.muted, fontFamily:T.mono }}>DigiPip Marketing Platform · Production</div>
-        </div>
-        <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:6 }}>
-          <Dot color={T.green} size={6}/>
-          <span style={{ fontSize:10, color:T.green, fontFamily:T.mono }}>All systems operational</span>
-        </div>
-      </div>
-
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:8, marginBottom:12 }}>
-        {[
-          {l:'Deployed',v:deployed,  c:T.green },
-          {l:'Building',v:building,  c:T.gold  },
-          {l:'Failed',  v:failed,    c:failed>0?T.red:T.muted},
-          {l:'Uptime',  v:`${uptime}%`, c:T.blue },
-          {l:'Regions', v:regions.length, c:T.purple},
-          {l:'Total',   v:total,     c:T.text  },
-        ].map(({l,v,c})=>(
-          <div key={l} style={{ padding:'10px 12px', borderRadius:9, background:'rgba(255,255,255,0.02)', border:`1px solid ${T.border}`, display:'flex', flexDirection:'column', gap:3 }}>
-            <span style={{ fontSize:9, color:T.muted, fontFamily:T.mono, textTransform:'uppercase' }}>{l}</span>
-            <span style={{ fontSize:18, fontWeight:800, color:c, fontFamily:T.mono, lineHeight:1 }}>{v}</span>
+    <div>
+      <GlassCard style={{ padding: '16px 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Logs temps réel</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {['info', 'success', 'warn', 'error'].map(l => (
+              <span key={l} style={{ fontSize: 9, padding: '2px 8px', borderRadius: 10, background: `${logColors[l]}15`, color: logColors[l], textTransform: 'uppercase' }}>
+                {l}
+              </span>
+            ))}
           </div>
-        ))}
-      </div>
-
-      <div style={{ display:'flex', gap:7 }}>
-        {regions.map(r=>(
-          <div key={r} style={{ flex:1, padding:'7px 12px', borderRadius:7, background:'rgba(34,197,94,0.04)', border:`1px solid rgba(34,197,94,0.12)`, display:'flex', alignItems:'center', gap:7 }}>
-            <Dot color={T.green} size={5}/>
-            <span style={{ fontSize:9, color:T.green, fontFamily:T.mono }}>{r}</span>
-            <span style={{ fontSize:9, color:T.muted, fontFamily:T.mono, marginLeft:'auto' }}>operational</span>
+        </div>
+        <div style={{ background: '#020617', borderRadius: 10, padding: '14px 16px', fontFamily: C.mono, fontSize: 11, lineHeight: 1.8, maxHeight: 400, overflowY: 'auto' }}>
+          <div style={{ display: 'flex', gap: 8, paddingBottom: 8, marginBottom: 8, borderBottom: `1px solid ${C.border}`, color: C.muted, fontSize: 10 }}>
+            <span style={{ width: 70 }}>TIME</span>
+            <span style={{ width: 60 }}>LEVEL</span>
+            <span style={{ width: 100 }}>SERVICE</span>
+            <span>MESSAGE</span>
           </div>
-        ))}
-      </div>
+          {logs.map((log, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, color: logColors[log.level] || C.text }}>
+              <span style={{ width: 70, color: C.muted }}>{log.time}</span>
+              <span style={{ width: 60, textTransform: 'uppercase' }}>{log.level}</span>
+              <span style={{ width: 100 }}>{log.service}</span>
+              <span style={{ color: C.textMid }}>{log.message}</span>
+            </div>
+          ))}
+          <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+            <span style={{ color: C.muted }}>$ tail -f /var/log/digipip/app.log</span>
+            <span style={{ display: 'inline-block', width: 6, height: 14, background: C.green, marginLeft: 8, animation: 'blink 1s step-end infinite' }} />
+          </div>
+        </div>
+      </GlassCard>
     </div>
   );
 }
 
-/* ══════════════════════════════════════════
-   PAGE
-══════════════════════════════════════════ */
-export default function PipelineStatus() {
+/* ═══════════════════════════════════════════
+   SECTION 8: ENVIRONMENTS
+═══════════════════════════════════════════ */
+function EnvironmentsSection() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {ENVIRONMENTS.map((env, i) => (
+        <GlassCard key={i}>
+          <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ width: 50, height: 50, borderRadius: 12, background: `${env.color}20`, border: `2px solid ${env.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+              {env.name === 'Development' ? '🛠️' : env.name === 'Staging' ? '🔍' : '🚀'}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{env.name}</span>
+                <Badge label={env.status === 'active' ? 'Running' : 'Stopped'} color={env.color} bg={`${env.color}15`} />
+              </div>
+              <div style={{ fontSize: 11, color: C.muted, fontFamily: C.mono }}>
+                Branch: {env.branch} · {env.pods} pods · Last deploy: {env.lastDeploy}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button style={{ padding: '6px 14px', borderRadius: 6, background: C.surface2, border: `1px solid ${C.border}`, color: C.text, fontSize: 11, cursor: 'pointer', fontFamily: C.mono }}>
+                Logs
+              </button>
+              <button style={{ padding: '6px 14px', borderRadius: 6, background: env.color, border: 'none', color: '#fff', fontSize: 11, cursor: 'pointer', fontWeight: 600, fontFamily: C.mono }}>
+                Deploy
+              </button>
+            </div>
+          </div>
+        </GlassCard>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   SECTION 9: SECURITY
+═══════════════════════════════════════════ */
+function SecuritySection() {
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 20 }}>
+        {SECURITY_SCORES.map((item, i) => (
+          <GlassCard key={i} style={{ padding: '16px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <span style={{ fontSize: 18 }}>{['🔐', '🛡️', '🚫', '🔍'][i]}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 800, color: item.color, fontFamily: C.mono }}>{item.score}</span>
+                <Badge label={item.status} color={item.color} bg={`${item.color}15`} />
+              </div>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>{item.label}</div>
+            <div style={{ fontSize: 10, color: C.muted, fontFamily: C.mono }}>{item.detail}</div>
+          </GlassCard>
+        ))}
+      </div>
+
+      <GlassCard style={{ padding: '20px' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 16 }}>Scan de vulnérabilités</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[
+            { name: 'Dépendances npm', status: 'Clean', issues: 0, color: C.green },
+            { name: 'Secrets (.env)', status: 'Clean', issues: 0, color: C.green },
+            { name: 'Conteneurs Docker', status: 'Warning', issues: 2, color: C.gold },
+            { name: 'Certificats SSL', status: 'Clean', issues: 0, color: C.green },
+          ].map(scan => (
+            <div key={scan.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: C.surface2, borderRadius: 8, border: `1px solid ${C.border}` }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: `${scan.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
+                {scan.issues === 0 ? '✓' : '⚠'}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{scan.name}</div>
+                <div style={{ fontSize: 10, color: C.muted }}>{scan.issues} issue{scan.issues !== 1 ? 's' : ''}</div>
+              </div>
+              <Badge label={scan.status} color={scan.color} bg={`${scan.color}15`} />
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   PAGE PRINCIPALE — TOUT-EN-UN
+═══════════════════════════════════════════ */
+export default function CloudOperations() {
+  const [activeTab, setActiveTab] = useState('overview');
   const [camps, setCamps] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
-  const [search, setSearch] = useState('');
 
   useEffect(() => {
     api.get('/api/campagnes')
@@ -585,142 +650,83 @@ export default function PipelineStatus() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = camps.filter(c => {
-    const matchFilter = filter === 'all' ||
-      (filter === 'deployed' && (c.status === 'sent' || c.status === 'active')) ||
-      (filter === 'building' && (c.status === 'draft' || c.status === 'scheduled')) ||
-      (filter === 'failed' && c.status === 'failed');
-    
-    const matchSearch = !search || 
-      c.title?.toLowerCase().includes(search.toLowerCase()) ||
-      c.client?.name?.toLowerCase().includes(search.toLowerCase());
-    return matchFilter && matchSearch;
-  });
+  const sections = {
+    overview: <OverviewSection camps={camps} />,
+    infrastructure: <InfrastructureSection />,
+    cicd: <CICDSection camps={camps} />,
+    monitoring: <MonitoringSection />,
+    storage: <StorageSection />,
+    costs: <CostsSection />,
+    logs: <LogsSection />,
+    environments: <EnvironmentsSection />,
+    security: <SecuritySection />,
+  };
 
   return (
-    <div style={{ 
-      padding: '32px 40px', 
-      background: T.bg, 
-      minHeight: '100vh', 
-      color: T.text,
-      fontFamily: T.sans 
-    }}>
+    <div style={{ padding: '28px 32px', background: C.bg, minHeight: '100vh', color: C.text, fontFamily: C.sans }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        @keyframes ping { 75%, 100% { transform: scale(2.4); opacity: 0; } }
-        @keyframes fadeInUp { from { opacity:0; transform: translateY(25px); } to { opacity:1; transform:none; } }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+        @keyframes ping { 75%,100% { transform:scale(2.5); opacity:0; } }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        @keyframes blink { 50% { opacity:0; } }
+        * { box-sizing:border-box; }
+        ::-webkit-scrollbar { width:6px; height:6px; }
+        ::-webkit-scrollbar-track { background:${C.surface2}; }
+        ::-webkit-scrollbar-thumb { background:${C.borderDk}; border-radius:3px; }
       `}</style>
 
-      {/* Header Premium */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 40 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-          <div style={{ 
-            width: 56, height: 56, borderRadius: 16, 
-            background: 'linear-gradient(135deg, #f5a623, #d97706)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 28, boxShadow: '0 0 40px rgba(245,166,35,0.5)'
-          }}>☁️</div>
-          
-          <div>
-            <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800, color: T.textHi }}>
-              Cloud Pipeline
-            </h1>
-            <p style={{ margin: 0, fontSize: 15, color: T.muted, fontFamily: T.mono }}>
-              DigiPip Marketing Engine • AWS Production • eu-west-1
-            </p>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, animation: 'fadeUp 0.3s ease' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+              ☁️
+            </div>
+            <div>
+              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: C.text }}>Cloud Operations Center</h1>
+              <p style={{ margin: 0, fontSize: 12, color: C.muted, fontFamily: C.mono, marginTop: 2 }}>
+                DigiPip · Tous les modules cloud en un seul endroit
+              </p>
+            </div>
           </div>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <div style={{ color: T.green, display: 'flex', alignItems: 'center', gap: 10, fontSize: 15 }}>
-            <div style={{ width: 9, height: 9, background: T.green, borderRadius: '50%', boxShadow: '0 0 12px #22c55e', animation: 'ping 2s infinite' }} />
-            All Systems Operational
-          </div>
-          
-          <div style={{ padding: '8px 20px', background: T.bgCard2, borderRadius: 12, border: `1px solid ${T.border}`, fontSize: 14 }}>
-            47 Edge Locations Active
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 20, background: C.surface, border: `1px solid ${C.border}` }}>
+          <PulseDot color={C.green} size={6} />
+          <span style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>Cloud Opérationnel</span>
         </div>
       </div>
 
-      {/* Global Cloud Stats */}
-      <div style={{ display: 'flex', gap: 16, marginBottom: 32 }}>
-        {[
-          { label: 'Deployed', value: '18', color: T.green },
-          { label: 'Building', value: '4', color: T.gold },
-          { label: 'Failed', value: '1', color: T.red },
-          { label: 'Avg Build', value: '2.4s', color: T.blue },
-          { label: 'Global Uptime', value: '99.97%', color: T.green },
-        ].map((s, i) => (
-          <div key={i} style={{
-            flex: 1,
-            background: T.bgCard2,
-            borderRadius: 16,
-            padding: '18px 22px',
-            border: `1px solid ${T.border}`,
-          }}>
-            <div style={{ fontSize: 13, color: T.muted }}>{s.label}</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: s.color, marginTop: 6 }}>{s.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div style={{ 
-        background: T.bgCard, 
-        padding: '14px 20px', 
-        borderRadius: 16, 
-        border: `1px solid ${T.border}`, 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 12, 
-        marginBottom: 32 
-      }}>
-        <input 
-          value={search} 
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Rechercher une campagne ou client..." 
-          style={{ 
-            flex: 1, background: 'none', border: 'none', outline: 'none', 
-            color: T.text, fontSize: 15 
-          }} 
-        />
-        
-        {['all','deployed','building','failed'].map(f => (
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, overflowX: 'auto', paddingBottom: 4, animation: 'fadeUp 0.4s ease 0.1s both' }}>
+        {TABS.map(tab => (
           <button
-            key={f}
-            onClick={() => setFilter(f)}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
             style={{
-              padding: '8px 20px',
-              borderRadius: 10,
-              fontSize: 13.5,
-              fontWeight: filter === f ? 600 : 500,
-              background: filter === f ? `${T.gold}15` : 'transparent',
-              color: filter === f ? T.gold : T.muted,
-              border: `1px solid ${filter === f ? T.gold : 'transparent'}`,
+              padding: '10px 16px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: activeTab === tab.id ? C.blue : C.surface,
+              color: activeTab === tab.id ? '#fff' : C.muted,
+              fontFamily: C.sans, fontSize: 12, fontWeight: activeTab === tab.id ? 700 : 500,
+              display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+              transition: 'all 0.2s', boxShadow: activeTab === tab.id ? `0 4px 12px ${C.blue}40` : 'none',
             }}
           >
-            {f === 'all' && 'Toutes les campagnes'}
-            {f === 'deployed' && '✅ Deployées'}
-            {f === 'building' && '⚙️ En cours'}
-            {f === 'failed' && '❌ Échouées'}
+            <span>{tab.icon}</span>
+            <span>{tab.label}</span>
           </button>
         ))}
       </div>
 
-      {/* Cards Grid */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(520px, 1fr))', 
-        gap: 24 
-      }}>
-        {loading ? (
-          // Skeletons...
-          <div>Loading...</div>
+      {/* Content */}
+      <div style={{ animation: 'fadeUp 0.4s ease 0.2s both' }}>
+        {loading && activeTab === 'overview' ? (
+          <div style={{ textAlign: 'center', padding: 60, color: C.muted }}>
+            <div style={{ width: 28, height: 28, border: `2px solid ${C.border}`, borderTopColor: C.gold, borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
+            <p style={{ fontFamily: C.mono, fontSize: 12 }}>Chargement...</p>
+          </div>
         ) : (
-          filtered.map((camp, i) => (
-            <DeployCard key={camp.id} camp={camp} idx={i} />
-          ))
+          sections[activeTab]
         )}
       </div>
     </div>

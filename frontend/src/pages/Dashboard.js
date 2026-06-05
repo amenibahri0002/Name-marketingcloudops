@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
-/* ── Design system unifié DigiPip ── */
+/* ═══════════════════════════════════════════
+   DESIGN SYSTEM — DigiPip Cloud Marketing
+═══════════════════════════════════════════ */
 const T = {
   bg:       '#f0f2f8',
   card:     '#ffffff',
@@ -23,10 +25,51 @@ const T = {
   purple:   '#8b5cf6',
   purpleDim:'rgba(139,92,246,0.10)',
   red:      '#ef4444',
+  cyan:     '#06b6d4',
+  orange:   '#f97316',
   sans:     "'Plus Jakarta Sans','Segoe UI',sans-serif",
+  mono:     "'JetBrains Mono',monospace",
 };
 
-/* ── Sparkline SVG ── */
+/* ═══════════════════════════════════════════
+   DONNÉES CLOUD — Simplifiées (pas de régions)
+═══════════════════════════════════════════ */
+
+// Comment le cloud gère chaque canal
+const CLOUD_ENGINE = {
+  email: {
+    icon: '✉',
+    name: 'Email Engine',
+    color: T.blue,
+    description: 'Envoi massif par lots intelligents',
+    capacity: '50,000 emails/heure',
+    tech: 'Load Balanced · Queue System',
+    status: 'Opérationnel',
+  },
+  sms: {
+    icon: '💬',
+    name: 'SMS Engine',
+    color: T.green,
+    description: 'Routes optimisées opérateurs',
+    capacity: '10,000 SMS/minute',
+    tech: 'Multi-carrier · Failover',
+    status: 'Opérationnel',
+  },
+  push: {
+    icon: '🔔',
+    name: 'Push Engine',
+    color: T.purple,
+    description: 'Notifications temps réel',
+    capacity: '100,000 push/minute',
+    tech: 'WebSocket · Firebase',
+    status: 'Opérationnel',
+  },
+};
+
+/* ═══════════════════════════════════════════
+   COMPOSANTS DE BASE
+═══════════════════════════════════════════ */
+
 function Sparkline({ data, color }) {
   const w = 90, h = 36;
   const max = Math.max(...data), min = Math.min(...data);
@@ -47,7 +90,6 @@ function Sparkline({ data, color }) {
   );
 }
 
-/* ── Mini bar chart (7 jours) ── */
 function BarChart({ data, labels, colors }) {
   const max = Math.max(...data.flatMap(s => s.values));
   const barW = 10, gap = 3, groupGap = 14;
@@ -83,7 +125,6 @@ function BarChart({ data, labels, colors }) {
   );
 }
 
-/* ── Donut chart ── */
 function Donut({ segments, size = 110 }) {
   const r = 38, cx = size/2, cy = size/2;
   const circ = 2 * Math.PI * r;
@@ -117,7 +158,6 @@ function Donut({ segments, size = 110 }) {
   );
 }
 
-/* ── Activity item ── */
 function ActivityItem({ icon, title, sub, time, color, delay }) {
   return (
     <div style={{
@@ -139,8 +179,167 @@ function ActivityItem({ icon, title, sub, time, color, delay }) {
   );
 }
 
-/* ══════════════════════════════════════════
-   DASHBOARD
+/* ═══════════════════════════════════════════
+   ☁️ SECTION CLOUD ENGINE — Simplifiée
+═══════════════════════════════════════════ */
+
+function CloudEngineStatus() {
+  const [hoveredEngine, setHoveredEngine] = useState(null);
+
+  return (
+    <div style={{
+      background: `linear-gradient(135deg, ${T.navy} 0%, #1e3a5f 50%, #0f2847 100%)`,
+      borderRadius: 22,
+      padding: '28px 32px',
+      marginBottom: 24,
+      color: 'white',
+      position: 'relative',
+      overflow: 'hidden',
+      boxShadow: '0 8px 40px rgba(22,18,13,0.25)',
+      animation: 'fadeUp 0.5s ease both',
+    }}>
+      {/* Background effects */}
+      <div style={{ 
+        position: 'absolute', top: -60, right: -60, 
+        width: 200, height: 200, 
+        background: 'radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 70%)',
+        pointerEvents: 'none' 
+      }}/>
+      <div style={{ 
+        position: 'absolute', bottom: -40, left: '30%', 
+        width: 160, height: 160, 
+        background: 'radial-gradient(circle, rgba(245,166,35,0.1) 0%, transparent 70%)',
+        pointerEvents: 'none' 
+      }}/>
+      
+      {/* Grid pattern */}
+      <div style={{ 
+        position: 'absolute', inset: 0,
+        backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
+        backgroundSize: '30px 30px',
+        pointerEvents: 'none'
+      }}/>
+
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <div>
+            <div style={{ 
+              fontSize: 11, fontWeight: 700, color: T.cyan, 
+              letterSpacing: '2.5px', marginBottom: 8, textTransform: 'uppercase' 
+            }}>
+              ☁️ DigiPip Cloud Engine
+            </div>
+            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>
+              Votre campagne, propulsée par le Cloud
+            </h2>
+            <p style={{ margin: '6px 0 0', fontSize: 13, opacity: 0.7, maxWidth: 500 }}>
+              Chaque canal marketing utilise un moteur cloud dédié avec scaling automatique.
+              Pas de configuration technique requise.
+            </p>
+          </div>
+          <div style={{ 
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '8px 16px', borderRadius: 20,
+            background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
+          }}>
+            <span style={{ 
+              width: 8, height: 8, borderRadius: '50%', 
+              background: T.green, boxShadow: `0 0 8px ${T.green}`,
+              animation: 'pulse 2s infinite'
+            }}/>
+            <span style={{ fontSize: 12, color: T.green, fontWeight: 600 }}>
+              Cloud Opérationnel
+            </span>
+          </div>
+        </div>
+
+        {/* Cloud Engines Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          {Object.entries(CLOUD_ENGINE).map(([type, engine], i) => (
+            <div 
+              key={type}
+              onMouseEnter={() => setHoveredEngine(type)}
+              onMouseLeave={() => setHoveredEngine(null)}
+              style={{
+                padding: '20px', borderRadius: 14,
+                background: hoveredEngine === type 
+                  ? 'rgba(255,255,255,0.08)' 
+                  : 'rgba(255,255,255,0.03)',
+                border: `1.5px solid ${hoveredEngine === type ? engine.color + '60' : 'rgba(255,255,255,0.08)'}`,
+                transition: 'all 0.3s ease',
+                cursor: 'default',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  background: `${engine.color}20`,
+                  border: `1px solid ${engine.color}40`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 20,
+                }}>
+                  {engine.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>
+                    {engine.name}
+                  </div>
+                  <div style={{ fontSize: 11, opacity: 0.6, fontFamily: T.mono }}>
+                    {engine.tech}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 12, lineHeight: 1.5 }}>
+                {engine.description}
+              </div>
+
+              <div style={{ 
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '10px 14px', borderRadius: 8,
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}>
+                <span style={{ fontSize: 10, opacity: 0.6 }}>Capacité</span>
+                <span style={{ fontSize: 12, fontWeight: 700, fontFamily: T.mono, color: engine.color }}>
+                  {engine.capacity}
+                </span>
+              </div>
+
+              {/* Mini throughput bar */}
+              <div style={{ marginTop: 12 }}>
+                <div style={{ 
+                  height: 4, borderRadius: 2, 
+                  background: 'rgba(255,255,255,0.1)',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    height: '100%', width: `${50 + Math.random() * 40}%`,
+                    background: `linear-gradient(90deg, ${engine.color}80, ${engine.color})`,
+                    borderRadius: 2,
+                    transition: 'width 2s ease',
+                    animation: 'pulse 3s infinite'
+                  }}/>
+                </div>
+                <div style={{ 
+                  display: 'flex', justifyContent: 'space-between', 
+                  marginTop: 4, fontSize: 9, opacity: 0.5, fontFamily: T.mono 
+                }}>
+                  <span>Charge actuelle</span>
+                  <span>Auto-scaling</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   DASHBOARD PRINCIPAL
 ══════════════════════════════════════════ */
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -197,12 +396,13 @@ export default function Dashboard() {
     { label:'Push',  value:81, color:T.gold   },
   ];
 
-  /* Recent activity */
+  /* Recent activity - SANS régions */
   const activities = [
-    { icon:'📢', title:'Campagne "Conférence IA 2026" déployée',  sub:'TechEventCo · Email',  time:'Il y a 2 min',  color:T.gold  },
-    { icon:'👥', title:'3 nouveaux contacts importés',           sub:'Segment B2B Tech',      time:'Il y a 18 min', color:T.blue  },
-    { icon:'✅', title:'Campagne "Promo Été" livrée à 97%',      sub:'12 500 destinataires',  time:'Il y a 1h',     color:T.green },
-    { icon:'🎯', title:'Segment "VIP Tunisie" mis à jour',       sub:'847 contacts actifs',   time:'Il y a 3h',     color:T.purple},
+    { icon:'☁️', title:'Moteur Email: 12,500 envois traités',        sub:'Load balancing · Queue optimisée',          time:'Il y a 2 min',  color:T.blue  },
+    { icon:'📢', title:'Campagne "Conférence IA 2026" déployée',     sub:'TechEventCo · Email · Cloud Engine',        time:'Il y a 5 min',  color:T.gold  },
+    { icon:'💬', title:'Burst SMS: 8,200 messages envoyés',          sub:'Multi-carrier · Failover automatique',      time:'Il y a 12 min', color:T.green },
+    { icon:'🎯', title:'Segment "VIP Tunisie" synchronisé',        sub:'Cache cloud · Temps réel',                   time:'Il y a 18 min', color:T.purple},
+    { icon:'🔔', title:'Push notifications: 45,000 en queue',      sub:'WebSocket · Firebase Cloud',                 time:'Il y a 25 min', color:T.blue  },
   ];
 
   /* Status campagnes */
@@ -244,23 +444,21 @@ export default function Dashboard() {
         boxShadow:'0 8px 40px rgba(22,18,13,0.20)',
         animation:'fadeUp 0.5s ease both',
       }}>
-        {/* Decoration circles */}
         <div style={{ position:'absolute', top:-50, right:-50, width:240, height:240, background:'rgba(245,166,35,0.07)', borderRadius:'50%', pointerEvents:'none' }}/>
         <div style={{ position:'absolute', bottom:-30, right:120, width:140, height:140, background:'rgba(245,166,35,0.04)', borderRadius:'50%', pointerEvents:'none' }}/>
-        {/* Grid */}
         <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px)', backgroundSize:'40px 40px', pointerEvents:'none' }}/>
 
         <div style={{ position:'relative' }}>
           <div style={{ fontSize:11, fontWeight:700, color:T.gold, letterSpacing:'2.5px', marginBottom:10, textTransform:'uppercase' }}>
-            ⚡ DigiPip Marketing Platform
+            ⚡ DigiPip Marketing Cloud
           </div>
           <h1 style={{ fontSize:30, fontWeight:800, margin:'0 0 10px', lineHeight:1.2 }}>
             {greeting}, {firstName} 👋
           </h1>
           <p style={{ fontSize:14, opacity:0.7, maxWidth:500, margin:'0 0 22px', lineHeight:1.6 }}>
             {isClient
-              ? 'Voici l\'état de vos campagnes et performances marketing en temps réel.'
-              : 'Vue globale de la plateforme — campagnes, contacts et analytics.'}
+              ? 'Vos campagnes marketing sont propulsées par notre cloud. Scaling automatique, haute disponibilité.'
+              : 'Vue globale de la plateforme cloud — campagnes, contacts et performance infrastructure.'}
           </p>
           <div style={{ display:'flex', gap:10 }}>
             <button
@@ -269,13 +467,16 @@ export default function Dashboard() {
               {isClient ? '📢 Mes Campagnes' : '📢 Voir les Campagnes'}
             </button>
             <button
-              onClick={() => navigate('/pipeline')}
+              onClick={() => navigate('/cloud')}
               style={{ padding:'10px 22px', background:'rgba(255,255,255,0.08)', color:'white', border:'1px solid rgba(255,255,255,0.15)', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer' }}>
-              ⚡ Pipeline DevOps
+              ☁️ Cloud Infrastructure
             </button>
           </div>
         </div>
       </div>
+
+      {/* ☁️ SECTION CLOUD ENGINE — SANS RÉGIONS */}
+      <CloudEngineStatus />
 
       {/* ── KPI Cards ── */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
@@ -308,13 +509,11 @@ export default function Dashboard() {
 
       {/* ── Charts row ── */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 340px', gap:20, marginBottom:24 }}>
-
-        {/* Bar chart — Évolution 7 jours */}
         <div style={{ background:T.card, borderRadius:18, padding:'24px 28px', border:`1.5px solid ${T.border}`, boxShadow:'0 2px 12px rgba(0,0,0,0.05)', animation:'fadeUp 0.5s ease 240ms both' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
             <div>
               <div style={{ fontSize:15, fontWeight:700, color:T.text, marginBottom:4 }}>Évolution des envois</div>
-              <div style={{ fontSize:12, color:T.muted }}>7 derniers jours · par canal</div>
+              <div style={{ fontSize:12, color:T.muted }}>7 derniers jours · par canal cloud</div>
             </div>
             <div style={{ display:'flex', gap:14 }}>
               {[{l:'Email',c:T.blue},{l:'SMS',c:T.green},{l:'Push',c:T.gold}].map(({l,c}) => (
@@ -328,10 +527,9 @@ export default function Dashboard() {
           <BarChart data={barSeries} labels={barLabels} colors={barColors}/>
         </div>
 
-        {/* Donut — répartition canaux */}
         <div style={{ background:T.card, borderRadius:18, padding:'24px 24px', border:`1.5px solid ${T.border}`, boxShadow:'0 2px 12px rgba(0,0,0,0.05)', animation:'fadeUp 0.5s ease 300ms both' }}>
           <div style={{ fontSize:15, fontWeight:700, color:T.text, marginBottom:4 }}>Répartition canaux</div>
-          <div style={{ fontSize:12, color:T.muted, marginBottom:20 }}>Taux d'engagement</div>
+          <div style={{ fontSize:12, color:T.muted, marginBottom:20 }}>Par moteur cloud</div>
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:18 }}>
             <Donut segments={donutSegs}/>
             <div style={{ width:'100%', display:'flex', flexDirection:'column', gap:10 }}>
@@ -350,15 +548,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Bottom row : campagnes récentes + activité ── */}
+      {/* ── Bottom row ── */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
-
-        {/* Campagnes récentes */}
         <div style={{ background:T.card, borderRadius:18, padding:'24px 24px', border:`1.5px solid ${T.border}`, boxShadow:'0 2px 12px rgba(0,0,0,0.05)', animation:'fadeUp 0.5s ease 360ms both' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18 }}>
             <div>
               <div style={{ fontSize:15, fontWeight:700, color:T.text }}>Campagnes récentes</div>
-              <div style={{ fontSize:12, color:T.muted }}>Derniers déploiements</div>
+              <div style={{ fontSize:12, color:T.muted }}>Propulsées par le cloud</div>
             </div>
             <button onClick={() => navigate(isClient?'/mes-campagnes':'/campagnes')}
               style={{ fontSize:12, color:T.gold, fontWeight:700, background:'none', border:'none', cursor:'pointer' }}>
@@ -372,6 +568,7 @@ export default function Dashboard() {
               {campagnes.map((c,i) => {
                 const sc = statusCfg[c.status] || statusCfg.draft;
                 const typeIcon = {email:'✉',sms:'💬',push:'🔔'}[c.type?.toLowerCase()] || '📢';
+                const engine = CLOUD_ENGINE[c.type?.toLowerCase()] || CLOUD_ENGINE.email;
                 return (
                   <div key={c.id} className="camp-row"
                     onClick={() => navigate(`/campagne/${c.id}`)}
@@ -386,7 +583,9 @@ export default function Dashboard() {
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:13, fontWeight:600, color:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.title}</div>
-                      <div style={{ fontSize:11, color:T.muted }}>{c.client?.name || 'DigiPip'}</div>
+                      <div style={{ fontSize:11, color:T.muted }}>
+                        {c.client?.name || 'DigiPip'} · ☁️ {engine.name}
+                      </div>
                     </div>
                     <span style={{ fontSize:10, fontWeight:700, color:sc.color, background:sc.bg, padding:'3px 9px', borderRadius:20, flexShrink:0 }}>
                       {sc.label}
@@ -398,11 +597,10 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Activité récente */}
         <div style={{ background:T.card, borderRadius:18, padding:'24px 24px', border:`1.5px solid ${T.border}`, boxShadow:'0 2px 12px rgba(0,0,0,0.05)', animation:'fadeUp 0.5s ease 420ms both' }}>
           <div style={{ marginBottom:18 }}>
-            <div style={{ fontSize:15, fontWeight:700, color:T.text }}>Activité récente</div>
-            <div style={{ fontSize:12, color:T.muted }}>Événements plateforme</div>
+            <div style={{ fontSize:15, fontWeight:700, color:T.text }}>Activité cloud</div>
+            <div style={{ fontSize:12, color:T.muted }}>Performance infrastructure</div>
           </div>
           {activities.map((a,i) => (
             <ActivityItem key={i} {...a} delay={440+i*50}/>

@@ -1,27 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 
-/* ─── Palette DigiLab ────────────────────────────────────────── */
+/* ─── Palette DigiPip Clair ────────────────────────────────── */
 const C = {
-  bg:         '#f4f6fb',
+  bg:         '#f8fafc',
   card:       '#ffffff',
-  navy:       '#16120d',
+  navy:       '#0f172a',
   gold:       '#f5a623',
-  goldDark:   '#c8831a',
-  goldDim:    'rgba(245,166,35,0.10)',
-  goldBorder: 'rgba(245,166,35,0.28)',
-  border:     '#e5e9f2',
-  text:       '#1a1f3c',
-  textMuted:  '#6b7280',
+  goldDark:   '#d97706',
+  goldDim:    'rgba(245,166,35,0.08)',
+  goldBorder: 'rgba(245,166,35,0.20)',
+  border:     '#e2e8f0',
+  text:       '#0f172a',
+  textMuted:  '#64748b',
   blue:       '#3b82f6',
-  blueDim:    'rgba(59,130,246,0.10)',
-  green:      '#22c55e',
-  greenDim:   'rgba(34,197,94,0.10)',
+  blueDim:    'rgba(59,130,246,0.08)',
+  green:      '#10b981',
+  greenDim:   'rgba(16,185,129,0.08)',
   red:        '#ef4444',
-  redDim:     'rgba(239,68,68,0.10)',
+  redDim:     'rgba(239,68,68,0.08)',
   purple:     '#8b5cf6',
-  purpleDim:  'rgba(139,92,246,0.10)',
-  shadow:     '0 1px 8px rgba(10,14,42,0.07)',
+  purpleDim:  'rgba(139,92,246,0.08)',
+  shadow:     '0 1px 4px rgba(0,0,0,0.04)',
 };
 
 /* ─── Rôles ───────────────────────────────────────────────────── */
@@ -32,9 +32,9 @@ const ROLES = {
 };
 
 const ROLE_STYLE = {
-  ADMIN:                 { bg: 'rgba(245,166,35,0.12)', color: '#c8831a', border: 'rgba(245,166,35,0.3)', icon: '👑', label: 'Admin' },
-  RESPONSABLE_MARKETING: { bg: 'rgba(59,130,246,0.10)', color: '#2563eb', border: 'rgba(59,130,246,0.3)', icon: '🎯', label: 'Marketing' },
-  CLIENT:                { bg: 'rgba(34,197,94,0.10)',  color: '#16a34a', border: 'rgba(34,197,94,0.3)',  icon: '👤', label: 'Client' },
+  ADMIN:                 { bg: C.goldDim, color: C.goldDark, border: C.goldBorder, icon: '👑', label: 'Admin' },
+  RESPONSABLE_MARKETING: { bg: C.blueDim, color: C.blue,     border: 'rgba(59,130,246,0.3)', icon: '🎯', label: 'Marketing' },
+  CLIENT:                { bg: C.greenDim, color: C.green,    border: 'rgba(16,185,129,0.3)',  icon: '👤', label: 'Client' },
 };
 
 const AVATAR_COLORS = [C.gold, C.blue, C.green, C.purple, '#ec4899', '#14b8a6', '#f97316'];
@@ -44,7 +44,7 @@ const formatDate  = d => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-d
 
 /* ─── CSS ─────────────────────────────────────────────────────── */
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
   @keyframes fadeUp {
     from { opacity:0; transform:translateY(12px); }
     to   { opacity:1; transform:translateY(0); }
@@ -54,14 +54,14 @@ const css = `
     100% { background-position: 500px 0; }
   }
   .dl-stat { transition:all 0.22s ease!important; }
-  .dl-stat:hover { transform:translateY(-3px)!important; box-shadow:0 8px 28px rgba(245,166,35,0.15)!important; border-color:#f5a623!important; }
-  .dl-row:hover td { background:#fafbff!important; }
+  .dl-stat:hover { transform:translateY(-3px)!important; box-shadow:0 8px 24px rgba(245,166,35,0.10)!important; border-color:#f5a623!important; }
+  .dl-row:hover td { background:#fefce8!important; }
   .dl-btn-del { transition:all 0.15s; }
-  .dl-btn-del:hover { background:rgba(239,68,68,0.15)!important; }
+  .dl-btn-del:hover { background:rgba(239,68,68,0.10)!important; }
   .dl-btn-add { transition:all 0.2s; }
-  .dl-btn-add:hover { transform:translateY(-2px)!important; box-shadow:0 8px 22px rgba(245,166,35,0.35)!important; }
-  .dl-input:focus { border-color:#f5a623!important; box-shadow:0 0 0 3px rgba(245,166,35,0.12)!important; outline:none; }
-  .dl-select:focus { border-color:#f5a623!important; box-shadow:0 0 0 3px rgba(245,166,35,0.12)!important; outline:none; }
+  .dl-btn-add:hover { transform:translateY(-2px)!important; box-shadow:0 8px 22px rgba(245,166,35,0.25)!important; }
+  .dl-input:focus { border-color:#f5a623!important; box-shadow:0 0 0 3px rgba(245,166,35,0.10)!important; outline:none; }
+  .dl-select:focus { border-color:#f5a623!important; box-shadow:0 0 0 3px rgba(245,166,35,0.10)!important; outline:none; }
 `;
 
 /* ─── Skeleton ───────────────────────────────────────────────── */
@@ -69,7 +69,7 @@ function Skel({ w = '100%', h = 16, r = 6 }) {
   return (
     <div style={{
       width: w, height: h, borderRadius: r, flexShrink: 0,
-      background: 'linear-gradient(90deg,#eef1f8 25%,#f6f8fd 50%,#eef1f8 75%)',
+      background: 'linear-gradient(90deg,#f1f5f9 25%,#f8fafc 50%,#f1f5f9 75%)',
       backgroundSize: '500px 100%',
       animation: 'shimmer 1.4s infinite linear',
     }} />
@@ -102,7 +102,7 @@ function AddUserModal({ onClose, onSave }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 1000,
-      background: 'rgba(10,14,42,0.55)', backdropFilter: 'blur(5px)',
+      background: 'rgba(15,23,42,0.50)', backdropFilter: 'blur(5px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
       animation: 'fadeUp 0.2s ease',
     }} onClick={e => e.target === e.currentTarget && onClose()}>
@@ -110,7 +110,7 @@ function AddUserModal({ onClose, onSave }) {
         background: C.card, borderRadius: 20,
         width: '100%', maxWidth: 500,
         border: `1.5px solid ${C.border}`,
-        boxShadow: '0 28px 70px rgba(10,14,42,0.22)', overflow: 'hidden',
+        boxShadow: '0 28px 70px rgba(15,23,42,0.18)', overflow: 'hidden',
       }}>
         {/* Header navy */}
         <div style={{
@@ -135,7 +135,7 @@ function AddUserModal({ onClose, onSave }) {
         <div style={{ padding: '24px 26px' }}>
           {error && (
             <div style={{
-              background: C.redDim, border: '1px solid rgba(239,68,68,0.25)',
+              background: C.redDim, border: '1px solid rgba(239,68,68,0.20)',
               borderRadius: 10, padding: '10px 14px', marginBottom: 18,
               fontSize: 13, color: C.red, fontWeight: 600,
               display: 'flex', alignItems: 'center', gap: 8,
@@ -156,7 +156,7 @@ function AddUserModal({ onClose, onSave }) {
                     style={{
                       padding: '12px 10px', borderRadius: 12, textAlign: 'center',
                       border: `1.5px solid ${selected ? rs.color : C.border}`,
-                      background: selected ? rs.bg : '#fafbfd',
+                      background: selected ? rs.bg : '#f8fafc',
                       cursor: 'pointer', transition: 'all 0.15s',
                       boxShadow: selected ? `0 4px 14px ${rs.bg}` : 'none',
                     }}>
@@ -175,7 +175,7 @@ function AddUserModal({ onClose, onSave }) {
               <input className="dl-input" value={form.name}
                 onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
                 placeholder="Ex: Ahmed Ben Ali"
-                style={{ width: '100%', padding: '11px 14px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13.5, color: C.text, background: '#fafbfd', boxSizing: 'border-box', fontFamily: 'inherit', transition: 'border-color .2s, box-shadow .2s' }}
+                style={{ width: '100%', padding: '11px 14px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13.5, color: C.text, background: '#f8fafc', boxSizing: 'border-box', fontFamily: 'inherit', transition: 'border-color .2s, box-shadow .2s' }}
               />
             </div>
             <div>
@@ -183,7 +183,7 @@ function AddUserModal({ onClose, onSave }) {
               <input className="dl-input" type="email" value={form.email}
                 onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
                 placeholder="email@exemple.com"
-                style={{ width: '100%', padding: '11px 14px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13.5, color: C.text, background: '#fafbfd', boxSizing: 'border-box', fontFamily: 'inherit', transition: 'border-color .2s, box-shadow .2s' }}
+                style={{ width: '100%', padding: '11px 14px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13.5, color: C.text, background: '#f8fafc', boxSizing: 'border-box', fontFamily: 'inherit', transition: 'border-color .2s, box-shadow .2s' }}
               />
             </div>
           </div>
@@ -197,7 +197,7 @@ function AddUserModal({ onClose, onSave }) {
                 value={form.password}
                 onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
                 placeholder="Minimum 8 caractères"
-                style={{ width: '100%', padding: '11px 44px 11px 14px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13.5, color: C.text, background: '#fafbfd', boxSizing: 'border-box', fontFamily: 'inherit', transition: 'border-color .2s, box-shadow .2s' }}
+                style={{ width: '100%', padding: '11px 44px 11px 14px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13.5, color: C.text, background: '#f8fafc', boxSizing: 'border-box', fontFamily: 'inherit', transition: 'border-color .2s, box-shadow .2s' }}
               />
               <button type="button" onClick={() => setShowPass(p => !p)} style={{
                 position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
@@ -216,7 +216,7 @@ function AddUserModal({ onClose, onSave }) {
             <button className="dl-btn-add" onClick={handle} disabled={saving} style={{
               flex: 2, padding: '11px', borderRadius: 10,
               border: 'none', background: C.gold,
-              fontSize: 13, fontWeight: 800, color: C.navy,
+              fontSize: 13, fontWeight: 800, color: '#fff',
               cursor: saving ? 'not-allowed' : 'pointer',
               boxShadow: '0 4px 14px rgba(245,166,35,0.25)',
               opacity: saving ? 0.7 : 1,
@@ -268,10 +268,10 @@ export default function Users() {
   const clients  = users.filter(u => u.role === ROLES.CLIENT).length;
 
   const stats = [
-    { label: 'Total',      value: users.length, color: C.gold,   dim: C.goldDim,  icon: '👥' },
+    { label: 'Total',      value: users.length, color: C.gold,    dim: C.goldDim,  icon: '👥' },
     { label: 'Admins',     value: admins,        color: C.goldDark, dim: C.goldDim, icon: '👑' },
-    { label: 'Marketing',  value: managers,      color: C.blue,   dim: C.blueDim,  icon: '🎯' },
-    { label: 'Clients',    value: clients,        color: C.green,  dim: C.greenDim, icon: '👤' },
+    { label: 'Marketing',  value: managers,      color: C.blue,    dim: C.blueDim,  icon: '🎯' },
+    { label: 'Clients',    value: clients,        color: C.green,   dim: C.greenDim, icon: '👤' },
   ];
 
   const TABLE_HEADS = ['UTILISATEUR', 'EMAIL', 'RÔLE', 'CRÉÉ LE', 'ACTIONS'];
@@ -280,7 +280,7 @@ export default function Users() {
     <div style={{
       background: C.bg, minHeight: '100vh',
       padding: '28px 32px',
-      fontFamily: "'Plus Jakarta Sans','Segoe UI',sans-serif",
+      fontFamily: C.sans,
       color: C.text, boxSizing: 'border-box',
     }}>
       <style>{css}</style>
@@ -302,7 +302,7 @@ export default function Users() {
           </p>
         </div>
         <button className="dl-btn-add" onClick={() => setShowForm(true)} style={{
-          background: C.gold, color: C.navy,
+          background: C.gold, color: '#fff',
           border: 'none', padding: '11px 22px',
           borderRadius: 11, fontSize: 13, fontWeight: 800,
           cursor: 'pointer', boxShadow: '0 4px 14px rgba(245,166,35,0.25)',
@@ -337,7 +337,6 @@ export default function Users() {
         display: 'flex', gap: 12, alignItems: 'center', marginBottom: 18,
         animation: 'fadeUp 0.4s ease 300ms both', flexWrap: 'wrap',
       }}>
-        {/* Search */}
         <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
           <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: C.textMuted }}>🔍</span>
           <input className="dl-input" value={search}
@@ -347,7 +346,6 @@ export default function Users() {
           />
         </div>
 
-        {/* Filtre rôle */}
         <div style={{ display: 'flex', background: C.card, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 3, gap: 2, boxShadow: C.shadow }}>
           {[
             { val: 'all',                       lbl: 'Tous' },
@@ -359,7 +357,7 @@ export default function Users() {
               padding: '7px 14px', borderRadius: 8, border: 'none',
               fontSize: 12, fontWeight: 700, cursor: 'pointer',
               background: roleFilter === f.val ? C.gold : 'none',
-              color:      roleFilter === f.val ? C.navy : C.textMuted,
+              color:      roleFilter === f.val ? '#fff' : C.textMuted,
               boxShadow:  roleFilter === f.val ? '0 2px 8px rgba(245,166,35,0.25)' : 'none',
               transition: 'all 0.18s',
             }}>{f.lbl}</button>
@@ -374,11 +372,10 @@ export default function Users() {
         boxShadow: C.shadow, overflow: 'hidden',
         animation: 'fadeUp 0.4s ease 360ms both',
       }}>
-        {/* Table top bar */}
         <div style={{
           padding: '13px 20px', borderBottom: `1.5px solid ${C.border}`,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          background: '#fafbfd',
+          background: '#f8fafc',
         }}>
           <span style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>
             Liste des utilisateurs
@@ -430,7 +427,6 @@ export default function Users() {
                     transition: 'background .15s',
                     animation: `fadeUp 0.3s ease ${idx * 40}ms both`,
                   }}>
-                    {/* Utilisateur */}
                     <td style={{ padding: '14px 18px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <div style={{
@@ -445,11 +441,9 @@ export default function Users() {
                         </div>
                       </div>
                     </td>
-                    {/* Email */}
                     <td style={{ padding: '14px 18px' }}>
                       <a href={`mailto:${u.email}`} style={{ fontSize: 13, color: C.blue, textDecoration: 'none', fontWeight: 500 }}>{u.email}</a>
                     </td>
-                    {/* Rôle */}
                     <td style={{ padding: '14px 18px' }}>
                       <span style={{
                         background: role.bg, color: role.color,
@@ -461,18 +455,16 @@ export default function Users() {
                         {role.icon} {role.label}
                       </span>
                     </td>
-                    {/* Date */}
                     <td style={{ padding: '14px 18px', fontSize: 12.5, color: C.textMuted, fontWeight: 500 }}>
                       {formatDate(u.createdAt)}
                     </td>
-                    {/* Actions */}
                     <td style={{ padding: '14px 18px' }}>
                       <button className="dl-btn-del"
                         onClick={() => handleDelete(u.id)}
                         disabled={deletingId === u.id}
                         style={{
                           background: C.redDim, color: C.red,
-                          border: '1px solid rgba(239,68,68,0.2)',
+                          border: '1px solid rgba(239,68,68,0.15)',
                           padding: '6px 14px', borderRadius: 8,
                           fontSize: 12, fontWeight: 700, cursor: 'pointer',
                           opacity: deletingId === u.id ? 0.5 : 1,

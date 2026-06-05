@@ -17,6 +17,7 @@ console.log('SERVER STARTING...')
 app.use(cors({
   origin: [
     'http://localhost:3000',
+    'http://localhost:3001',
     'https://digipip.vercel.app',
     'https://marketingcloudops-frontend.vercel.app'
   ],

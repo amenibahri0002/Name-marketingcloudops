@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 
 const DP = {
-  gold:'#f5a623', goldGlow:'rgba(245,166,35,0.12)',
-  dark:'#16120d', bg:'#f6f3ee', card:'#ffffff',
-  border:'#ede8df', text:'#1a160e', muted:'#9c8f7a',
-  blue:'#3b82f6', green:'#22c55e', red:'#ef4444',
-  font:"'Montserrat','Open Sans',sans-serif",
+  gold:'#f5a623', goldGlow:'rgba(245,166,35,0.08)',
+  dark:'#0f172a', bg:'#f8fafc', card:'#ffffff',
+  border:'#e2e8f0', text:'#0f172a', muted:'#64748b',
+  blue:'#3b82f6', green:'#10b981', red:'#ef4444',
+  font:"'Inter','Plus Jakarta Sans',sans-serif",
 };
 
 const BAR_COLORS = [DP.gold, DP.blue, DP.green, '#8b5cf6', '#ec4899', '#14b8a6'];
@@ -14,7 +14,7 @@ const BAR_COLORS = [DP.gold, DP.blue, DP.green, '#8b5cf6', '#ec4899', '#14b8a6']
 function MiniBar({ value, max, color }) {
   const pct = max > 0 ? (value / max) * 100 : 0;
   return (
-    <div style={{ flex:1, height:6, background:'#f0ece4', borderRadius:4, overflow:'hidden' }}>
+    <div style={{ flex:1, height:6, background:'#f1f5f9', borderRadius:4, overflow:'hidden' }}>
       <div style={{ width:`${pct}%`, height:'100%', background:color, borderRadius:4, transition:'width 0.6s ease' }} />
     </div>
   );
@@ -45,7 +45,6 @@ export default function Reporting() {
   const draft     = filtered.filter(c => c.status === 'draft').length;
   const total     = filtered.length;
 
-  // Campagnes par client
   const byClient = clients.map(cl => ({
     name: cl.name,
     count: filtered.filter(c => c.clientId === cl.id || c.client?.id === cl.id).length,
@@ -53,14 +52,12 @@ export default function Reporting() {
 
   const maxCount = byClient.length > 0 ? byClient[0].count : 1;
 
-  // Campagnes par type
   const byType = ['email','sms','push'].map(t => ({
     type: t,
     icon: t === 'email' ? '📧' : t === 'sms' ? '📱' : '🔔',
     count: filtered.filter(c => c.type === t).length,
   }));
 
-  // Activité mensuelle (6 derniers mois)
   const now = new Date();
   const months = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
@@ -87,9 +84,6 @@ export default function Reporting() {
   return (
     <div style={{ fontFamily:DP.font, color:DP.text }}>
 
-      {/* Le titre "Reporting" est affiché par la Topbar (Layout.jsx) — pas besoin de le répéter ici */}
-
-      {/* Filtre par canal — aligné à droite */}
       <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:20 }}>
         <div style={{ display:'flex', gap:6 }}>
           {[
@@ -102,8 +96,9 @@ export default function Reporting() {
               padding:'7px 14px', borderRadius:8, fontSize:11, fontWeight:700,
               cursor:'pointer', fontFamily:DP.font, border:'none',
               background: filter === f.value ? DP.gold : DP.card,
-              color:       filter === f.value ? DP.dark : DP.muted,
+              color:       filter === f.value ? '#fff' : DP.muted,
               boxShadow:   filter === f.value ? '0 2px 8px rgba(245,166,35,0.25)' : 'none',
+              border: `1px solid ${filter === f.value ? DP.gold : DP.border}`,
               transition:'all 0.2s'
             }}>
               {f.label}
@@ -112,13 +107,12 @@ export default function Reporting() {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
         {[
           { label:'Total campagnes', value:total,     color:DP.gold,  icon:'📢', bg:DP.goldGlow },
-          { label:'Envoyées',        value:sent,      color:DP.green, icon:'✅', bg:'rgba(34,197,94,0.1)' },
-          { label:'Planifiées',      value:scheduled, color:DP.blue,  icon:'📅', bg:'rgba(59,130,246,0.1)' },
-          { label:'Brouillons',      value:draft,     color:DP.muted, icon:'📝', bg:'rgba(156,143,122,0.1)' },
+          { label:'Envoyées',        value:sent,      color:DP.green, icon:'✅', bg:'rgba(16,185,129,0.08)' },
+          { label:'Planifiées',      value:scheduled, color:DP.blue,  icon:'📅', bg:'rgba(59,130,246,0.08)' },
+          { label:'Brouillons',      value:draft,     color:DP.muted, icon:'📝', bg:'rgba(100,116,139,0.08)' },
         ].map(k => (
           <div key={k.label} style={{
             background:DP.card, border:`1px solid ${DP.border}`,
@@ -139,10 +133,8 @@ export default function Reporting() {
         ))}
       </div>
 
-      {/* Row 2 — Activité mensuelle + Par type */}
       <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:16, marginBottom:16 }}>
 
-        {/* Activité mensuelle */}
         <div style={{ background:DP.card, border:`1px solid ${DP.border}`, borderRadius:14, padding:20 }}>
           <div style={{ fontSize:13, fontWeight:800, color:DP.text, marginBottom:16 }}>📈 Activité — 6 derniers mois</div>
           <div style={{ display:'flex', alignItems:'flex-end', gap:10, height:120 }}>
@@ -164,7 +156,6 @@ export default function Reporting() {
           </div>
         </div>
 
-        {/* Par canal */}
         <div style={{ background:DP.card, border:`1px solid ${DP.border}`, borderRadius:14, padding:20 }}>
           <div style={{ fontSize:13, fontWeight:800, color:DP.text, marginBottom:16 }}>📊 Par canal</div>
           <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
@@ -181,7 +172,6 @@ export default function Reporting() {
         </div>
       </div>
 
-      {/* Par client */}
       <div style={{ background:DP.card, border:`1px solid ${DP.border}`, borderRadius:14, padding:20 }}>
         <div style={{ fontSize:13, fontWeight:800, color:DP.text, marginBottom:16 }}>🏢 Campagnes par client</div>
         {byClient.length === 0 ? (
@@ -192,8 +182,8 @@ export default function Reporting() {
               <div key={cl.name} style={{ display:'flex', alignItems:'center', gap:12 }}>
                 <div style={{
                   width:28, height:28, borderRadius:7, flexShrink:0,
-                  background:`${BAR_COLORS[i % BAR_COLORS.length]}18`,
-                  border:`1px solid ${BAR_COLORS[i % BAR_COLORS.length]}30`,
+                  background:`${BAR_COLORS[i % BAR_COLORS.length]}15`,
+                  border:`1px solid ${BAR_COLORS[i % BAR_COLORS.length]}25`,
                   display:'flex', alignItems:'center', justifyContent:'center',
                   fontSize:10, fontWeight:800, color:BAR_COLORS[i % BAR_COLORS.length]
                 }}>
