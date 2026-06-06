@@ -1,752 +1,495 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 
-/* ── Design Tokens — Light Theme ── */
 const C = {
-  bg:        '#f5f7fa',
-  surface:   '#ffffff',
-  surface2:  '#f1f4f9',
-  surface3:  '#e8edf5',
-  border:    '#e2e8f0',
-  borderDk:  '#cbd5e1',
-  text:      '#0f172a',
-  textMid:   '#334155',
-  muted:     '#94a3b8',
-  gold:      '#d97706',
-  goldLt:    '#fef3c7',
-  green:     '#059669',
-  greenLt:   '#d1fae5',
-  red:       '#dc2626',
-  redLt:     '#fee2e2',
-  blue:      '#2563eb',
-  blueLt:    '#dbeafe',
-  purple:    '#7c3aed',
-  purpleLt:  '#ede9fe',
-  cyan:      '#0891b2',
-  cyanLt:    '#cffafe',
-  orange:    '#ea580c',
-  orangeLt:  '#ffedd5',
-  pink:      '#db2777',
-  pinkLt:    '#fce7f3',
-  navy:      '#0f172a',
-  mono:      "'IBM Plex Mono', monospace",
-  sans:      "'Sora', sans-serif",
+  bg:'#f5f7fa', surface:'#ffffff', surface2:'#f1f4f9', surface3:'#e8edf5',
+  border:'#e2e8f0', borderDk:'#cbd5e1', text:'#0f172a', textMid:'#334155', muted:'#94a3b8',
+  gold:'#d97706', goldLt:'#fef3c7', green:'#059669', greenLt:'#d1fae5',
+  red:'#dc2626', redLt:'#fee2e2', blue:'#2563eb', blueLt:'#dbeafe',
+  purple:'#7c3aed', purpleLt:'#ede9fe', cyan:'#0891b2', cyanLt:'#cffafe',
+  orange:'#ea580c', orangeLt:'#ffedd5', navy:'#0f172a',
+  mono:"'IBM Plex Mono',monospace", sans:"'Sora',sans-serif"
 };
 
-/* ── Helpers ── */
-function seed(id, n) { return ((id * 17 + n * 31) % 100); }
-function genCloud(id) {
-  return {
-    cpu:      40 + seed(id,1)%50,
-    mem:      30 + seed(id,2)%55,
-    latency:  12 + seed(id,3)%88,
-    uptime:   (99 + (seed(id,4)%2===0 ? 0.9 : 0.7)).toFixed(2),
-    region:   ['eu-west-1','us-east-1','ap-south-1','eu-central-1'][seed(id,5)%4],
-    replicas: 1 + seed(id,6)%3,
-    buildMs:  900 + seed(id,7)*28,
-    version:  `v${1+seed(id,8)%4}.${seed(id,9)%10}.${seed(id,10)%20}`,
-    commits:  3 + seed(id,11)%12,
-    network:  45 + seed(id,12)%40,
-    disk:     20 + seed(id,13)%60,
-    requests: 1200 + seed(id,14)*80,
-    errors:   seed(id,15)%5,
-  };
-}
+function PulseDot({color,size=8}){return(<span style={{position:'relative',display:'inline-flex',width:size,height:size,flexShrink:0}}><span style={{position:'absolute',inset:-2,borderRadius:'50%',background:color,opacity:0.25,animation:'ping 2s cubic-bezier(0,0,0.2,1) infinite'}}/><span style={{width:size,height:size,borderRadius:'50%',background:color,display:'block',position:'relative',zIndex:1}}/></span>);}
+function Badge({label,color,bg}){return(<span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'3px 10px',borderRadius:20,fontSize:11,fontWeight:600,color,background:bg,whiteSpace:'nowrap'}}>{label}</span>);}
+function Card({children,style={},onClick}){const[h,setH]=useState(false);return(<div onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{background:C.surface,borderRadius:12,border:`1px solid ${h?C.borderDk:C.border}`,overflow:'hidden',transition:'all 0.18s',boxShadow:h?'0 8px 24px rgba(15,23,42,0.10)':'0 1px 4px rgba(15,23,42,0.05)',cursor:onClick?'pointer':'default',...style}}>{children}</div>);}
+function MiniBar({value,color,height=4}){const col=value>80?C.red:value>60?C.gold:color;return(<div style={{height,borderRadius:4,background:C.surface3,overflow:'hidden',flex:1}}><div style={{height:'100%',width:`${Math.min(value,100)}%`,background:col,borderRadius:4,transition:'width 1s ease'}}/></div>);}
 
-function useCountUp(target, duration=1500) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    const t0 = performance.now();
-    const tick = (now) => {
-      const p = Math.min((now-t0)/duration, 1);
-      const ease = 1 - Math.pow(1-p, 3);
-      setVal(Math.floor(target*ease));
-      if (p < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }, [target, duration]);
-  return val;
-}
+/* ══════════════════════════════════════════
+   DONNÉES RÉELLES DIGILAB SOLUTIONS
+══════════════════════════════════════════ */
 
-/* ── Components ── */
-function PulseDot({ color, size=8 }) {
-  return (
-    <span style={{ position:'relative', display:'inline-flex', width:size, height:size, flexShrink:0 }}>
-      <span style={{ position:'absolute', inset:-2, borderRadius:'50%', background:color, opacity:0.25, animation:'ping 2s cubic-bezier(0,0,0.2,1) infinite' }} />
-      <span style={{ width:size, height:size, borderRadius:'50%', background:color, display:'block', position:'relative', zIndex:1 }} />
-    </span>
-  );
-}
-
-function Badge({ label, color, bg }) {
-  return (
-    <span style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, color, background:bg, whiteSpace:'nowrap' }}>
-      {label}
-    </span>
-  );
-}
-
-function CircularGauge({ value, max=100, color, size=48, stroke=5, label }) {
-  const r = (size-stroke)/2;
-  const circ = 2*Math.PI*r;
-  const p = Math.min(value/max, 1);
-  const col = value>80 ? C.red : value>60 ? C.gold : color;
-  return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
-      <svg width={size} height={size} style={{ transform:'rotate(-90deg)' }}>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={C.surface3} strokeWidth={stroke} />
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={col} strokeWidth={stroke}
-          strokeDasharray={circ} strokeDashoffset={circ*(1-p)} strokeLinecap="round"
-          style={{ transition:'stroke-dashoffset 1.2s ease-out' }} />
-      </svg>
-      <span style={{ fontSize:10, fontWeight:700, color:col, fontFamily:C.mono }}>{value}%</span>
-      {label && <span style={{ fontSize:8, color:C.muted, fontFamily:C.mono, textTransform:'uppercase', letterSpacing:'0.06em' }}>{label}</span>}
-    </div>
-  );
-}
-
-function Card({ children, style={}, onClick }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      onClick={onClick}
-      onMouseEnter={()=>setHovered(true)}
-      onMouseLeave={()=>setHovered(false)}
-      style={{
-        background: C.surface,
-        borderRadius: 12,
-        border: `1px solid ${hovered ? C.borderDk : C.border}`,
-        overflow: 'hidden',
-        transition: 'all 0.18s',
-        boxShadow: hovered
-          ? '0 8px 24px rgba(15,23,42,0.10)'
-          : '0 1px 4px rgba(15,23,42,0.05)',
-        cursor: onClick ? 'pointer' : 'default',
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function MiniBar({ value, color, height=4 }) {
-  const col = value > 80 ? C.red : value > 60 ? C.gold : color;
-  return (
-    <div style={{ height, borderRadius:4, background:C.surface3, overflow:'hidden', flex:1 }}>
-      <div style={{ height:'100%', width:`${Math.min(value,100)}%`, background:col, borderRadius:4, transition:'width 1s ease' }} />
-    </div>
-  );
-}
-
-/* ── Static Data ── */
-const REGIONS = [
-  { id:'eu-west-1',    name:'Europe (Paris)',     flag:'🇫🇷', status:'active',  cpu:45, mem:62, lat:18,  uptime:'99.99' },
-  { id:'us-east-1',    name:'US East (Virginia)', flag:'🇺🇸', status:'active',  cpu:38, mem:55, lat:42,  uptime:'99.97' },
-  { id:'ap-south-1',   name:'Asia (Mumbai)',      flag:'🇮🇳', status:'active',  cpu:52, mem:48, lat:85,  uptime:'99.94' },
-  { id:'eu-central-1', name:'Europe (Frankfurt)', flag:'🇩🇪', status:'standby', cpu:12, mem:20, lat:22,  uptime:'100.0' },
+// Clients de DigiLab Solutions
+const DIGILAB_CLIENTS = [
+  { name:'Tunisie Telecom', sector:'Télécommunications', campaigns:24, contacts:125000, mrr:2500, status:'actif' },
+  { name:'Banque Zitouna', sector:'Finance Islamique', campaigns:18, contacts:85000, mrr:1800, status:'actif' },
+  { name:'Ooredoo Tunisie', sector:'Télécommunications', campaigns:15, contacts:68000, mrr:1500, status:'actif' },
+  { name:'Medina Tech', sector:'Technologie', campaigns:12, contacts:32000, mrr:950, status:'actif' },
+  { name:'Carthage Group', sector:'Immobilier', campaigns:9, contacts:45000, mrr:1200, status:'actif' },
+  { name:'StartUp Sfax', sector:'Startup', campaigns:6, contacts:15000, mrr:450, status:'actif' },
+  { name:'Sahara Travel', sector:'Tourisme', campaigns:8, contacts:28000, mrr:750, status:'actif' },
+  { name:'Tunisie Auto', sector:'Automobile', campaigns:11, contacts:42000, mrr:1100, status:'actif' },
 ];
 
-const SERVICES = [
-  { id:'vercel',     name:'Frontend',    icon:'▲', color:C.blue,   bg:C.blueLt,   status:'up',   latency:18,  region:'us-east-1' },
-  { id:'render',     name:'API Backend', icon:'⬡', color:C.green,  bg:C.greenLt,  status:'up',   latency:42,  region:'eu-west-1' },
-  { id:'neon',       name:'PostgreSQL',  icon:'🐘',color:C.cyan,   bg:C.cyanLt,   status:'up',   latency:8,   region:'eu-central-1' },
-  { id:'redis',      name:'Cache Redis', icon:'⚡', color:C.orange, bg:C.orangeLt, status:'up',   latency:3,   region:'eu-west-1' },
-  { id:'firebase',   name:'Push FCM',    icon:'🔥',color:C.red,    bg:C.redLt,    status:'down', latency:0,   region:'—' },
-  { id:'nodemailer', name:'Email SMTP',  icon:'📧',color:C.gold,   bg:C.goldLt,   status:'warn', latency:312, region:'us-east-1' },
+// Campagnes réelles DigiLab
+const DIGILAB_CAMPAIGNS = [
+  { id:1, title:'Campagne Ramadan 2026', client:'Tunisie Telecom', type:'SMS', status:'active', recipients:125000, rate:82.4, date:'2026-03-01' },
+  { id:2, title:'Promo Été DigiLab', client:'DigiLab Solutions', type:'Email', status:'sent', recipients:45000, rate:68.7, date:'2026-05-15' },
+  { id:3, title:'Lancement App Zitouna', client:'Banque Zitouna', type:'Push', status:'scheduled', recipients:28000, rate:0, date:'2026-06-10' },
+  { id:4, title:'Newsletter Mensuelle', client:'Ooredoo Tunisie', type:'Email', status:'sent', recipients:80000, rate:71.2, date:'2026-05-01' },
+  { id:5, title:'Black Friday Early', client:'Medina Tech', type:'Multicanal', status:'draft', recipients:15000, rate:0, date:'—' },
+  { id:6, title:'Ventes Flash Auto', client:'Tunisie Auto', type:'SMS', status:'active', recipients:42000, rate:75.8, date:'2026-06-05' },
+  { id:7, title:'Pack Vacances', client:'Sahara Travel', type:'Email', status:'sent', recipients:28000, rate:64.3, date:'2026-05-20' },
+  { id:8, title:'Welcome StartUp', client:'StartUp Sfax', type:'Email', status:'sent', recipients:15000, rate:58.9, date:'2026-04-15' },
 ];
 
-const PIPELINE_STEPS = [
-  { id:'source',  label:'Source',  icon:'⌥' },
-  { id:'build',   label:'Build',   icon:'⚙' },
-  { id:'test',    label:'Test',    icon:'✦' },
-  { id:'preview', label:'Preview', icon:'◈' },
-  { id:'deploy',  label:'Deploy',  icon:'↑' },
-];
+// Données cloud DigiLab (sans outils spécifiques)
+const CLOUD_METRICS = {
+  regions: [
+    { id:'tn-north', name:'Tunisie Nord', location:'Tunis', status:'active', cpu:45, memory:62, latency:18, uptime:'99.99' },
+    { id:'tn-south', name:'Tunisie Sud', location:'Sfax', status:'active', cpu:38, memory:55, latency:42, uptime:'99.97' },
+    { id:'tn-east', name:'Tunisie Est', location:'Sousse', status:'active', cpu:52, memory:48, latency:85, uptime:'99.94' },
+    { id:'tn-central', name:'Tunisie Centre', location:'Kairouan', status:'standby', cpu:12, memory:20, latency:22, uptime:'100.0' },
+  ],
+  services: [
+    { name:'Site Web Principal', status:'up', latency:18, region:'Tunis' },
+    { name:'API Backend', status:'up', latency:42, region:'Tunis' },
+    { name:'Base de Données', status:'up', latency:8, region:'Sfax' },
+    { name:'Cache Serveur', status:'up', latency:3, region:'Tunis' },
+    { name:'Notifications Push', status:'down', latency:0, region:'—' },
+    { name:'Email Marketing', status:'warn', latency:312, region:'Tunis' },
+  ],
+  storage: [
+    { type:'Base de Données Clients', used:68, total:'10 GB', iops:'1.2k', details:{tables:24, records:'2.4M', backups:'7 jours', growth:'+12%/mois'} },
+    { type:'Fichiers Médias', used:23, total:'50 GB', iops:'8.5k', details:{files:'45K', images:'32K', videos:'1.2K', growth:'+8%/mois'} },
+    { type:'Logs Système', used:41, total:'20 GB', iops:'450', details:{entries:'12M', retention:'30 jours', compression:'85%', growth:'+15%/mois'} },
+    { type:'Cache Temporaire', used:15, total:'2 GB', iops:'12k', details:{keys:'45K', hitRate:'94%', evictions:'12/jour', growth:'+5%/mois'} },
+  ],
+  costs: {
+    monthly: 1240,
+    perSend: 0.002,
+    forecast: 1480,
+    breakdown: [
+      { category:'Serveurs Cloud', cost:520, pct:42, trend:'+5%', optimization:'Auto-scaling activé' },
+      { category:'Base de Données', cost:310, pct:25, trend:'+12%', optimization:'Index optimization' },
+      { category:'Stockage Fichiers', cost:240, pct:19, trend:'+8%', optimization:'Compression activée' },
+      { category:'Email Marketing', cost:170, pct:14, trend:'-3%', optimization:'Envoi par lots' },
+    ],
+    optimizations: [
+      { title:'Auto-scaling', description:'Réduction 15% en période creuse', status:'Actif', savings:78 },
+      { title:'Cache CDN', description:'Cache hit rate 94%', status:'Actif', savings:45 },
+      { title:'Compression', description:'Gzip + Brotli activés', status:'Actif', savings:32 },
+      { title:'Arrêt Programmé', description:'Dev env arrêt 20h-8h', status:'Programmé', savings:120 },
+    ]
+  },
+  incidents: [
+    { id:'INC-2026-001', severity:'critical', title:'Panne API', description:'Timeout sur 45% des requêtes entre 14:23 et 14:47', service:'API Backend', status:'resolved', duration:'24 min', time:'2026-06-05 14:23', impact:'2,340 utilisateurs affectés', resolution:'Redémarrage automatique' },
+    { id:'INC-2026-002', severity:'high', title:'Dégradation Email', description:'Latence > 500ms sur le service email', service:'Email Marketing', status:'resolved', duration:'1h 12min', time:'2026-06-05 11:15', impact:'Queue de 1,240 messages', resolution:'Basculement serveur' },
+    { id:'INC-2026-003', severity:'medium', title:'Alerte Cache', description:'Utilisation mémoire > 85% pendant 15 min', service:'Cache Serveur', status:'active', duration:'En cours', time:'2026-06-05 16:42', impact:"Risque d'éviction", resolution:'Scale-up en cours' },
+    { id:'INC-2026-004', severity:'low', title:'Backup retardé', description:'Backup quotidien retardé de 2h', service:'Base de Données', status:'resolved', duration:'2h 15min', time:'2026-06-05 03:00', impact:'Aucun', resolution:'Retry automatique' },
+  ],
+  logs: [
+    { time:'16:42:01', level:'critical', service:'API', message:'POST /api/campagnes 504 Gateway Timeout' },
+    { time:'16:41:58', level:'error', service:'Worker', message:'Campagne #42 échec envoi - retry 3/3' },
+    { time:'16:41:45', level:'warn', service:'Cache', message:'Memory usage > 85% - eviction activée' },
+    { time:'16:40:12', level:'error', service:'Email', message:'Timeout connexion SMTP - fallback activé' },
+    { time:'16:39:33', level:'info', service:'Web', message:'GET /dashboard 200 OK' },
+    { time:'16:38:10', level:'success', service:'Déploiement', message:'Version 2.4.1 déployée avec succès' },
+    { time:'16:37:22', level:'warn', service:'Monitoring', message:'CPU usage > 80% sur serveur principal' },
+    { time:'16:36:15', level:'info', service:'Backup', message:'Backup démarré - 2.4GB' },
+    { time:'16:35:08', level:'error', service:'Push', message:'Service notifications indisponible' },
+    { time:'16:34:44', level:'success', service:'Auth', message:'2,847 sessions actives' },
+  ],
+  security: {
+    score: 92,
+    grade: 'A',
+    tools: [
+      { name:'Authentification', status:'Actif', score:'A+', description:'Tokens JWT avec expiration 7 jours', details:{sessions:'2,847 actives', refresh:'Automatique', mfa:'Activé', algorithm:'HS256'} },
+      { name:'Chiffrement SSL', status:'Actif', score:'A+', description:'Chiffrement de bout en bout', details:{protocol:'TLS 1.3', certificate:'Valide', renewal:'Auto', hsts:'Activé'} },
+      { name:'Rate Limiting', status:'Actif', score:'A', description:'Protection contre les attaques', details:{limit:'100 req/min', burst:'150 req/min', blocked:'12 aujourd\'hui', strategy:'Token bucket'} },
+      { name:'Audit Logs', status:'Partiel', score:'B', description:'Journalisation des actions', details:{coverage:'Console', retention:'30 jours', events:'Login, CRUD', compliance:'RGPD'} },
+      { name:'Firewall', status:'Actif', score:'A', description:'Filtrage des requêtes', details:{rules:'OWASP', blocked:'45 aujourd\'hui', mode:'Blocking', update:'Auto'} },
+      { name:'Chiffrement Données', status:'Actif', score:'A+', description:'Chiffrement au repos et en transit', details:{atRest:'AES-256', inTransit:'TLS 1.3', rotation:'90 jours', backup:'Chiffré'} },
+    ],
+    vulnerabilities: [
+      { severity:'low', name:'XSS reflected', status:'corrigé', date:'2026-06-01' },
+      { severity:'medium', name:'CSRF token', status:'corrigé', date:'2026-05-28' },
+      { severity:'low', name:'Header missing', status:'ouvert', date:'—' },
+      { severity:'high', name:'Dependency lodash', status:'corrigé', date:'2026-06-03' },
+    ]
+  }
+};
 
-const ENVIRONMENTS = [
-  { name:'Development', status:'active', color:C.blue,   bg:C.blueLt,  pods:4,  lastDeploy:'2h ago',  branch:'dev'     },
-  { name:'Staging',     status:'active', color:C.gold,   bg:C.goldLt,  pods:6,  lastDeploy:'5h ago',  branch:'staging' },
-  { name:'Production',  status:'active', color:C.green,  bg:C.greenLt, pods:10, lastDeploy:'1d ago',  branch:'main'    },
-];
-
-const SECURITY_SCORES = [
-  { label:'Auth JWT',      score:'A+', status:'Actif',   detail:'HS256 · Exp: 7j',  color:C.green,  bg:C.greenLt,  icon:'🔐' },
-  { label:'HTTPS / SSL',   score:'A+', status:'Actif',   detail:'TLS 1.3',           color:C.green,  bg:C.greenLt,  icon:'🛡️' },
-  { label:'Rate Limiting', score:'A',  status:'Actif',   detail:'100 req/min',       color:C.blue,   bg:C.blueLt,   icon:'🚫' },
-  { label:'Audit Logs',    score:'B',  status:'Partiel', detail:'Console only',      color:C.gold,   bg:C.goldLt,   icon:'🔍' },
-];
-
-const TABS = [
-  { id:'overview',       icon:'☁️', label:"Vue d'ensemble" },
-  { id:'infrastructure', icon:'🏗️', label:'Infrastructure'  },
-  { id:'cicd',           icon:'🔄', label:'CI/CD'           },
-  { id:'monitoring',     icon:'📊', label:'Monitoring'      },
-  { id:'storage',        icon:'💾', label:'Stockage'        },
-  { id:'costs',          icon:'💰', label:'Coûts'           },
-  { id:'logs',           icon:'📝', label:'Logs'            },
-  { id:'environments',   icon:'🌐', label:'Environnements'  },
-  { id:'security',       icon:'🔐', label:'Sécurité'        },
+const TABS=[
+  {id:'overview',icon:'☁️',label:"Vue d'ensemble"},
+  {id:'monitoring',icon:'📊',label:'Monitoring'},
+  {id:'storage',icon:'💾',label:'Stockage'},
+  {id:'costs',icon:'💰',label:'Coûts'},
+  {id:'logs',icon:'📝',label:'Logs & Incidents'},
+  {id:'security',icon:'🔐',label:'Sécurité'},
 ];
 
 /* ══════════════════════════════════════════
    SECTIONS
 ══════════════════════════════════════════ */
 
-function OverviewSection({ camps }) {
-  const deployed = camps.filter(c=>c.status==='sent'||c.status==='active').length;
-  const uptimeAnim = useCountUp(9997, 1800);
-
-  return (
-    <div>
-      {/* KPI row */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
-        {[
-          { icon:'☁️', label:'Régions actives',  value:'3',                          color:C.blue,   bg:C.blueLt,   sub:'Multi-cloud'  },
-          { icon:'⚡', label:'Uptime global',    value:`${(uptimeAnim/100).toFixed(2)}%`, color:C.green, bg:C.greenLt, sub:'SLA 99.9%'   },
-          { icon:'📦', label:'Déployées',        value:deployed,                     color:C.gold,   bg:C.goldLt,   sub:`${camps.length} total` },
-          { icon:'🔥', label:'Req / min',        value:'2 847',                      color:C.purple, bg:C.purpleLt, sub:'Pic : 8.2k'   },
-        ].map((card,i)=>(
-          <Card key={i} style={{ padding:'18px' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-              <div style={{ width:36, height:36, borderRadius:9, background:card.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>{card.icon}</div>
-              <PulseDot color={card.color} size={7} />
-            </div>
-            <div style={{ fontSize:10, color:C.muted, textTransform:'uppercase', letterSpacing:'0.08em', fontFamily:C.mono, marginBottom:4 }}>{card.label}</div>
-            <div style={{ fontSize:26, fontWeight:800, color:card.color, fontFamily:C.mono, lineHeight:1 }}>{card.value}</div>
-            <div style={{ fontSize:10, color:C.muted, marginTop:5 }}>{card.sub}</div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Services grid */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:20 }}>
-        {SERVICES.map(svc=>(
-          <Card key={svc.id}>
-            <div style={{ padding:'13px 16px', display:'flex', alignItems:'center', gap:10, borderBottom:`1px solid ${C.border}` }}>
-              <div style={{ width:30, height:30, borderRadius:8, background:svc.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>{svc.icon}</div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:12, fontWeight:700, color:C.text }}>{svc.name}</div>
-                <div style={{ fontSize:9, color:C.muted, fontFamily:C.mono }}>{svc.region}</div>
-              </div>
-              <Badge
-                label={svc.status==='up'?'OK':svc.status==='warn'?'WARN':'DOWN'}
-                color={svc.status==='up'?C.green:svc.status==='warn'?C.gold:C.red}
-                bg={svc.status==='up'?C.greenLt:svc.status==='warn'?C.goldLt:C.redLt}
-              />
-            </div>
-            <div style={{ padding:'10px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontSize:10, color:C.muted, fontFamily:C.mono }}>Latence</span>
-              <span style={{ fontSize:13, fontWeight:700, color:svc.latency>100?C.red:C.green, fontFamily:C.mono }}>
-                {svc.latency>0?`${svc.latency}ms`:'—'}
-              </span>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Regions */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
-        {REGIONS.map(r=>(
-          <Card key={r.id}>
-            <div style={{ padding:'14px 16px', display:'flex', alignItems:'center', gap:10, borderBottom:`1px solid ${C.border}` }}>
-              <span style={{ fontSize:22 }}>{r.flag}</span>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:12, fontWeight:700, color:C.text }}>{r.name}</div>
-                <div style={{ fontSize:9, color:C.muted, fontFamily:C.mono }}>{r.id}</div>
-              </div>
-              <PulseDot color={r.status==='active'?C.green:C.gold} size={6} />
-            </div>
-            <div style={{ padding:'12px 16px', display:'flex', gap:10, alignItems:'center' }}>
-              <CircularGauge value={r.cpu} color={C.blue}   size={42} stroke={4} label="CPU" />
-              <CircularGauge value={r.mem} color={C.purple} size={42} stroke={4} label="MEM" />
-              <div style={{ flex:1, textAlign:'right' }}>
-                <div style={{ fontSize:9, color:C.muted, fontFamily:C.mono }}>UPTIME</div>
-                <div style={{ fontSize:12, fontWeight:700, color:C.green, fontFamily:C.mono }}>{r.uptime}%</div>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function InfrastructureSection() {
-  const [selectedVM, setSelectedVM] = useState(null);
-  return (
-    <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
-      {REGIONS.map(region=>(
-        <Card key={region.id} style={{ flex:1, minWidth:240 }}>
-          <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <span style={{ fontSize:26 }}>{region.flag}</span>
-              <div>
-                <div style={{ fontSize:13, fontWeight:700, color:C.text }}>{region.name}</div>
-                <div style={{ fontSize:9, color:C.muted, fontFamily:C.mono }}>{region.id}</div>
-              </div>
-            </div>
-            <PulseDot color={region.status==='active'?C.green:C.gold} size={7} />
-          </div>
-          <div style={{ padding:'10px', display:'flex', flexDirection:'column', gap:8 }}>
-            {[
-              { id:'vm-1', type:'API Server', cpu:45, mem:62, color:C.blue   },
-              { id:'vm-2', type:'Worker',     cpu:38, mem:55, color:C.blue   },
-              { id:'vm-3', type:'Redis',      cpu:12, mem:20, color:C.orange },
-            ].map(vm=>{
-              const sel = selectedVM===vm.id;
-              return (
-                <div key={vm.id} onClick={()=>setSelectedVM(sel?null:vm.id)}
-                  style={{ padding:'10px 12px', borderRadius:8, background:sel?`${vm.color}10`:C.surface2, border:`1.5px solid ${sel?vm.color:C.border}`, cursor:'pointer', transition:'all 0.18s', display:'flex', alignItems:'center', gap:10 }}>
-                  <PulseDot color={vm.color} size={7} />
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:11, fontWeight:700, color:C.text }}>{vm.type}</div>
-                    <div style={{ fontSize:9, color:C.muted, fontFamily:C.mono }}>{vm.id}</div>
-                  </div>
-                  <span style={{ fontSize:10, fontWeight:700, color:vm.color, fontFamily:C.mono }}>{vm.cpu}%</span>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function CICDSection({ camps }) {
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      {camps.slice(0,5).map((camp,idx)=>{
-        const m = genCloud(camp.id||idx+1);
-        const stage = camp.status==='sent'||camp.status==='active' ? 5 : camp.status==='scheduled' ? 3 : 2;
-        const isLive = camp.status==='sent'||camp.status==='active';
-
-        return (
-          <Card key={camp.id} style={{ padding:'16px 20px' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
-              <div style={{ width:36, height:36, borderRadius:9, background:C.blueLt, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>📦</div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:13, fontWeight:700, color:C.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{camp.title}</div>
-                <div style={{ fontSize:10, color:C.muted, fontFamily:C.mono }}>{camp.client?.name||'—'} · {m.version}</div>
-              </div>
-              <Badge
-                label={isLive?'Deployed':camp.status==='scheduled'?'Queued':'Draft'}
-                color={isLive?C.green:camp.status==='scheduled'?C.blue:C.gold}
-                bg={isLive?C.greenLt:camp.status==='scheduled'?C.blueLt:C.goldLt}
-              />
-            </div>
-
-            {/* Pipeline steps */}
-            <div style={{ display:'flex', alignItems:'center', marginBottom:12 }}>
-              {PIPELINE_STEPS.map((step,i)=>{
-                const done    = i < stage;
-                const current = i===stage-1 && !isLive;
-                const failed  = camp.status==='failed' && i===stage-1;
-                const sc = failed?C.red : done?C.green : current?C.gold : C.border;
-                return (
-                  <React.Fragment key={step.id}>
-                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1 }}>
-                      <div style={{
-                        width:26, height:26, borderRadius:'50%',
-                        background: failed?C.redLt : done?C.greenLt : current?C.goldLt : C.surface2,
-                        border:`2px solid ${sc}`,
-                        display:'flex', alignItems:'center', justifyContent:'center',
-                        fontSize:10, fontWeight:700, color:sc,
-                      }}>
-                        {failed?'✕':done?'✓':current?'●':step.icon}
-                      </div>
-                      <span style={{ fontSize:9, color:done?C.green:current?C.gold:C.muted, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.04em' }}>{step.label}</span>
-                    </div>
-                    {i < PIPELINE_STEPS.length-1 && (
-                      <div style={{ height:2, flex:1, marginBottom:16, background:i<stage-1?C.green:C.border, transition:'background 0.4s' }} />
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </div>
-
-            {/* Terminal log */}
-            <div style={{ padding:'10px 14px', background:C.navy, borderRadius:8, fontFamily:C.mono, fontSize:10, color:C.green, lineHeight:1.8 }}>
-              <div style={{ color:C.muted, marginBottom:2 }}>$ git push origin main</div>
-              <div>✓ Build completed in {m.buildMs}ms</div>
-              <div>✓ Deployed → {m.region} ×{m.replicas} replicas</div>
-              <div>✓ Health check — {m.latency}ms latency</div>
-            </div>
-          </Card>
-        );
-      })}
-      {camps.length === 0 && (
-        <div style={{ textAlign:'center', padding:40, color:C.muted }}>
-          <div style={{ fontSize:32, marginBottom:10, opacity:0.3 }}>📦</div>
-          <p style={{ fontFamily:C.mono, fontSize:12 }}>Aucune campagne</p>
+function OverviewSection(){
+  return(<div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,marginBottom:20}}>
+      {[{icon:'🏢',label:'Clients Actifs',value:'8',color:C.blue,bg:C.blueLt,sub:'Entreprises tunisiennes'},{icon:'📢',label:'Campagnes',value:'8',color:C.gold,bg:C.goldLt,sub:'4 actives'},{icon:'👥',label:'Contacts',value:'448K',color:C.green,bg:C.greenLt,sub:'Base totale'},{icon:'💰',label:'MRR',value:'9,250 TND',color:C.purple,bg:C.purpleLt,sub:'Revenus mensuels'}].map((card,i)=>(<Card key={i} style={{padding:'18px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+          <div style={{width:36,height:36,borderRadius:9,background:card.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>{card.icon}</div>
+          <PulseDot color={card.color} size={7}/>
         </div>
-      )}
+        <div style={{fontSize:10,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',fontFamily:C.mono,marginBottom:4}}>{card.label}</div>
+        <div style={{fontSize:26,fontWeight:800,color:card.color,fontFamily:C.mono,lineHeight:1}}>{card.value}</div>
+        <div style={{fontSize:10,color:C.muted,marginTop:5}}>{card.sub}</div>
+      </Card>))}
     </div>
-  );
-}
-
-function MonitoringSection() {
-  const data = [35,52,41,68,79,55,43,91,87,72,66,84,95,88,76,63,71,83,78,90,85,92,88,96];
-  return (
-    <div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:20 }}>
-        {[
-          { icon:'🟢', label:'API Backend',    status:'Opérationnel',  latency:'42ms',  uptime:'99.94%', color:C.green, bg:C.greenLt },
-          { icon:'🟢', label:'Frontend',       status:'Opérationnel',  latency:'18ms',  uptime:'99.99%', color:C.green, bg:C.greenLt },
-          { icon:'🟢', label:'PostgreSQL',     status:'Opérationnel',  latency:'8ms',   uptime:'99.97%', color:C.green, bg:C.greenLt },
-          { icon:'🟡', label:'Email SMTP',     status:'Dégradé',       latency:'312ms', uptime:'98.12%', color:C.gold,  bg:C.goldLt  },
-          { icon:'🟢', label:'Auth JWT',       status:'Opérationnel',  latency:'5ms',   uptime:'100%',   color:C.green, bg:C.greenLt },
-          { icon:'🔴', label:'Push Firebase',  status:'Non configuré', latency:'—',     uptime:'—',      color:C.red,   bg:C.redLt   },
-        ].map((svc,i)=>(
-          <Card key={i}>
-            <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontSize:16 }}>{svc.icon}</span>
-              <Badge label={svc.status} color={svc.color} bg={svc.bg} />
+    <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12}}>
+      <Card style={{padding:'20px'}}>
+        <div style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:16}}>Clients DigiLab Solutions</div>
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          {DIGILAB_CLIENTS.map((client,i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',background:C.surface2,borderRadius:8,border:`1px solid ${C.border}`}}>
+            <div style={{width:36,height:36,borderRadius:'50%',background:C.blueLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,color:C.blue,flexShrink:0}}>{client.name.charAt(0)}</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:600,color:C.text}}>{client.name}</div>
+              <div style={{fontSize:11,color:C.muted}}>{client.sector} · {client.campaigns} campagnes · {client.contacts.toLocaleString('fr-FR')} contacts</div>
             </div>
-            <div style={{ padding:'12px 16px' }}>
-              <div style={{ fontSize:12, fontWeight:700, color:C.text, marginBottom:10 }}>{svc.label}</div>
-              <div style={{ display:'flex', gap:16 }}>
-                <div>
-                  <div style={{ fontSize:9, color:C.muted, textTransform:'uppercase', fontFamily:C.mono, letterSpacing:'0.06em' }}>Latence</div>
-                  <div style={{ fontSize:14, fontWeight:700, color:svc.color, fontFamily:C.mono }}>{svc.latency}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize:9, color:C.muted, textTransform:'uppercase', fontFamily:C.mono, letterSpacing:'0.06em' }}>Uptime</div>
-                  <div style={{ fontSize:14, fontWeight:700, color:svc.color, fontFamily:C.mono }}>{svc.uptime}</div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <Card style={{ padding:'20px' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-          <div style={{ fontSize:14, fontWeight:700, color:C.text }}>Trafic réseau — 24h</div>
-          <div style={{ display:'flex', gap:12 }}>
-            <span style={{ fontSize:10, color:C.blue, fontFamily:C.mono, display:'flex', alignItems:'center', gap:5 }}>
-              <span style={{ width:10, height:4, background:C.blue, borderRadius:2, display:'inline-block' }}></span> HTTP
-            </span>
-            <span style={{ fontSize:10, color:C.cyan, fontFamily:C.mono, display:'flex', alignItems:'center', gap:5 }}>
-              <span style={{ width:10, height:4, background:C.cyan, borderRadius:2, display:'inline-block' }}></span> WS
-            </span>
-          </div>
+            <Badge label={client.status==='actif'?'Actif':'Inactif'} color={C.green} bg={C.greenLt}/>
+            <span style={{fontSize:12,fontWeight:700,color:C.text,fontFamily:C.mono,minWidth:70,textAlign:'right'}}>{client.mrr} TND</span>
+          </div>))}
         </div>
-        <div style={{ display:'flex', alignItems:'flex-end', gap:2, height:100 }}>
-          {data.map((v,i)=>(
-            <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', gap:2, height:'100%', justifyContent:'flex-end' }}>
-              <div style={{ width:'100%', height:`${v}%`, borderRadius:'2px 2px 0 0', background:C.blue, opacity:0.75, minWidth:4 }} />
-              <div style={{ width:'100%', height:`${v*0.5}%`, borderRadius:'2px 2px 0 0', background:C.cyan, opacity:0.5, minWidth:4 }} />
+      </Card>
+      <Card style={{padding:'20px'}}>
+        <div style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:16}}>Campagnes récentes</div>
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          {DIGILAB_CAMPAIGNS.slice(0,5).map((camp,i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',background:C.surface2,borderRadius:8,border:`1px solid ${C.border}`}}>
+            <div style={{width:36,height:36,borderRadius:8,background:C.goldLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>
+              {camp.type==='SMS'?'💬':camp.type==='Email'?'✉':camp.type==='Push'?'🔔':'⚡'}
             </div>
-          ))}
-        </div>
-        <div style={{ display:'flex', justifyContent:'space-between', marginTop:6 }}>
-          {['00h','06h','12h','18h','24h'].map(t=>(
-            <span key={t} style={{ fontSize:9, color:C.muted, fontFamily:C.mono }}>{t}</span>
-          ))}
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:600,color:C.text}}>{camp.title}</div>
+              <div style={{fontSize:11,color:C.muted}}>{camp.client} · {camp.recipients.toLocaleString('fr-FR')} destinataires</div>
+            </div>
+            <Badge label={camp.status==='active'?'Active':camp.status==='sent'?'Envoyée':camp.status==='scheduled'?'Planifiée':'Brouillon'} 
+              color={camp.status==='active'?C.blue:camp.status==='sent'?C.green:camp.status==='scheduled'?C.gold:C.muted}
+              bg={camp.status==='active'?C.blueLt:camp.status==='sent'?C.greenLt:camp.status==='scheduled'?C.goldLt:C.surface2}/>
+            {camp.rate>0&&<span style={{fontSize:12,fontWeight:700,color:C.green,fontFamily:C.mono,minWidth:50,textAlign:'right'}}>{camp.rate}%</span>}
+          </div>))}
         </div>
       </Card>
     </div>
-  );
+  </div>);
 }
 
-function StorageSection() {
-  return (
-    <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12 }}>
-      {[
-        { icon:'🗃️', label:'PostgreSQL (Neon)',  used:68, total:'10 GB', color:C.blue,   bg:C.blueLt,   iops:'1.2k' },
-        { icon:'📁', label:'Static Files (CDN)', used:23, total:'50 GB', color:C.green,  bg:C.greenLt,  iops:'8.5k' },
-        { icon:'📊', label:'Logs (Grafana)',      used:41, total:'20 GB', color:C.purple, bg:C.purpleLt, iops:'450'  },
-        { icon:'💬', label:'Redis Cache',         used:15, total:'2 GB',  color:C.orange, bg:C.orangeLt, iops:'12k'  },
-      ].map(({ icon, label, used, total, color, bg, iops })=>(
-        <Card key={label} style={{ padding:'16px' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <div style={{ width:32, height:32, borderRadius:8, background:bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>{icon}</div>
-              <div>
-                <div style={{ fontSize:12, fontWeight:700, color:C.text }}>{label}</div>
-                <div style={{ fontSize:9, color:C.muted, fontFamily:C.mono }}>{iops} IOPS</div>
-              </div>
-            </div>
-            <span style={{ fontSize:10, color:C.muted, fontFamily:C.mono }}>{total}</span>
-          </div>
-          <div style={{ height:5, borderRadius:3, background:C.surface3, overflow:'hidden', marginBottom:6 }}>
-            <div style={{ height:'100%', width:`${used}%`, background:used>80?C.red:color, borderRadius:3, transition:'width 1s' }} />
-          </div>
-          <div style={{ display:'flex', justifyContent:'space-between' }}>
-            <span style={{ fontSize:10, color:C.muted, fontFamily:C.mono }}>{used}% utilisé</span>
-            <span style={{ fontSize:10, color:used>80?C.red:C.green, fontFamily:C.mono, fontWeight:600 }}>
-              {used>80?'⚠ Critique':'✓ Normal'}
-            </span>
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function CostsSection() {
-  return (
-    <div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14, marginBottom:20 }}>
-        {[
-          { label:'Budget mensuel', value:'€1 240', used:'62%', color:C.blue,   bg:C.blueLt,   trend:'+8%',  trendColor:C.red   },
-          { label:'Coût par envoi', value:'€0.002', used:'45%', color:C.green,  bg:C.greenLt,  trend:'-3%',  trendColor:C.green },
-          { label:'Forecast',       value:'€1 480', used:'74%', color:C.gold,   bg:C.goldLt,   trend:'Alert',trendColor:C.red   },
-        ].map((card,i)=>(
-          <Card key={i} style={{ padding:'18px' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-              <span style={{ fontSize:10, color:C.muted, textTransform:'uppercase', letterSpacing:'0.08em', fontFamily:C.mono }}>{card.label}</span>
-              <span style={{ fontSize:11, fontWeight:600, color:card.trendColor, fontFamily:C.mono }}>{card.trend}</span>
-            </div>
-            <div style={{ fontSize:28, fontWeight:800, color:card.color, fontFamily:C.mono, lineHeight:1, marginBottom:8 }}>{card.value}</div>
-            <div style={{ fontSize:10, color:C.muted }}>Budget utilisé : {card.used}</div>
-          </Card>
-        ))}
-      </div>
-
-      <Card style={{ padding:'20px' }}>
-        <div style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:16 }}>Répartition des coûts</div>
-        {[
-          { label:'Compute (Render + Vercel)', cost:'€520', pct:42, color:C.blue   },
-          { label:'Database (Neon PostgreSQL)',cost:'€310', pct:25, color:C.cyan   },
-          { label:'Storage (CDN + Logs)',      cost:'€240', pct:19, color:C.purple },
-          { label:'Email (Nodemailer)',         cost:'€170', pct:14, color:C.gold   },
-        ].map(item=>(
-          <div key={item.label} style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
-            <span style={{ fontSize:12, color:C.textMid, minWidth:220 }}>{item.label}</span>
-            <div style={{ flex:1, height:6, borderRadius:3, background:C.surface3, overflow:'hidden' }}>
-              <div style={{ height:'100%', width:`${item.pct}%`, background:item.color, borderRadius:3, transition:'width 1s' }} />
-            </div>
-            <span style={{ fontSize:11, fontWeight:700, color:item.color, fontFamily:C.mono, minWidth:44, textAlign:'right' }}>{item.cost}</span>
-          </div>
-        ))}
-      </Card>
-    </div>
-  );
-}
-
-function LogsSection() {
-  const logs = [
-    { time:'16:42:01', level:'info',    service:'api-server',  message:'POST /api/campagnes 201 Created' },
-    { time:'16:41:58', level:'success', service:'worker',      message:'Campagne #42 envoyée à 12 500 contacts' },
-    { time:'16:41:45', level:'warn',    service:'redis',       message:'Memory usage > 75%' },
-    { time:'16:40:12', level:'error',   service:'email-smtp',  message:'Timeout connecting to Gmail SMTP' },
-    { time:'16:39:33', level:'info',    service:'nginx',       message:'GET /dashboard 200 OK' },
-    { time:'16:38:10', level:'success', service:'cicd',        message:'Deployment v2.4.1 → Render completed' },
-  ];
-  const logMeta = {
-    info:    { color:C.blue,   bg:C.blueLt   },
-    success: { color:C.green,  bg:C.greenLt  },
-    warn:    { color:C.gold,   bg:C.goldLt   },
-    error:   { color:C.red,    bg:C.redLt    },
-  };
-
-  return (
-    <Card style={{ padding:'18px 20px' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
-        <div style={{ fontSize:14, fontWeight:700, color:C.text }}>Logs temps réel</div>
-        <div style={{ display:'flex', gap:6 }}>
-          {Object.entries(logMeta).map(([l,m])=>(
-            <span key={l} style={{ fontSize:9, padding:'2px 8px', borderRadius:10, background:m.bg, color:m.color, textTransform:'uppercase', fontWeight:600 }}>{l}</span>
-          ))}
+function MonitoringSection(){
+  return(<div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,marginBottom:20}}>
+      {[{metric:'CPU',value:45,max:100,trend:'+2%',status:'normal',color:C.blue},{metric:'Mémoire',value:68,max:100,trend:'+5%',status:'attention',color:C.purple},{metric:'Disque',value:23,max:100,trend:'-3%',status:'normal',color:C.cyan},{metric:'Réseau Entrant',value:45,max:100,trend:'+12%',status:'normal',color:C.green},{metric:'Réseau Sortant',value:38,max:100,trend:'+8%',status:'normal',color:C.orange},{metric:'Temps Réponse',value:124,max:500,trend:'-15ms',status:'normal',color:C.gold}].map((m,i)=>(<Card key={i} style={{padding:'18px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+          <span style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',fontFamily:C.mono}}>{m.metric}</span>
+          <Badge label={m.status==='normal'?'Normal':'Attention'} color={m.status==='normal'?C.green:C.gold} bg={m.status==='normal'?C.greenLt:C.goldLt}/>
         </div>
-      </div>
-
-      {/* Terminal box with dark bg */}
-      <div style={{ background:C.navy, borderRadius:10, padding:'14px 16px', fontFamily:C.mono, fontSize:11, lineHeight:1.9, maxHeight:340, overflowY:'auto' }}>
-        <div style={{ display:'flex', gap:8, paddingBottom:8, marginBottom:8, borderBottom:`1px solid #1e293b`, color:'#475569', fontSize:9, textTransform:'uppercase', letterSpacing:'0.08em' }}>
-          <span style={{ width:68 }}>Time</span>
-          <span style={{ width:60 }}>Level</span>
-          <span style={{ width:100 }}>Service</span>
-          <span>Message</span>
+        <div style={{display:'flex',alignItems:'baseline',gap:8,marginBottom:10}}>
+          <span style={{fontSize:28,fontWeight:800,color:m.color,fontFamily:C.mono}}>{m.value}</span>
+          <span style={{fontSize:11,color:C.muted}}>{m.max===100?'%':'ms'}</span>
         </div>
-        {logs.map((log,i)=>{
-          const m = logMeta[log.level]||logMeta.info;
-          return (
-            <div key={i} style={{ display:'flex', gap:8, marginBottom:2 }}>
-              <span style={{ width:68, color:'#475569' }}>{log.time}</span>
-              <span style={{ width:60, color:m.color, fontWeight:600, textTransform:'uppercase', fontSize:9 }}>{log.level}</span>
-              <span style={{ width:100, color:'#64748b' }}>{log.service}</span>
-              <span style={{ color:'#94a3b8' }}>{log.message}</span>
+        <MiniBar value={(m.value/m.max)*100} color={m.color}/>
+        <span style={{fontSize:10,color:m.trend.startsWith('+')?C.red:C.green,fontFamily:C.mono,fontWeight:600,marginTop:6,display:'block'}}>{m.trend} vs hier</span>
+      </Card>))}
+    </div>
+    <Card style={{padding:'20px'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <div style={{fontSize:16,fontWeight:700,color:C.text}}>Régions Cloud DigiLab</div>
+        <Badge label={`${CLOUD_METRICS.regions.filter(r=>r.status==='active').length} actives`} color={C.green} bg={C.greenLt}/>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12}}>
+        {CLOUD_METRICS.regions.map((region,i)=>(<Card key={i}>
+          <div style={{padding:'14px 16px',display:'flex',alignItems:'center',gap:10,borderBottom:`1px solid ${C.border}`}}>
+            <div style={{width:36,height:36,borderRadius:8,background:C.blueLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>🌍</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.text}}>{region.name}</div>
+              <div style={{fontSize:10,color:C.muted,fontFamily:C.mono}}>{region.location}</div>
             </div>
-          );
-        })}
-        <div style={{ marginTop:10, paddingTop:8, borderTop:'1px solid #1e293b', display:'flex', alignItems:'center', gap:8 }}>
-          <span style={{ color:'#475569' }}>$ tail -f /var/log/digipip/app.log</span>
-          <span style={{ display:'inline-block', width:7, height:13, background:C.green, borderRadius:1, animation:'blink 1s step-end infinite' }} />
+            <PulseDot color={region.status==='active'?C.green:C.gold} size={6}/>
+          </div>
+          <div style={{padding:'12px 16px'}}>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+              <span style={{fontSize:10,color:C.muted,fontFamily:C.mono}}>CPU</span>
+              <span style={{fontSize:12,fontWeight:700,color:C.blue,fontFamily:C.mono}}>{region.cpu}%</span>
+            </div>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+              <span style={{fontSize:10,color:C.muted,fontFamily:C.mono}}>Mémoire</span>
+              <span style={{fontSize:12,fontWeight:700,color:C.purple,fontFamily:C.mono}}>{region.memory}%</span>
+            </div>
+            <div style={{display:'flex',justifyContent:'space-between'}}>
+              <span style={{fontSize:10,color:C.muted,fontFamily:C.mono}}>Uptime</span>
+              <span style={{fontSize:12,fontWeight:700,color:C.green,fontFamily:C.mono}}>{region.uptime}%</span>
+            </div>
+          </div>
+        </Card>))}
+      </div>
+    </Card>
+  </div>);
+}
+
+function StorageSection(){
+  return(<div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12}}>
+      {CLOUD_METRICS.storage.map((item,i)=>(<Card key={i} style={{padding:'20px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <div style={{width:40,height:40,borderRadius:10,background:C.blueLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>
+              {i===0?'🗃️':i===1?'📁':i===2?'📊':'💬'}
+            </div>
+            <div>
+              <div style={{fontSize:14,fontWeight:700,color:C.text}}>{item.type}</div>
+              <div style={{fontSize:10,color:C.muted,fontFamily:C.mono}}>{item.iops} IOPS</div>
+            </div>
+          </div>
+          <span style={{fontSize:12,color:C.muted,fontFamily:C.mono}}>{item.total}</span>
+        </div>
+        <div style={{marginBottom:12}}>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+            <span style={{fontSize:11,color:C.text,fontWeight:600}}>{item.used}% utilisé</span>
+            <span style={{fontSize:11,color:item.used>80?C.red:C.green,fontWeight:600}}>{item.used>80?'⚠ Critique':'✓ Normal'}</span>
+          </div>
+          <div style={{height:8,borderRadius:4,background:C.surface3,overflow:'hidden'}}>
+            <div style={{height:'100%',width:`${item.used}%`,background:item.used>80?C.red:C.blue,borderRadius:4,transition:'width 1s'}}/>
+          </div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8,padding:'12px',background:C.surface2,borderRadius:8}}>
+          {Object.entries(item.details).map(([key,value])=>(<div key={key}>
+            <div style={{fontSize:9,color:C.muted,textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:2}}>{key}</div>
+            <div style={{fontSize:12,fontWeight:700,color:C.text,fontFamily:C.mono}}>{value}</div>
+          </div>))}
+        </div>
+      </Card>))}
+    </div>
+    <Card style={{padding:'20px',marginTop:14}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <div style={{fontSize:16,fontWeight:700,color:C.text}}>Résumé du stockage</div>
+        <Badge label="82 GB total" color={C.blue} bg={C.blueLt}/>
+      </div>
+      <div style={{display:'flex',gap:20}}>
+        <div style={{flex:1}}>
+          <div style={{fontSize:11,color:C.muted,marginBottom:8}}>Répartition par type</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {CLOUD_METRICS.storage.map((item,i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:8}}>
+              <div style={{width:10,height:10,borderRadius:3,background:C.blue}}/>
+              <span style={{flex:1,fontSize:12,color:C.text}}>{item.type}</span>
+              <span style={{fontSize:12,fontWeight:700,color:C.blue,fontFamily:C.mono}}>{item.used}%</span>
+            </div>))}
+          </div>
+        </div>
+        <div style={{width:1,background:C.border}}/>
+        <div style={{flex:1}}>
+          <div style={{fontSize:11,color:C.muted,marginBottom:8}}>Prévisions</div>
+          <div style={{fontSize:13,color:C.text,lineHeight:1.6}}>
+            <div>📈 Croissance moyenne: <strong>+10%/mois</strong></div>
+            <div>⚠️ Alertes: <strong style={{color:C.red}}>Base de Données à 68%</strong></div>
+            <div>💡 Recommandation: <strong>Upgrade 20 GB</strong></div>
+          </div>
         </div>
       </div>
     </Card>
-  );
+  </div>);
 }
 
-function EnvironmentsSection() {
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      {ENVIRONMENTS.map((env,i)=>(
-        <Card key={i}>
-          <div style={{ padding:'16px 20px', display:'flex', alignItems:'center', gap:16 }}>
-            <div style={{ width:48, height:48, borderRadius:12, background:env.bg, border:`1.5px solid ${env.color}40`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>
-              {env.name==='Development'?'🛠️':env.name==='Staging'?'🔍':'🚀'}
-            </div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:5 }}>
-                <span style={{ fontSize:14, fontWeight:700, color:C.text }}>{env.name}</span>
-                <Badge label={env.status==='active'?'Running':'Stopped'} color={env.color} bg={env.bg} />
-              </div>
-              <div style={{ fontSize:11, color:C.muted, fontFamily:C.mono }}>
-                Branch: {env.branch} · {env.pods} pods · Dernier déploiement : {env.lastDeploy}
-              </div>
-            </div>
-            <div style={{ display:'flex', gap:8 }}>
-              <button style={{ padding:'7px 14px', borderRadius:7, background:C.surface2, border:`1px solid ${C.border}`, color:C.textMid, fontSize:11, cursor:'pointer', fontFamily:C.mono, fontWeight:500 }}>Logs</button>
-              <button style={{ padding:'7px 14px', borderRadius:7, background:env.color, border:'none', color:'#fff', fontSize:11, cursor:'pointer', fontWeight:700, fontFamily:C.mono }}>Deploy</button>
+function CostsSection(){
+  return(<div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,marginBottom:20}}>
+      {[{label:'Budget mensuel',value:`${CLOUD_METRICS.costs.monthly} TND`,used:'62%',color:C.blue,bg:C.blueLt,trend:'+8%',trendColor:C.red,alert:false},{label:'Coût par envoi',value:`${CLOUD_METRICS.costs.perSend} TND`,used:'45%',color:C.green,bg:C.greenLt,trend:'-3%',trendColor:C.green,alert:false},{label:'Prévision',value:`${CLOUD_METRICS.costs.forecast} TND`,used:'74%',color:C.gold,bg:C.goldLt,trend:'Alerte',trendColor:C.red,alert:true}].map((card,i)=>(<Card key={i} style={{padding:'18px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+          <span style={{fontSize:10,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',fontFamily:C.mono}}>{card.label}</span>
+          <span style={{fontSize:11,fontWeight:600,color:card.trendColor,fontFamily:C.mono}}>{card.trend}</span>
+        </div>
+        <div style={{fontSize:28,fontWeight:800,color:card.color,fontFamily:C.mono,lineHeight:1,marginBottom:8}}>{card.value}</div>
+        <div style={{fontSize:10,color:C.muted}}>Budget utilisé : {card.used}</div>
+        {card.alert&&(<div style={{marginTop:10,padding:'8px 12px',background:C.redLt,borderRadius:6,border:`1px solid ${C.red}20`}}><span style={{fontSize:11,color:C.red,fontWeight:600}}>⚠️ Dépassement prévu dans 12 jours</span></div>)}
+      </Card>))}
+    </div>
+    <Card style={{padding:'20px',marginBottom:14}}>
+      <div style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:16}}>Répartition des coûts</div>
+      {CLOUD_METRICS.costs.breakdown.map(item=>(<div key={item.category} style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
+        <span style={{fontSize:12,color:C.textMid,minWidth:220}}>{item.category}</span>
+        <div style={{flex:1,height:6,borderRadius:3,background:C.surface3,overflow:'hidden'}}>
+          <div style={{height:'100%',width:`${item.pct}%`,background:C.blue,borderRadius:3,transition:'width 1s'}}/>
+        </div>
+        <span style={{fontSize:12,fontWeight:700,color:C.blue,fontFamily:C.mono,minWidth:50,textAlign:'right'}}>{item.cost} TND</span>
+        <span style={{fontSize:10,color:C.muted,fontFamily:C.mono}}>({item.pct}%)</span>
+        <span style={{fontSize:10,color:item.trend.startsWith('+')?C.red:C.green,fontFamily:C.mono,minWidth:40}}>{item.trend}</span>
+      </div>))}
+    </Card>
+    <Card style={{padding:'20px'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <div style={{fontSize:16,fontWeight:700,color:C.text}}>Optimisations actives</div>
+        <Badge label={`${CLOUD_METRICS.costs.optimizations.reduce((a,o)=>a+o.savings,0)} TND/mois économisés`} color={C.green} bg={C.greenLt}/>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12}}>
+        {CLOUD_METRICS.costs.optimizations.map((opt,i)=>(<div key={i} style={{padding:'14px',background:C.surface2,borderRadius:8,border:`1px solid ${C.border}`,display:'flex',gap:12}}>
+          <span style={{fontSize:24}}>{['🔄','📦','🗜️','⏰'][i]}</span>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:2}}>{opt.title}</div>
+            <div style={{fontSize:11,color:C.muted,marginBottom:4}}>{opt.description}</div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <Badge label={opt.status} color={C.green} bg={C.greenLt}/>
+              <span style={{fontSize:12,fontWeight:700,color:C.green,fontFamily:C.mono}}>{opt.savings} TND/mois</span>
             </div>
           </div>
-        </Card>
-      ))}
-    </div>
-  );
+        </div>))}
+      </div>
+    </Card>
+  </div>);
 }
 
-function SecuritySection() {
-  return (
-    <div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12, marginBottom:20 }}>
-        {SECURITY_SCORES.map((item,i)=>(
-          <Card key={i} style={{ padding:'16px 20px' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-              <span style={{ fontSize:20 }}>{item.icon}</span>
-              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <span style={{ fontSize:16, fontWeight:800, color:item.color, fontFamily:C.mono }}>{item.score}</span>
-                <Badge label={item.status} color={item.color} bg={item.bg} />
-              </div>
-            </div>
-            <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:4 }}>{item.label}</div>
-            <div style={{ fontSize:10, color:C.muted, fontFamily:C.mono }}>{item.detail}</div>
-          </Card>
-        ))}
+function LogsSection(){
+  const logMeta={info:{color:C.blue,bg:C.blueLt},success:{color:C.green,bg:C.greenLt},warn:{color:C.gold,bg:C.goldLt},error:{color:C.red,bg:C.redLt},critical:{color:C.red,bg:C.redLt}};
+  const severityConfig={critical:{color:C.red,bg:C.redLt,icon:'🔴'},high:{color:C.orange,bg:C.orangeLt,icon:'🟠'},medium:{color:C.gold,bg:C.goldLt,icon:'🟡'},low:{color:C.blue,bg:C.blueLt,icon:'🔵'}};
+  return(<div>
+    <Card style={{padding:'20px',marginBottom:14}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <div style={{fontSize:16,fontWeight:700,color:C.text}}>Incidents récents</div>
+        <Badge label={`${CLOUD_METRICS.incidents.filter(i=>i.status==='active').length} actifs`} color={C.red} bg={C.redLt}/>
       </div>
-
-      <Card style={{ padding:'20px' }}>
-        <div style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:14 }}>Scan de vulnérabilités</div>
-        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-          {[
-            { name:'Dépendances npm',    status:'Clean',   issues:0, color:C.green,  bg:C.greenLt },
-            { name:'Secrets (.env)',      status:'Clean',   issues:0, color:C.green,  bg:C.greenLt },
-            { name:'Conteneurs Docker',  status:'Warning', issues:2, color:C.gold,   bg:C.goldLt  },
-            { name:'Certificats SSL',     status:'Clean',   issues:0, color:C.green,  bg:C.greenLt },
-          ].map(scan=>(
-            <div key={scan.name} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', background:C.surface2, borderRadius:8, border:`1px solid ${C.border}` }}>
-              <div style={{ width:32, height:32, borderRadius:8, background:scan.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:700, color:scan.color, flexShrink:0 }}>
-                {scan.issues===0?'✓':'⚠'}
-              </div>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:12, fontWeight:600, color:C.text }}>{scan.name}</div>
-                <div style={{ fontSize:10, color:C.muted }}>{scan.issues} issue{scan.issues!==1?'s':''}</div>
-              </div>
-              <Badge label={scan.status} color={scan.color} bg={scan.bg} />
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        {CLOUD_METRICS.incidents.map((incident,i)=>{const sev=severityConfig[incident.severity];return(<div key={i} style={{padding:'14px 16px',borderRadius:10,background:sev.bg,border:`1px solid ${sev.color}20`,display:'flex',gap:12}}>
+          <span style={{fontSize:20}}>{sev.icon}</span>
+          <div style={{flex:1}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+              <span style={{fontSize:13,fontWeight:700,color:C.text}}>{incident.id} - {incident.title}</span>
+              <Badge label={incident.status==='active'?'Actif':'Résolu'} color={incident.status==='active'?C.red:C.green} bg={incident.status==='active'?C.redLt:C.greenLt}/>
             </div>
-          ))}
+            <div style={{fontSize:11,color:C.muted,marginBottom:6}}>{incident.description}</div>
+            <div style={{display:'flex',gap:16,fontSize:10,color:C.muted,fontFamily:C.mono}}>
+              <span>🕐 {incident.time}</span><span>⏱️ {incident.duration}</span><span>🔧 {incident.service}</span><span>👥 {incident.impact}</span>
+            </div>
+            {incident.status==='resolved'?(<div style={{marginTop:6,fontSize:11,color:C.green,fontWeight:600}}>✅ Résolution: {incident.resolution}</div>):(<div style={{marginTop:6,fontSize:11,color:C.red,fontWeight:600}}>🔴 En cours: {incident.resolution}</div>)}
+          </div>
+        </div>);})}
+      </div>
+    </Card>
+    <Card style={{padding:'18px 20px'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+        <div style={{fontSize:16,fontWeight:700,color:C.text}}>Logs temps réel</div>
+        <div style={{display:'flex',gap:6}}>
+          {Object.entries(logMeta).map(([l,m])=>(<span key={l} style={{fontSize:9,padding:'2px 8px',borderRadius:10,background:m.bg,color:m.color,textTransform:'uppercase',fontWeight:600}}>{l}</span>))}
         </div>
-      </Card>
+      </div>
+      <div style={{background:C.navy,borderRadius:10,padding:'14px 16px',fontFamily:C.mono,fontSize:11,lineHeight:1.9,maxHeight:340,overflowY:'auto'}}>
+        <div style={{display:'flex',gap:8,paddingBottom:8,marginBottom:8,borderBottom:'1px solid #1e293b',color:'#475569',fontSize:9,textTransform:'uppercase',letterSpacing:'0.08em'}}>
+          <span style={{width:68}}>Heure</span><span style={{width:60}}>Niveau</span><span style={{width:100}}>Service</span><span>Message</span>
+        </div>
+        {CLOUD_METRICS.logs.map((log,i)=>{const m=logMeta[log.level]||logMeta.info;return(<div key={i} style={{display:'flex',gap:8,marginBottom:2}}>
+          <span style={{width:68,color:'#475569'}}>{log.time}</span>
+          <span style={{width:60,color:m.color,fontWeight:600,textTransform:'uppercase',fontSize:9}}>{log.level}</span>
+          <span style={{width:100,color:'#64748b'}}>{log.service}</span>
+          <span style={{color:'#94a3b8'}}>{log.message}</span>
+        </div>);})}
+        <div style={{marginTop:10,paddingTop:8,borderTop:'1px solid #1e293b',display:'flex',alignItems:'center',gap:8}}>
+          <span style={{color:'#475569'}}>$ tail -f /var/log/digilab/app.log</span>
+          <span style={{display:'inline-block',width:7,height:13,background:C.green,borderRadius:1,animation:'blink 1s step-end infinite'}}/>
+        </div>
+      </div>
+    </Card>
+  </div>);
+}
+
+function SecuritySection(){
+  return(<div>
+    <Card style={{padding:'20px',marginBottom:14}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <div style={{fontSize:16,fontWeight:700,color:C.text}}>Score de sécurité global</div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontSize:32,fontWeight:800,color:C.green,fontFamily:C.mono}}>{CLOUD_METRICS.security.grade}</span>
+          <Badge label={`${CLOUD_METRICS.security.score}/100`} color={C.green} bg={C.greenLt}/>
+        </div>
+      </div>
+      <div style={{display:'flex',gap:20}}>
+        <div style={{flex:1}}>
+          <div style={{fontSize:11,color:C.muted,marginBottom:8}}>Répartition des scores</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {CLOUD_METRICS.security.tools.map((tool,i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:8}}>
+              <span style={{fontSize:14}}>{['🔐','🛡️','🚫','🔍','🧱','🔒'][i]}</span>
+              <span style={{flex:1,fontSize:12,color:C.text}}>{tool.name}</span>
+              <span style={{fontSize:12,fontWeight:700,color:tool.score==='A+'?C.green:tool.score==='A'?C.blue:C.gold,fontFamily:C.mono,minWidth:30}}>{tool.score}</span>
+              <div style={{width:60,height:4,background:C.surface3,borderRadius:2,overflow:'hidden'}}>
+                <div style={{height:'100%',width:tool.score==='A+'?'100%':tool.score==='A'?'90%':'75%',background:tool.score==='A+'?C.green:tool.score==='A'?C.blue:C.gold,borderRadius:2}}/>
+              </div>
+            </div>))}
+          </div>
+        </div>
+        <div style={{width:1,background:C.border}}/>
+        <div style={{flex:1}}>
+          <div style={{fontSize:11,color:C.muted,marginBottom:8}}>Vulnérabilités</div>
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {CLOUD_METRICS.security.vulnerabilities.map((vuln,i)=>{const vc={low:{color:C.blue,bg:C.blueLt,icon:'🔵'},medium:{color:C.gold,bg:C.goldLt,icon:'🟡'},high:{color:C.orange,bg:C.orangeLt,icon:'🟠'},critical:{color:C.red,bg:C.redLt,icon:'🔴'}}[vuln.severity];return(<div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:vc.bg,borderRadius:6,border:`1px solid ${vc.color}20`}}>
+              <span>{vc.icon}</span>
+              <span style={{flex:1,fontSize:11,color:C.text}}>{vuln.name}</span>
+              <Badge label={vuln.status==='corrigé'?'Corrigé':'Ouvert'} color={vuln.status==='corrigé'?C.green:C.red} bg={vuln.status==='corrigé'?C.greenLt:C.redLt}/>
+            </div>);})}
+          </div>
+        </div>
+      </div>
+    </Card>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12}}>
+      {CLOUD_METRICS.security.tools.map((tool,i)=>(<Card key={i} style={{padding:'18px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <span style={{fontSize:22}}>{['🔐','🛡️','🚫','🔍','🧱','🔒'][i]}</span>
+            <div><div style={{fontSize:14,fontWeight:700,color:C.text}}>{tool.name}</div><div style={{fontSize:10,color:C.muted}}>{tool.description}</div></div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={{fontSize:16,fontWeight:800,color:tool.score==='A+'?C.green:tool.score==='A'?C.blue:C.gold,fontFamily:C.mono}}>{tool.score}</span>
+            <Badge label={tool.status} color={tool.status==='Actif'?C.green:C.gold} bg={tool.status==='Actif'?C.greenLt:C.goldLt}/>
+          </div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8,padding:'12px',background:C.surface2,borderRadius:8}}>
+          {Object.entries(tool.details).map(([key,value])=>(<div key={key}><div style={{fontSize:9,color:C.muted,textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:2}}>{key}</div><div style={{fontSize:12,fontWeight:700,color:C.text,fontFamily:C.mono}}>{value}</div></div>))}
+        </div>
+      </Card>))}
     </div>
-  );
+  </div>);
 }
 
 /* ══════════════════════════════════════════
-   MAIN PAGE
+   MAIN
 ══════════════════════════════════════════ */
-export default function CloudOperations() {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [camps,     setCamps]     = useState([]);
-  const [loading,   setLoading]   = useState(true);
+export default function CloudOperations(){
+  const[activeTab,setActiveTab]=useState('overview');
+  const[camps,setCamps]=useState([]);
+  const[loading,setLoading]=useState(true);
 
   useEffect(()=>{
-    api.get('/api/campagnes')
-      .then(r => setCamps(Array.isArray(r.data) ? r.data : r.data?.data || []))
-      .catch(()  => setCamps([]))
-      .finally(()=> setLoading(false));
+    api.get('/api/campagnes').then(r=>setCamps(Array.isArray(r.data)?r.data:r.data?.data||[])).catch(()=>setCamps([])).finally(()=>setLoading(false));
   },[]);
 
-  const sections = {
-    overview:       <OverviewSection camps={camps} />,
-    infrastructure: <InfrastructureSection />,
-    cicd:           <CICDSection camps={camps} />,
-    monitoring:     <MonitoringSection />,
-    storage:        <StorageSection />,
-    costs:          <CostsSection />,
-    logs:           <LogsSection />,
-    environments:   <EnvironmentsSection />,
-    security:       <SecuritySection />,
+  const sections={
+    overview:<OverviewSection/>,
+    monitoring:<MonitoringSection/>,
+    storage:<StorageSection/>,
+    costs:<CostsSection/>,
+    logs:<LogsSection/>,
+    security:<SecuritySection/>,
   };
 
-  return (
-    <div style={{ padding:'28px 32px', background:C.bg, minHeight:'100vh', color:C.text, fontFamily:C.sans }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@400;500;600;700;800&display=swap');
-        @keyframes ping    { 75%,100% { transform:scale(2.4); opacity:0; } }
-        @keyframes fadeUp  { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
-        @keyframes spin    { to{transform:rotate(360deg)} }
-        @keyframes blink   { 50%{opacity:0} }
-        * { box-sizing:border-box; }
-        ::-webkit-scrollbar { width:5px; height:5px; }
-        ::-webkit-scrollbar-track { background:${C.surface2}; }
-        ::-webkit-scrollbar-thumb { background:${C.borderDk}; border-radius:3px; }
-      `}</style>
-
-      {/* ── Header ── */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, animation:'fadeUp 0.3s ease' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <div style={{ width:40, height:40, borderRadius:10, background:C.blueLt, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>☁️</div>
-          <div>
-            <h1 style={{ margin:0, fontSize:22, fontWeight:800, color:C.navy }}>Cloud Operations Center</h1>
-            <p style={{ margin:0, fontSize:11, color:C.muted, fontFamily:C.mono, marginTop:2 }}>
-              DigiPip · Tous les modules cloud en un seul endroit
-            </p>
-          </div>
-        </div>
-        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 16px', borderRadius:20, background:C.surface, border:`1px solid ${C.border}` }}>
-          <PulseDot color={C.green} size={6} />
-          <span style={{ fontSize:12, color:C.green, fontWeight:600 }}>Cloud Opérationnel</span>
-        </div>
+  return(<div style={{padding:'28px 32px',background:C.bg,minHeight:'100vh',color:C.text,fontFamily:C.sans}}>
+    <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@400;500;600;700;800&display=swap');@keyframes ping{75%,100%{transform:scale(2.4);opacity:0}}@keyframes blink{50%{opacity:0}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:${C.surface2}}::-webkit-scrollbar-thumb{background:${C.borderDk};border-radius:3px}`}</style>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
+      <div style={{display:'flex',alignItems:'center',gap:12}}>
+        <div style={{width:40,height:40,borderRadius:10,background:C.blueLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>☁️</div>
+        <div><h1 style={{margin:0,fontSize:22,fontWeight:800,color:C.navy}}>Cloud Operations Center</h1><p style={{margin:0,fontSize:11,color:C.muted,fontFamily:C.mono,marginTop:2}}>DigiLab Solutions · Tunisie</p></div>
       </div>
-
-      {/* ── Tabs ── */}
-      <div style={{ display:'flex', gap:4, marginBottom:24, overflowX:'auto', paddingBottom:4, animation:'fadeUp 0.35s ease 0.05s both' }}>
-        {TABS.map(tab=>{
-          const active = activeTab===tab.id;
-          return (
-            <button key={tab.id} onClick={()=>setActiveTab(tab.id)} style={{
-              padding:'9px 15px', borderRadius:9,
-              border: active ? `1.5px solid ${C.blue}` : `1px solid ${C.border}`,
-              cursor:'pointer',
-              background: active ? C.blueLt : C.surface,
-              color: active ? C.blue : C.muted,
-              fontFamily:C.sans, fontSize:12, fontWeight: active ? 700 : 500,
-              display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap',
-              transition:'all 0.15s',
-            }}>
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Content ── */}
-      <div style={{ animation:'fadeUp 0.4s ease 0.1s both' }}>
-        {loading && activeTab==='overview' ? (
-          <div style={{ textAlign:'center', padding:60, color:C.muted }}>
-            <div style={{ width:26, height:26, border:`2px solid ${C.border}`, borderTopColor:C.blue, borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto 12px' }} />
-            <p style={{ fontFamily:C.mono, fontSize:12 }}>Chargement...</p>
-          </div>
-        ) : (
-          sections[activeTab]
-        )}
+      <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:20,background:C.surface,border:`1px solid ${C.border}`}}>
+        <PulseDot color={C.green} size={6}/>
+        <span style={{fontSize:12,color:C.green,fontWeight:600}}>Cloud Opérationnel</span>
       </div>
     </div>
-  );
+    <div style={{display:'flex',gap:4,marginBottom:24,overflowX:'auto',paddingBottom:4}}>
+      {TABS.map(tab=>{const active=activeTab===tab.id;return(<button key={tab.id} onClick={()=>setActiveTab(tab.id)} style={{padding:'9px 15px',borderRadius:9,border:active?`1.5px solid ${C.blue}`:`1px solid ${C.border}`,cursor:'pointer',background:active?C.blueLt:C.surface,color:active?C.blue:C.muted,fontFamily:C.sans,fontSize:12,fontWeight:active?700:500,display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap',transition:'all 0.15s'}}><span>{tab.icon}</span><span>{tab.label}</span></button>);})}
+    </div>
+    <div>{loading&&activeTab==='overview'?(<div style={{textAlign:'center',padding:60,color:C.muted}}><div style={{width:26,height:26,border:`2px solid ${C.border}`,borderTopColor:C.blue,borderRadius:'50%',animation:'spin 0.8s linear infinite',margin:'0 auto 12px'}}/><p style={{fontFamily:C.mono,fontSize:12}}>Chargement...</p></div>):sections[activeTab]}</div>
+  </div>);
 }

@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PrivateRoute from './components/PrivateRoute';
 import Layout      from './Layout';
 import NotFound    from './pages/NotFound';
@@ -8,15 +8,15 @@ import Settings    from './pages/Settings';
 import HomePage    from './pages/HomePage';
 import PublicCampagnes from './pages/PublicCampagnes';
 
-/* ── Pages existantes ── */
 const Login               = lazy(() => import('./pages/Login'));
 const Dashboard           = lazy(() => import('./pages/Dashboard'));
+const AdminDashboard      = lazy(() => import('./pages/AdminDashboard')); // 🔑 AJOUTÉ
 const Clients             = lazy(() => import('./pages/Clients'));
 const Campagnes           = lazy(() => import('./pages/Campagnes'));
 const Contacts            = lazy(() => import('./pages/Contacts'));
 const Segments            = lazy(() => import('./pages/Segments'));
 const Reporting           = lazy(() => import('./pages/Reporting'));
-const Users               = lazy(() => import('./pages/Users'));
+const UsersPage           = lazy(() => import('./pages/UsersPage'));
 const Monitoring          = lazy(() => import('./pages/Monitoring'));
 const Analytics           = lazy(() => import('./pages/Analytics'));
 const AccessDenied        = lazy(() => import('./pages/AccessDenied'));
@@ -26,9 +26,7 @@ const MesCampagnes        = lazy(() => import('./pages/MesCampagnes'));
 const CampagneDetail      = lazy(() => import('./pages/CampagneDetail'));
 const CampagneAdminDetail = lazy(() => import('./pages/CampagneAdminDetail'));
 const Register            = lazy(() => import('./pages/Register'));
-
-/* ☁️ UNE SEULE PAGE CLOUD — tout-en-un */
-const CloudOperations     = lazy(() => import('./pages/CloudOperations'));
+const CloudOperations     = lazy(() => import('./pages/CloudOperations')); // 🔑 AJOUTÉ
 
 const Loading = () => (
   <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#080c14', fontFamily:"'Inter',sans-serif" }}>
@@ -39,6 +37,16 @@ const Loading = () => (
     <style>{`@keyframes spin { to { transform:rotate(360deg); } }`}</style>
   </div>
 );
+
+// 🔑 AJOUTÉ : Redirection selon le rôle
+const RoleRedirect = () => {
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : {};
+  const role = (user.role || '').toUpperCase();
+  
+  if (role === 'ADMIN') return <Navigate to="/admin/dashboard" replace />;
+  return <Navigate to="/dashboard" replace />;
+};
 
 function App() {
   return (
@@ -53,26 +61,46 @@ function App() {
           <Route path="/access-denied" element={<AccessDenied />} />
           <Route path="/campagnes-public" element={<PublicCampagnes />} />
 
-          {/* ── FLUX CLIENT ── */}
+          {/* ── REDIRECTION RACINE ── */}
+          <Route path="/" element={
+            <PrivateRoute>
+              <RoleRedirect />
+            </PrivateRoute>
+          } />
+
+          {/* ── DASHBOARD ADMIN ── */}
+          <Route path="/admin/dashboard" element={
+            <PrivateRoute roles={['ADMIN']}>
+              <Layout><AdminDashboard /></Layout>
+            </PrivateRoute>
+          } />
+
+          {/* ── DASHBOARD MARKETING/CLIENT ── */}
+          <Route path="/dashboard" element={
+            <PrivateRoute roles={['RESPONSABLE_MARKETING', 'CLIENT']}>
+              <Layout><Dashboard /></Layout>
+            </PrivateRoute>
+          } />
+
+          {/* ── FLUX CLIENT : voir et s'inscrire aux campagnes ── */}
           <Route path="/campagnes"     element={<MesCampagnes />} />
           <Route path="/campagnes/:id" element={<CampagneDetail />} />
 
-          {/* ── GESTION CAMPAGNES ── */}
+          {/* ── GESTION CAMPAGNES (Admin + Responsable Marketing) ── */}
           <Route path="/gestion-campagnes" element={
             <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
               <Layout><Campagnes /></Layout>
             </PrivateRoute>
           } />
+
+          {/* ── DETAIL ADMIN campagne ── */}
           <Route path="/admin/campagnes/:id" element={
             <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
               <CampagneAdminDetail />
             </PrivateRoute>
           } />
 
-          {/* ── PRIVÉES STANDARD ── */}
-          <Route path="/dashboard" element={
-            <PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>
-          } />
+          {/* ── PRIVÉES ── */}
           <Route path="/profile" element={
             <PrivateRoute><Layout><Profile /></Layout></PrivateRoute>
           } />
@@ -100,7 +128,7 @@ function App() {
             </PrivateRoute>
           } />
           <Route path="/users" element={
-            <PrivateRoute roles={['ADMIN']}><Layout><Users /></Layout></PrivateRoute>
+            <PrivateRoute roles={['ADMIN']}><Layout><UsersPage /></Layout></PrivateRoute>
           } />
           <Route path="/monitoring" element={
             <PrivateRoute roles={['ADMIN']}><Layout><Monitoring /></Layout></PrivateRoute>
@@ -118,15 +146,12 @@ function App() {
           <Route path="/pipeline" element={
             <PrivateRoute roles={['ADMIN']}><Layout><PipelineStatus /></Layout></PrivateRoute>
           } />
-
-          {/* ☁️ UNE SEULE ROUTE CLOUD */}
           <Route path="/cloud-operations" element={
             <PrivateRoute roles={['ADMIN','RESPONSABLE_MARKETING']}>
               <Layout><CloudOperations /></Layout>
             </PrivateRoute>
           } />
 
-          {/* 404 */}
           <Route path="*" element={<NotFound />} />
 
         </Routes>

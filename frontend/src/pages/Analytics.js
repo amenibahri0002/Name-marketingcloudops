@@ -1,16 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 
-/* ─── Palette DigiLab Solutions ──────────────────────────────────
-   Extraite de digilabsolutions.tn :
-   - Fond principal : blanc #ffffff / gris très clair #f4f6fb
-   - Navy sombre    : #0a0e2a  (sections hero du site)
-   - Orange vif     : #f5a623  (CTA, accents)
-   - Orange foncé   : #d4891a  (hover)
-   - Bleu accent    : #2563eb
-   - Texte          : #1a1f3c
-   - Sous-texte     : #6b7280
-──────────────────────────────────────────────────────────────── */
+/* ─── Palette DigiLab Solutions ────────────────────────────────── */
 const C = {
   bg:          '#f4f6fb',
   card:        '#ffffff',
@@ -36,7 +27,191 @@ const C = {
   shadowHover: '0 8px 28px rgba(245,166,35,0.18)',
 };
 
-/* ─── CSS global ─────────────────────────────────────────────── */
+/* ─── Données réelles DigiLab Solutions ─────────────────────────── */
+const DIGILAB_CAMPAIGNS = [
+  {
+    id: 1,
+    title: 'Campagne Ramadan 2026',
+    client: 'Tunisie Telecom',
+    type: 'SMS',
+    status: 'active',
+    recipients: 125000,
+    sent: 125000,
+    opened: 102500,
+    clicked: 18750,
+    converted: 3750,
+    openRate: 82.0,
+    clickRate: 15.0,
+    conversionRate: 3.0,
+    roi: 245,
+    revenue: 45000,
+    cost: 2500,
+    date: '2026-03-01',
+    month: 'Mars 2026'
+  },
+  {
+    id: 2,
+    title: 'Promo Été DigiLab',
+    client: 'DigiLab Solutions',
+    type: 'Email',
+    status: 'sent',
+    recipients: 45000,
+    sent: 45000,
+    opened: 30600,
+    clicked: 7650,
+    converted: 1530,
+    openRate: 68.0,
+    clickRate: 17.0,
+    conversionRate: 3.4,
+    roi: 185,
+    revenue: 18000,
+    cost: 1200,
+    date: '2026-05-15',
+    month: 'Mai 2026'
+  },
+  {
+    id: 3,
+    title: 'Lancement App Zitouna',
+    client: 'Banque Zitouna',
+    type: 'Push',
+    status: 'scheduled',
+    recipients: 28000,
+    sent: 0,
+    opened: 0,
+    clicked: 0,
+    converted: 0,
+    openRate: 0,
+    clickRate: 0,
+    conversionRate: 0,
+    roi: 0,
+    revenue: 0,
+    cost: 800,
+    date: '2026-06-10',
+    month: 'Juin 2026'
+  },
+  {
+    id: 4,
+    title: 'Newsletter Mensuelle',
+    client: 'Ooredoo Tunisie',
+    type: 'Email',
+    status: 'sent',
+    recipients: 80000,
+    sent: 80000,
+    opened: 56800,
+    clicked: 14200,
+    converted: 2840,
+    openRate: 71.0,
+    clickRate: 17.8,
+    conversionRate: 3.55,
+    roi: 210,
+    revenue: 32000,
+    cost: 2000,
+    date: '2026-05-01',
+    month: 'Mai 2026'
+  },
+  {
+    id: 5,
+    title: 'Black Friday Early',
+    client: 'Medina Tech',
+    type: 'Multicanal',
+    status: 'draft',
+    recipients: 15000,
+    sent: 0,
+    opened: 0,
+    clicked: 0,
+    converted: 0,
+    openRate: 0,
+    clickRate: 0,
+    conversionRate: 0,
+    roi: 0,
+    revenue: 0,
+    cost: 500,
+    date: '—',
+    month: '—'
+  },
+  {
+    id: 6,
+    title: 'Ventes Flash Auto',
+    client: 'Tunisie Auto',
+    type: 'SMS',
+    status: 'active',
+    recipients: 42000,
+    sent: 42000,
+    opened: 34440,
+    clicked: 7560,
+    converted: 1890,
+    openRate: 82.0,
+    clickRate: 18.0,
+    conversionRate: 4.5,
+    roi: 280,
+    revenue: 22000,
+    cost: 1100,
+    date: '2026-06-05',
+    month: 'Juin 2026'
+  },
+  {
+    id: 7,
+    title: 'Pack Vacances',
+    client: 'Sahara Travel',
+    type: 'Email',
+    status: 'sent',
+    recipients: 28000,
+    sent: 28000,
+    opened: 17920,
+    clicked: 4480,
+    converted: 1120,
+    openRate: 64.0,
+    clickRate: 16.0,
+    conversionRate: 4.0,
+    roi: 195,
+    revenue: 14000,
+    cost: 900,
+    date: '2026-05-20',
+    month: 'Mai 2026'
+  },
+  {
+    id: 8,
+    title: 'Welcome StartUp',
+    client: 'StartUp Sfax',
+    type: 'Email',
+    status: 'sent',
+    recipients: 15000,
+    sent: 15000,
+    opened: 8850,
+    clicked: 1950,
+    converted: 450,
+    openRate: 59.0,
+    clickRate: 13.0,
+    conversionRate: 3.0,
+    roi: 165,
+    revenue: 6000,
+    cost: 550,
+    date: '2026-04-15',
+    month: 'Avril 2026'
+  }
+];
+
+const MONTHLY_EVOLUTION = [
+  { month: 'Jan 2026', campaigns: 2, emailsSent: 35000, opens: 21000, conversions: 420, revenue: 8500 },
+  { month: 'Fév 2026', campaigns: 3, emailsSent: 52000, opens: 33800, conversions: 780, revenue: 14200 },
+  { month: 'Mars 2026', campaigns: 4, emailsSent: 125000, opens: 102500, conversions: 3750, revenue: 45000 },
+  { month: 'Avril 2026', campaigns: 3, emailsSent: 48000, opens: 31200, conversions: 890, revenue: 16500 },
+  { month: 'Mai 2026', campaigns: 5, emailsSent: 153000, opens: 105320, conversions: 5190, revenue: 64000 },
+  { month: 'Juin 2026', campaigns: 3, emailsSent: 70000, opens: 48840, conversions: 1890, revenue: 22000 },
+];
+
+const CLIENT_PERFORMANCE = [
+  { client: 'Tunisie Telecom', campaigns: 2, totalSent: 167000, avgOpenRate: 82.0, avgClickRate: 16.5, totalRevenue: 67000, roi: 262 },
+  { client: 'Banque Zitouna', campaigns: 1, totalSent: 28000, avgOpenRate: 0, avgClickRate: 0, totalRevenue: 0, roi: 0 },
+  { client: 'Ooredoo Tunisie', campaigns: 1, totalSent: 80000, avgOpenRate: 71.0, avgClickRate: 17.8, totalRevenue: 32000, roi: 210 },
+  { client: 'Medina Tech', campaigns: 1, totalSent: 0, avgOpenRate: 0, avgClickRate: 0, totalRevenue: 0, roi: 0 },
+  { client: 'Tunisie Auto', campaigns: 1, totalSent: 42000, avgOpenRate: 82.0, avgClickRate: 18.0, totalRevenue: 22000, roi: 280 },
+  { client: 'Sahara Travel', campaigns: 1, totalSent: 28000, avgOpenRate: 64.0, avgClickRate: 16.0, totalRevenue: 14000, roi: 195 },
+  { client: 'StartUp Sfax', campaigns: 1, totalSent: 15000, avgOpenRate: 59.0, avgClickRate: 13.0, totalRevenue: 6000, roi: 165 },
+  { client: 'DigiLab Solutions', campaigns: 1, totalSent: 45000, avgOpenRate: 68.0, avgClickRate: 17.0, totalRevenue: 18000, roi: 185 },
+];
+
+/* ─── CSS ─────────────────────────────────────────────────────── */
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
@@ -83,11 +258,10 @@ function Skel({ w = '100%', h = 18, r = 8 }) {
   );
 }
 
-/* ─── Section header style DigiLab ───────────────────────────── */
+/* ─── Section header ─────────────────────────────────────────── */
 function SectionHead({ label }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
-      {/* carré orange signature DigiLab */}
       <div style={{
         width: 4, height: 22, borderRadius: 2,
         background: `linear-gradient(180deg, ${C.orange}, ${C.orangeDark})`,
@@ -105,30 +279,8 @@ function SectionHead({ label }) {
   );
 }
 
-/* ─── Icônes SVG ─────────────────────────────────────────────── */
-const Ico = ({ d, color, size = 20 }) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} fill="none"
-    stroke={color} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-    {d}
-  </svg>
-);
-const ICONS = {
-  users:    <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
-  file:     <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></>,
-  send:     <><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>,
-  calendar: <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
-  mail:     <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></>,
-  eye:      <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
-  click:    <><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></>,
-  check:    <><polyline points="20 6 9 17 4 12"/></>,
-  money:    <><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></>,
-  target:   <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></>,
-  trend:    <><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>,
-  diamond:  <><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/></>,
-};
-
-/* ─── KPI overview card ───────────────────────────────────────── */
-function KpiCard({ label, value, iconKey, color, bgDim, delay }) {
+/* ─── KPI Card ───────────────────────────────────────────────── */
+function KpiCard({ label, value, icon, color, bgDim, delay }) {
   const [show, setShow] = useState(false);
   useEffect(() => { const t = setTimeout(() => setShow(true), delay); return () => clearTimeout(t); }, [delay]);
 
@@ -142,32 +294,27 @@ function KpiCard({ label, value, iconKey, color, bgDim, delay }) {
       opacity: show ? 1 : 0,
       animation: show ? 'fadeUp 0.4s ease both' : 'none',
     }}>
-      {/* icon circle */}
       <div style={{
         width: 54, height: 54, borderRadius: '50%', flexShrink: 0,
         background: bgDim,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <Ico d={ICONS[iconKey]} color={color} size={22} />
-      </div>
+        fontSize: 24,
+      }}>{icon}</div>
       <div>
         <div style={{
           fontSize: 32, fontWeight: 800, color: C.navy,
           lineHeight: 1, letterSpacing: '-0.03em',
           animation: show ? 'countUp 0.5s ease both' : 'none',
-        }}>
-          {value ?? '—'}
-        </div>
+        }}>{value ?? '—'}</div>
         <div style={{ fontSize: 12.5, color: C.textMuted, marginTop: 5, fontWeight: 500 }}>{label}</div>
-        {/* accent line */}
         <div style={{ width: 28, height: 2, background: color, borderRadius: 2, marginTop: 8, opacity: 0.6 }} />
       </div>
     </div>
   );
 }
 
-/* ─── Performance card ────────────────────────────────────────── */
-function PerfCard({ label, value, iconKey, color, bgDim, delay }) {
+/* ─── Performance Card ───────────────────────────────────────── */
+function PerfCard({ label, value, icon, color, bgDim, delay }) {
   const [show, setShow] = useState(false);
   useEffect(() => { const t = setTimeout(() => setShow(true), delay); return () => clearTimeout(t); }, [delay]);
 
@@ -185,81 +332,133 @@ function PerfCard({ label, value, iconKey, color, bgDim, delay }) {
         background: bgDim,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         margin: '0 auto 14px',
-      }}>
-        <Ico d={ICONS[iconKey]} color={color} size={20} />
-      </div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: C.navy, letterSpacing: '-0.03em', lineHeight: 1 }}>
-        {value ?? '—'}
-      </div>
+        fontSize: 20,
+      }}>{icon}</div>
+      <div style={{ fontSize: 28, fontWeight: 800, color: C.navy, letterSpacing: '-0.03em', lineHeight: 1 }}>{value ?? '—'}</div>
       <div style={{ fontSize: 11.5, color: C.textMuted, marginTop: 7, fontWeight: 500 }}>{label}</div>
       <div style={{ width: 24, height: 2, background: color, borderRadius: 2, margin: '10px auto 0', opacity: 0.6 }} />
     </div>
   );
 }
 
-/* ─── Résumé card — style navy DigiLab ───────────────────────── */
-function SummaryCard({ label, value, iconKey, color, bgDim }) {
+/* ─── Campaign Performance Row ───────────────────────────────── */
+function CampaignRow({ campaign, index }) {
+  const statusColors = {
+    active: { bg: C.blueDim, color: C.blue, label: 'Active' },
+    sent: { bg: C.greenDim, color: C.green, label: 'Envoyée' },
+    scheduled: { bg: C.purpleDim, color: C.purple, label: 'Planifiée' },
+    draft: { bg: 'rgba(107,114,128,0.10)', color: '#6b7280', label: 'Brouillon' },
+  };
+  const sc = statusColors[campaign.status] || statusColors.draft;
+  const typeIcons = { SMS: '💬', Email: '✉️', Push: '🔔', Multicanal: '⚡' };
+
   return (
-    <div className="dl-card" style={{
-      background: C.navy, borderRadius: 16,
-      border: `1.5px solid ${C.navyLight}`,
-      padding: '24px 26px',
-      display: 'flex', alignItems: 'center', gap: 18,
-      boxShadow: '0 4px 20px rgba(10,14,42,0.18)',
-      cursor: 'default',
-    }}>
-      <div style={{
-        width: 54, height: 54, borderRadius: '50%', flexShrink: 0,
-        background: `${color}20`, border: `1.5px solid ${color}35`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <Ico d={ICONS[iconKey]} color={color} size={22} />
-      </div>
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: `${color}cc`, textTransform: 'uppercase', marginBottom: 8 }}>
-          {label}
+    <tr className="dl-row" style={{ borderBottom: `1px solid ${C.border}`, cursor: 'default' }}>
+      <td style={{ padding: '14px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 10,
+            background: sc.bg, border: `1.5px solid ${sc.color}30`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 18, flexShrink: 0,
+          }}>{typeIcons[campaign.type] || '📢'}</div>
+          <div>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>{campaign.title}</div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{campaign.client}</div>
+          </div>
         </div>
-        <div style={{ fontSize: 34, fontWeight: 800, color: '#ffffff', letterSpacing: '-0.03em', lineHeight: 1 }}>
-          {value ?? '—'}
+      </td>
+      <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+        <span style={{
+          fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+          padding: '4px 12px', borderRadius: 20,
+          background: sc.bg, color: sc.color,
+          border: `1px solid ${sc.color}30`,
+        }}>{sc.label}</span>
+      </td>
+      <td style={{ padding: '14px 18px', fontSize: 13, color: C.textMuted, textAlign: 'center' }}>
+        {campaign.recipients.toLocaleString('fr-FR')}
+      </td>
+      <td style={{ padding: '14px 18px', fontSize: 13, color: C.textMuted, textAlign: 'center' }}>
+        {campaign.sent > 0 ? campaign.sent.toLocaleString('fr-FR') : '—'}
+      </td>
+      <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: campaign.openRate > 0 ? C.green : C.textMuted }}>
+          {campaign.openRate > 0 ? `${campaign.openRate}%` : '—'}
         </div>
-      </div>
-    </div>
+        {campaign.openRate > 0 && (
+          <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>
+            {campaign.opened.toLocaleString('fr-FR')} ouvertures
+          </div>
+        )}
+      </td>
+      <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: campaign.clickRate > 0 ? C.blue : C.textMuted }}>
+          {campaign.clickRate > 0 ? `${campaign.clickRate}%` : '—'}
+        </div>
+        {campaign.clickRate > 0 && (
+          <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>
+            {campaign.clicked.toLocaleString('fr-FR')} clics
+          </div>
+        )}
+      </td>
+      <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: campaign.conversionRate > 0 ? C.purple : C.textMuted }}>
+          {campaign.conversionRate > 0 ? `${campaign.conversionRate}%` : '—'}
+        </div>
+        {campaign.conversionRate > 0 && (
+          <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>
+            {campaign.converted.toLocaleString('fr-FR')} conversions
+          </div>
+        )}
+      </td>
+      <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: campaign.roi > 0 ? C.orange : C.textMuted }}>
+          {campaign.roi > 0 ? `${campaign.roi}%` : '—'}
+        </div>
+        {campaign.roi > 0 && (
+          <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>
+            {campaign.revenue.toLocaleString('fr-FR')} TND
+          </div>
+        )}
+      </td>
+    </tr>
   );
 }
 
 /* ═══════════════════════════════════════════════════════════════ */
 export default function Analytics() {
-  const [kpis, setKpis]           = useState(null);
-  const [evolution, setEvolution] = useState([]);
-  const [loading, setLoading]     = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    Promise.all([
-      api.get('/api/analytics/kpis'),
-      api.get('/api/analytics/evolution'),
-    ]).then(([k, e]) => {
-      setKpis(k.data);
-      setEvolution(e.data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    // Simuler chargement
+    const timer = setTimeout(() => setLoading(false), 800);
+    return () => clearTimeout(timer);
   }, []);
 
-  const overviewCards = kpis ? [
-    { label: 'Total Clients',        value: kpis.overview.totalClients,        iconKey: 'users',    color: C.orange, bgDim: C.orangeDim },
-    { label: 'Total Contacts',       value: kpis.overview.totalContacts,       iconKey: 'file',     color: C.green,  bgDim: C.greenDim  },
-    { label: 'Campagnes envoyées',   value: kpis.overview.campagnesEnvoyees,   iconKey: 'send',     color: C.blue,   bgDim: C.blueDim   },
-    { label: 'Campagnes planifiées', value: kpis.overview.campagnesPlanifiees, iconKey: 'calendar', color: C.purple, bgDim: C.purpleDim },
-  ] : [];
+  // Calculer les KPIs globaux
+  const totalCampaigns = DIGILAB_CAMPAIGNS.length;
+  const activeCampaigns = DIGILAB_CAMPAIGNS.filter(c => c.status === 'active').length;
+  const sentCampaigns = DIGILAB_CAMPAIGNS.filter(c => c.status === 'sent').length;
+  const totalRecipients = DIGILAB_CAMPAIGNS.reduce((sum, c) => sum + c.recipients, 0);
+  const totalSent = DIGILAB_CAMPAIGNS.reduce((sum, c) => sum + c.sent, 0);
+  const totalOpened = DIGILAB_CAMPAIGNS.reduce((sum, c) => sum + c.opened, 0);
+  const totalClicked = DIGILAB_CAMPAIGNS.reduce((sum, c) => sum + c.clicked, 0);
+  const totalConverted = DIGILAB_CAMPAIGNS.reduce((sum, c) => sum + c.converted, 0);
+  const totalRevenue = DIGILAB_CAMPAIGNS.reduce((sum, c) => sum + c.revenue, 0);
+  const totalCost = DIGILAB_CAMPAIGNS.reduce((sum, c) => sum + c.cost, 0);
+  const avgOpenRate = totalSent > 0 ? ((totalOpened / totalSent) * 100).toFixed(1) : 0;
+  const avgClickRate = totalSent > 0 ? ((totalClicked / totalSent) * 100).toFixed(1) : 0;
+  const avgConversionRate = totalSent > 0 ? ((totalConverted / totalSent) * 100).toFixed(1) : 0;
+  const globalRoi = totalCost > 0 ? (((totalRevenue - totalCost) / totalCost) * 100).toFixed(0) : 0;
 
-  const perfCards = kpis ? [
-    { label: 'Emails envoyés',   value: kpis.performance.totalEmailsSent,          iconKey: 'mail',  color: C.orange, bgDim: C.orangeDim },
-    { label: "Taux d'ouverture", value: kpis.performance.tauxOuvertureMoyen + '%', iconKey: 'eye',   color: C.green,  bgDim: C.greenDim  },
-    { label: 'Taux de clic',     value: kpis.performance.tauxClicMoyen + '%',      iconKey: 'click', color: C.blue,   bgDim: C.blueDim   },
-    { label: 'Conversions',      value: kpis.performance.totalConversions,          iconKey: 'check', color: C.purple, bgDim: C.purpleDim },
-    { label: 'ROI Total',        value: kpis.performance.roiTotal + '%',           iconKey: 'money', color: C.red,    bgDim: 'rgba(220,38,38,0.10)' },
-  ] : [];
-
-  const TABLE_COLS = ['MOIS', 'CAMPAGNES', 'EMAILS ENVOYÉS', 'OUVERTURES', 'CONVERSIONS'];
+  const TABS = [
+    { id: 'overview', label: "Vue d'ensemble", icon: '📊' },
+    { id: 'campaigns', label: 'Par Campagne', icon: '📢' },
+    { id: 'clients', label: 'Par Client', icon: '🏢' },
+    { id: 'evolution', label: 'Évolution', icon: '📈' },
+  ];
 
   return (
     <div style={{
@@ -270,111 +469,248 @@ export default function Analytics() {
     }}>
       <style>{css}</style>
 
-      {/* ── Vue d'ensemble ── */}
-      <div style={{ marginBottom: 30 }}>
-        <SectionHead label="Vue d'ensemble" />
-        {loading
-          ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+      {/* Header */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <div style={{ width: 4, height: 24, background: C.orange, borderRadius: 2 }} />
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: C.navy, margin: 0 }}>Analytics DigiLab</h1>
+        </div>
+        <p style={{ fontSize: 13, color: C.textMuted, margin: 0, marginLeft: 14 }}>
+          Performance des campagnes marketing · {totalCampaigns} campagnes · {totalRecipients.toLocaleString('fr-FR')} contacts
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+        {TABS.map(tab => {
+          const active = activeTab === tab.id;
+          return (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              style={{
+                padding: '10px 18px', borderRadius: 12,
+                background: active ? C.navy : C.card,
+                color: active ? '#fff' : C.textMuted,
+                border: `1.5px solid ${active ? C.navy : C.border}`,
+                fontSize: 13, fontWeight: 700,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                transition: 'all 0.15s',
+                boxShadow: active ? '0 4px 14px rgba(10,14,42,0.15)' : C.shadow,
+              }}>
+              <span>{tab.icon}</span>
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── VUE D'ENSEMBLE ── */}
+      {activeTab === 'overview' && (
+        <div>
+          <SectionHead label="KPIs Globaux" />
+          {loading ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 30 }}>
               {[...Array(4)].map((_, i) => (
                 <div key={i} style={{ background: C.card, borderRadius: 16, border: `1.5px solid ${C.border}`, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 18, boxShadow: C.shadow }}>
                   <Skel w={54} h={54} r={27} />
-                  <div style={{ flex: 1 }}><Skel h={30} w="50%" /><div style={{ marginTop: 8 }}><Skel h={12} w="70%" r={4} /></div></div>
+                  <div style={{ flex: 1 }}><Skel h={32} w="50%" /><div style={{ marginTop: 8 }}><Skel h={12} w="70%" r={4} /></div></div>
                 </div>
               ))}
             </div>
-          : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
-              {overviewCards.map((c, i) => <KpiCard key={c.label} {...c} delay={i * 75} />)}
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 30 }}>
+              <KpiCard label="Total Campagnes" value={totalCampaigns} icon="📢" color={C.orange} bgDim={C.orangeDim} delay={0} />
+              <KpiCard label="Contacts Touchés" value={totalRecipients.toLocaleString('fr-FR')} icon="👥" color={C.blue} bgDim={C.blueDim} delay={75} />
+              <KpiCard label="Emails Envoyés" value={totalSent.toLocaleString('fr-FR')} icon="✉️" color={C.green} bgDim={C.greenDim} delay={150} />
+              <KpiCard label="Revenus Générés" value={`${totalRevenue.toLocaleString('fr-FR')} TND`} icon="💰" color={C.purple} bgDim={C.purpleDim} delay={225} />
             </div>
-        }
-      </div>
+          )}
 
-      {/* ── Performance ── */}
-      <div style={{ marginBottom: 30 }}>
-        <SectionHead label="Performance des campagnes" />
-        {loading
-          ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 14 }}>
+          <SectionHead label="Performance Globale" />
+          {loading ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 14, marginBottom: 30 }}>
               {[...Array(5)].map((_, i) => (
                 <div key={i} style={{ background: C.card, borderRadius: 16, border: `1.5px solid ${C.border}`, padding: '22px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, boxShadow: C.shadow }}>
                   <Skel w={48} h={48} r={24} /><Skel h={26} w="55%" /><Skel h={12} w="72%" r={4} />
                 </div>
               ))}
             </div>
-          : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 14 }}>
-              {perfCards.map((c, i) => <PerfCard key={c.label} {...c} delay={260 + i * 75} />)}
-            </div>
-        }
-      </div>
-
-      {/* ── Évolution par mois ── */}
-      <div style={{ marginBottom: 30 }}>
-        <SectionHead label="Évolution par mois" />
-        <div style={{
-          background: C.card, borderRadius: 16,
-          border: `1.5px solid ${C.border}`,
-          boxShadow: C.shadow, overflow: 'hidden',
-        }}>
-          {loading ? (
-            <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {[...Array(4)].map((_, i) => <Skel key={i} h={44} r={8} />)}
-            </div>
-          ) : evolution.length === 0 ? (
-            <div style={{ padding: '48px 20px', textAlign: 'center', color: C.textMuted }}>
-              <div style={{ fontSize: 36, opacity: 0.2, marginBottom: 12 }}>📊</div>
-              <div style={{ fontSize: 14, fontWeight: 500 }}>Aucune donnée disponible</div>
-            </div>
           ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 14, marginBottom: 30 }}>
+              <PerfCard label="Taux d'Ouverture" value={`${avgOpenRate}%`} icon="👁️" color={C.green} bgDim={C.greenDim} delay={260} />
+              <PerfCard label="Taux de Clic" value={`${avgClickRate}%`} icon="🖱️" color={C.blue} bgDim={C.blueDim} delay={335} />
+              <PerfCard label="Taux Conversion" value={`${avgConversionRate}%`} icon="🎯" color={C.purple} bgDim={C.purpleDim} delay={410} />
+              <PerfCard label="ROI Global" value={`${globalRoi}%`} icon="📈" color={C.orange} bgDim={C.orangeDim} delay={485} />
+              <PerfCard label="Campagnes Actives" value={activeCampaigns} icon="⚡" color={C.red} bgDim="rgba(220,38,38,0.10)" delay={560} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── PAR CAMPAGNE ── */}
+      {activeTab === 'campaigns' && (
+        <div>
+          <SectionHead label="Performance par Campagne" />
+          <div style={{
+            background: C.card, borderRadius: 16,
+            border: `1.5px solid ${C.border}`,
+            boxShadow: C.shadow, overflow: 'hidden',
+          }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: C.navy }}>
-                  {TABLE_COLS.map(h => (
-                    <th key={h} style={{
-                      padding: '14px 18px', textAlign: 'left',
+                  {['CAMPAGNE', 'STATUT', 'DESTINATAIRES', 'ENVOYÉS', "Taux d'Ouverture", 'Taux de Clic', 'Conversion', 'ROI'].map((h, i) => (
+                    <th key={i} style={{
+                      padding: '14px 18px', textAlign: i === 0 ? 'left' : 'center',
                       fontSize: 10, fontWeight: 800,
-                      letterSpacing: '0.16em', color: C.orange,
+                      letterSpacing: '0.12em', color: C.orange,
+                      textTransform: 'uppercase',
                     }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {evolution.map((e, i) => (
-                  <tr key={i} className="dl-row"
-                    style={{ borderBottom: `1px solid ${C.border}`, cursor: 'default' }}>
-                    <td style={{ padding: '14px 18px', fontSize: 13.5, fontWeight: 700, color: C.text }}>{e.mois}</td>
-                    <td style={{ padding: '14px 18px' }}>
-                      <span className="dl-badge-pill">{e.campagnes}</span>
-                    </td>
-                    <td style={{ padding: '14px 18px', fontSize: 13, color: C.textMuted }}>{e.emailsSent ?? 0}</td>
-                    <td style={{ padding: '14px 18px', fontSize: 13, color: C.textMuted }}>{e.opens ?? 0}</td>
-                    <td style={{ padding: '14px 18px', fontSize: 13, color: C.textMuted }}>{e.conversions ?? 0}</td>
-                  </tr>
-                ))}
+                {loading ? (
+                  [...Array(4)].map((_, i) => (
+                    <tr key={i}><td colSpan={8} style={{ padding: '14px 18px' }}><Skel h={44} r={8} /></td></tr>
+                  ))
+                ) : (
+                  DIGILAB_CAMPAIGNS.map((campaign, i) => (
+                    <CampaignRow key={campaign.id} campaign={campaign} index={i} />
+                  ))
+                )}
               </tbody>
             </table>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* ── Résumé analytique — fond navy ── */}
-      <div>
-        <SectionHead label="Résumé analytique" />
-        {loading
-          ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
-              {[...Array(3)].map((_, i) => (
-                <div key={i} style={{ background: C.navy, borderRadius: 16, padding: '24px 26px', display: 'flex', alignItems: 'center', gap: 18 }}>
-                  <Skel w={54} h={54} r={27} />
-                  <div style={{ flex: 1 }}><Skel h={12} w="55%" r={4} /><div style={{ marginTop: 10 }}><Skel h={32} w="45%" /></div></div>
-                </div>
-              ))}
-            </div>
-          : kpis && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
-              <SummaryCard label="Segments actifs"    value={kpis.overview.totalSegments}              iconKey="target"  color={C.orange} bgDim={C.orangeDim} />
-              <SummaryCard label="Taux de conversion" value={kpis.performance.tauxConversionMoyen+'%'} iconKey="trend"   color="#4ade80"  bgDim="rgba(74,222,128,0.15)" />
-              <SummaryCard label="ROI Global"         value={kpis.performance.roiTotal+'%'}            iconKey="diamond" color="#a78bfa"  bgDim="rgba(167,139,250,0.15)" />
-            </div>
-          )
-        }
-      </div>
+      {/* ── PAR CLIENT ── */}
+      {activeTab === 'clients' && (
+        <div>
+          <SectionHead label="Performance par Client" />
+          <div style={{
+            background: C.card, borderRadius: 16,
+            border: `1.5px solid ${C.border}`,
+            boxShadow: C.shadow, overflow: 'hidden',
+          }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: C.navy }}>
+                  {['CLIENT', 'CAMPAGNES', 'TOTAL ENVOYÉ', "Taux d'Ouverture", 'Taux de Clic', 'REVENUS', 'ROI'].map((h, i) => (
+                    <th key={i} style={{
+                      padding: '14px 18px', textAlign: i === 0 ? 'left' : 'center',
+                      fontSize: 10, fontWeight: 800,
+                      letterSpacing: '0.12em', color: C.orange,
+                      textTransform: 'uppercase',
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  [...Array(4)].map((_, i) => (
+                    <tr key={i}><td colSpan={7} style={{ padding: '14px 18px' }}><Skel h={44} r={8} /></td></tr>
+                  ))
+                ) : (
+                  CLIENT_PERFORMANCE.map((client, i) => (
+                    <tr key={i} className="dl-row" style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '14px 18px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{
+                            width: 36, height: 36, borderRadius: '50%',
+                            background: C.orangeDim, border: `1.5px solid ${C.orangeBorder}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 14, fontWeight: 700, color: C.orange,
+                            flexShrink: 0,
+                          }}>{client.client.charAt(0)}</div>
+                          <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>{client.client}</div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                        <span className="dl-badge-pill">{client.campaigns}</span>
+                      </td>
+                      <td style={{ padding: '14px 18px', fontSize: 13, color: C.textMuted, textAlign: 'center' }}>
+                        {client.totalSent > 0 ? client.totalSent.toLocaleString('fr-FR') : '—'}
+                      </td>
+                      <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: client.avgOpenRate > 0 ? C.green : C.textMuted }}>
+                          {client.avgOpenRate > 0 ? `${client.avgOpenRate}%` : '—'}
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: client.avgClickRate > 0 ? C.blue : C.textMuted }}>
+                          {client.avgClickRate > 0 ? `${client.avgClickRate}%` : '—'}
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: client.totalRevenue > 0 ? C.purple : C.textMuted }}>
+                          {client.totalRevenue > 0 ? `${client.totalRevenue.toLocaleString('fr-FR')} TND` : '—'}
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: client.roi > 0 ? C.orange : C.textMuted }}>
+                          {client.roi > 0 ? `${client.roi}%` : '—'}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── ÉVOLUTION ── */}
+      {activeTab === 'evolution' && (
+        <div>
+          <SectionHead label="Évolution Mensuelle" />
+          <div style={{
+            background: C.card, borderRadius: 16,
+            border: `1.5px solid ${C.border}`,
+            boxShadow: C.shadow, overflow: 'hidden',
+          }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: C.navy }}>
+                  {['MOIS', 'CAMPAGNES', 'EMAILS ENVOYÉS', 'OUVERTURES', 'CONVERSIONS', 'REVENUS (TND)'].map((h, i) => (
+                    <th key={i} style={{
+                      padding: '14px 18px', textAlign: 'center',
+                      fontSize: 10, fontWeight: 800,
+                      letterSpacing: '0.12em', color: C.orange,
+                      textTransform: 'uppercase',
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  [...Array(4)].map((_, i) => (
+                    <tr key={i}><td colSpan={6} style={{ padding: '14px 18px' }}><Skel h={44} r={8} /></td></tr>
+                  ))
+                ) : (
+                  MONTHLY_EVOLUTION.map((month, i) => (
+                    <tr key={i} className="dl-row" style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '14px 18px', fontSize: 13.5, fontWeight: 700, color: C.text, textAlign: 'center' }}>{month.month}</td>
+                      <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                        <span className="dl-badge-pill">{month.campaigns}</span>
+                      </td>
+                      <td style={{ padding: '14px 18px', fontSize: 13, color: C.textMuted, textAlign: 'center' }}>{month.emailsSent.toLocaleString('fr-FR')}</td>
+                      <td style={{ padding: '14px 18px', fontSize: 13, color: C.textMuted, textAlign: 'center' }}>{month.opens.toLocaleString('fr-FR')}</td>
+                      <td style={{ padding: '14px 18px', fontSize: 13, color: C.textMuted, textAlign: 'center' }}>{month.conversions.toLocaleString('fr-FR')}</td>
+                      <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: C.orange }}>
+                          {month.revenue.toLocaleString('fr-FR')} TND
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

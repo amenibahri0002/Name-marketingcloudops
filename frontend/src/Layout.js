@@ -5,12 +5,12 @@ const gold = '#f5a623';
 const dark = '#16120d';
 
 /* ═══════════════════════════════════════════
-   MENUS — DÉCLARÉS UNE SEULE FOIS
+   MENUS PAR RÔLE
 ═══════════════════════════════════════════ */
 
 const adminMenu = [
   { section: 'Principal', items: [
-    { path: '/dashboard', icon: '⬛', label: 'Dashboard' },
+    { path: '/admin/dashboard', icon: '⬛', label: 'Dashboard' },
     { path: '/users', icon: '👤', label: 'Utilisateurs' },
   ]},
   { section: 'Cloud Operations', items: [
@@ -129,7 +129,10 @@ function Layout({ children }) {
                  : userRole === 'RESPONSABLE_MARKETING' ? { label: 'Resp. Marketing', short: 'RM' }
                  : { label: 'Client', short: 'CL' };
 
-  const initials = userName ? userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) : roleInfo.short;
+  // Pour l'admin, on affiche "Administrateur" au lieu du nom réel
+  const displayName = userRole === 'ADMIN' ? 'Administrateur' : userName;
+  const displayInitials = userRole === 'ADMIN' ? 'AD' : (userName ? userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) : roleInfo.short);
+  
   const currentLabel = allPages.find(m => m.path === location.pathname)?.label || 'Dashboard';
   const unreadCount = notifs.filter(n => n.unread).length;
 
@@ -138,7 +141,7 @@ function Layout({ children }) {
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'Open Sans', sans-serif", background: '#f6f3ee' }}>
 
-      {/* SIDEBAR */}
+      {/* ═══════ SIDEBAR ═══════ */}
       <aside style={{ width: 260, flexShrink: 0, background: dark, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
         
         {/* LOGO */}
@@ -224,59 +227,135 @@ function Layout({ children }) {
           </div>
         </div>
 
-        {/* USER */}
+        {/* ═══════ USER SECTION — Admin masqué ═══════ */}
         <div style={{ padding: '1.2rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <div style={{ width: 38, height: 38, borderRadius: '50%', background: gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: dark, fontSize: '0.8rem' }}>
-              {initials}
+            <div style={{ 
+              width: 38, height: 38, borderRadius: '50%', 
+              background: gold, display: 'flex', alignItems: 'center', 
+              justifyContent: 'center', fontWeight: 800, color: dark, 
+              fontSize: '0.8rem' 
+            }}>
+              {displayInitials}
             </div>
             <div style={{ flex: 1, overflow: 'hidden' }}>
-              <div style={{ fontWeight: 600, color: 'white', fontSize: '0.9rem' }}>{userName}</div>
-              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{roleInfo.label}</div>
+              <div style={{ fontWeight: 600, color: 'white', fontSize: '0.9rem' }}>
+                {displayName}
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>
+                {roleInfo.label}
+              </div>
             </div>
           </div>
-          <button onClick={logout} style={{ width: '100%', padding: '0.6rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={logout} style={{ 
+            width: '100%', padding: '0.6rem', 
+            background: 'rgba(239,68,68,0.1)', 
+            border: '1px solid rgba(239,68,68,0.3)', 
+            borderRadius: 8, color: '#ef4444', 
+            fontWeight: 600, cursor: 'pointer' 
+          }}>
             Déconnexion
           </button>
         </div>
-      </aside>
+      </aside>  {/* ← BALISE FERMANTE AJOUTÉE */}
 
-      {/* MAIN */}
+      {/* ═══════ MAIN ═══════ */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ height: 66, background: 'white', borderBottom: '1px solid #ede8df', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem' }}>
+        {/* HEADER */}
+        <div style={{ 
+          height: 66, background: 'white', 
+          borderBottom: '1px solid #ede8df', 
+          display: 'flex', alignItems: 'center', 
+          justifyContent: 'space-between', padding: '0 2rem' 
+        }}>
           <div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1a160e' }}>{currentLabel}</div>
-            <div style={{ fontSize: '0.7rem', color: '#9c8f7a' }}>Espace {roleInfo.label}</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1a160e' }}>
+              {currentLabel}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#9c8f7a' }}>
+              Espace {roleInfo.label}
+            </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {/* Notifications */}
             <div ref={notifRef} style={{ position: 'relative' }}>
-              <button onClick={() => setShowNotifs(!showNotifs)} style={{ width: 38, height: 38, borderRadius: 10, border: '1px solid #e4e0d8', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+              <button onClick={() => setShowNotifs(!showNotifs)} style={{ 
+                width: 38, height: 38, borderRadius: 10, 
+                border: '1px solid #e4e0d8', background: 'white', 
+                cursor: 'pointer', display: 'flex', alignItems: 'center', 
+                justifyContent: 'center', position: 'relative' 
+              }}>
                 🔔
                 {unreadCount > 0 && (
-                  <span style={{ position: 'absolute', top: -2, right: -2, width: 18, height: 18, borderRadius: '50%', background: '#ef4444', color: 'white', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ 
+                    position: 'absolute', top: -2, right: -2, 
+                    width: 18, height: 18, borderRadius: '50%', 
+                    background: '#ef4444', color: 'white', 
+                    fontSize: 10, fontWeight: 700, 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                  }}>
                     {unreadCount}
                   </span>
                 )}
               </button>
               {showNotifs && (
-                <div style={{ position: 'absolute', top: 'calc(100% + 12px)', right: 0, width: 360, background: 'white', borderRadius: 16, boxShadow: '0 16px 48px rgba(0,0,0,0.15)', border: '1px solid #e4e0d8', zIndex: 50, overflow: 'hidden' }}>
-                  <div style={{ padding: '1rem 1.2rem', borderBottom: '1px solid #f0ede8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Notifications Cloud</span>
-                    <button onClick={markAllRead} style={{ fontSize: '0.75rem', color: gold, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Tout marquer lu</button>
+                <div style={{ 
+                  position: 'absolute', top: 'calc(100% + 12px)', right: 0, 
+                  width: 360, background: 'white', borderRadius: 16, 
+                  boxShadow: '0 16px 48px rgba(0,0,0,0.15)', 
+                  border: '1px solid #e4e0d8', zIndex: 50, overflow: 'hidden' 
+                }}>
+                  <div style={{ 
+                    padding: '1rem 1.2rem', 
+                    borderBottom: '1px solid #f0ede8', 
+                    display: 'flex', justifyContent: 'space-between', 
+                    alignItems: 'center' 
+                  }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                      Notifications Cloud
+                    </span>
+                    <button onClick={markAllRead} style={{ 
+                      fontSize: '0.75rem', color: gold, 
+                      background: 'none', border: 'none', 
+                      cursor: 'pointer', fontWeight: 600 
+                    }}>
+                      Tout marquer lu
+                    </button>
                   </div>
                   <div style={{ maxHeight: 320, overflowY: 'auto' }}>
                     {notifs.map((notif, i) => (
-                      <div key={notif.id} style={{ padding: '0.9rem 1.2rem', borderBottom: i < notifs.length - 1 ? '1px solid #f0ede8' : 'none', display: 'flex', alignItems: 'flex-start', gap: 12, background: notif.unread ? 'rgba(245,166,35,0.03)' : 'transparent' }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 10, background: notif.type === 'alert' ? 'rgba(239,68,68,0.1)' : 'rgba(245,166,35,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+                      <div key={notif.id} style={{ 
+                        padding: '0.9rem 1.2rem', 
+                        borderBottom: i < notifs.length - 1 ? '1px solid #f0ede8' : 'none', 
+                        display: 'flex', alignItems: 'flex-start', gap: 12, 
+                        background: notif.unread ? 'rgba(245,166,35,0.03)' : 'transparent' 
+                      }}>
+                        <div style={{ 
+                          width: 36, height: 36, borderRadius: 10, 
+                          background: notif.type === 'alert' ? 'rgba(239,68,68,0.1)' : 'rgba(245,166,35,0.1)', 
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                          fontSize: 16, flexShrink: 0 
+                        }}>
                           {notif.icon}
                         </div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1a160e', marginBottom: 2 }}>{notif.text}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#9c8f7a' }}>{notif.time}</div>
+                          <div style={{ 
+                            fontSize: '0.85rem', fontWeight: 600, 
+                            color: '#1a160e', marginBottom: 2 
+                          }}>
+                            {notif.text}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#9c8f7a' }}>
+                            {notif.time}
+                          </div>
                         </div>
-                        {notif.unread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: gold, flexShrink: 0, marginTop: 4 }} />}
+                        {notif.unread && (
+                          <span style={{ 
+                            width: 8, height: 8, borderRadius: '50%', 
+                            background: gold, flexShrink: 0, marginTop: 4 
+                          }} />
+                        )}
                       </div>
                     ))}
                   </div>
@@ -286,25 +365,75 @@ function Layout({ children }) {
 
             {/* Profile */}
             <div ref={profileRef} style={{ position: 'relative' }}>
-              <button onClick={() => setShowProfile(!showProfile)} style={{ width: 38, height: 38, borderRadius: '50%', background: gold, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: dark, fontSize: '0.85rem' }}>
-                {initials}
+              <button onClick={() => setShowProfile(!showProfile)} style={{ 
+                width: 38, height: 38, borderRadius: '50%', 
+                background: gold, border: 'none', cursor: 'pointer', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                fontWeight: 800, color: dark, fontSize: '0.85rem' 
+              }}>
+                {displayInitials}
               </button>
               {showProfile && (
-                <div style={{ position: 'absolute', top: 'calc(100% + 12px)', right: 0, width: 240, background: 'white', borderRadius: 16, boxShadow: '0 16px 48px rgba(0,0,0,0.15)', border: '1px solid #e4e0d8', zIndex: 50, overflow: 'hidden' }}>
-                  <div style={{ padding: '1.2rem', borderBottom: '1px solid #f0ede8', textAlign: 'center' }}>
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: dark, fontSize: '1.1rem', margin: '0 auto 0.6rem' }}>
-                      {initials}
+                <div style={{ 
+                  position: 'absolute', top: 'calc(100% + 12px)', right: 0, 
+                  width: 240, background: 'white', borderRadius: 16, 
+                  boxShadow: '0 16px 48px rgba(0,0,0,0.15)', 
+                  border: '1px solid #e4e0d8', zIndex: 50, overflow: 'hidden' 
+                }}>
+                  <div style={{ 
+                    padding: '1.2rem', 
+                    borderBottom: '1px solid #f0ede8', 
+                    textAlign: 'center' 
+                  }}>
+                    <div style={{ 
+                      width: 48, height: 48, borderRadius: '50%', 
+                      background: gold, display: 'flex', alignItems: 'center', 
+                      justifyContent: 'center', fontWeight: 800, 
+                      color: dark, fontSize: '1.1rem', 
+                      margin: '0 auto 0.6rem' 
+                    }}>
+                      {displayInitials}
                     </div>
-                    <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{userName}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#9c8f7a', marginTop: 2 }}>{userEmail}</div>
-                    <div style={{ marginTop: 6, display: 'inline-block', padding: '2px 10px', borderRadius: 12, background: 'rgba(245,166,35,0.1)', color: gold, fontSize: '0.7rem', fontWeight: 700 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                      {displayName}
+                    </div>
+                    <div style={{ 
+                      fontSize: '0.75rem', color: '#9c8f7a', marginTop: 2 
+                    }}>
+                      {userEmail}
+                    </div>
+                    <div style={{ 
+                      marginTop: 6, display: 'inline-block', 
+                      padding: '2px 10px', borderRadius: 12, 
+                      background: 'rgba(245,166,35,0.1)', color: gold, 
+                      fontSize: '0.7rem', fontWeight: 700 
+                    }}>
                       {roleInfo.label}
                     </div>
                   </div>
                   <div style={{ padding: '0.6rem' }}>
-                    <button onClick={() => navigate('/profile')} style={{ width: '100%', padding: '0.6rem', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8, fontSize: '0.85rem', color: '#1a160e' }}>👤 Mon Profil</button>
-                    <button onClick={() => navigate('/cloud-operations')} style={{ width: '100%', padding: '0.6rem', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8, fontSize: '0.85rem', color: '#1a160e' }}>☁️ Cloud Operations</button>
-                    <button onClick={logout} style={{ width: '100%', padding: '0.6rem', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8, fontSize: '0.85rem', color: '#ef4444', fontWeight: 600 }}>🚪 Déconnexion</button>
+                    <button onClick={() => navigate('/profile')} style={{ 
+                      width: '100%', padding: '0.6rem', textAlign: 'left', 
+                      background: 'none', border: 'none', cursor: 'pointer', 
+                      borderRadius: 8, fontSize: '0.85rem', color: '#1a160e' 
+                    }}>
+                      👤 Mon Profil
+                    </button>
+                    <button onClick={() => navigate('/cloud-operations')} style={{ 
+                      width: '100%', padding: '0.6rem', textAlign: 'left', 
+                      background: 'none', border: 'none', cursor: 'pointer', 
+                      borderRadius: 8, fontSize: '0.85rem', color: '#1a160e' 
+                    }}>
+                      ☁️ Cloud Operations
+                    </button>
+                    <button onClick={logout} style={{ 
+                      width: '100%', padding: '0.6rem', textAlign: 'left', 
+                      background: 'none', border: 'none', cursor: 'pointer', 
+                      borderRadius: 8, fontSize: '0.85rem', 
+                      color: '#ef4444', fontWeight: 600 
+                    }}>
+                      🚪 Déconnexion
+                    </button>
                   </div>
                 </div>
               )}
@@ -312,6 +441,7 @@ function Layout({ children }) {
           </div>
         </div>
 
+        {/* CONTENT */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '2rem', background: '#f6f3ee' }}>
           {children}
         </div>
