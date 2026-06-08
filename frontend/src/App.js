@@ -7,13 +7,20 @@ import Profile     from './pages/Profile';
 import Settings    from './pages/Settings';
 import HomePage    from './pages/HomePage';
 import PublicCampagnes from './pages/PublicCampagnes';
+import Campagnes from './pages/Campagnes';
+import CampagneDetail from './pages/CampagneDetail';
+import SidebarClient from './components/SidebarClient';
+
+// 🔑 AJOUTÉ : Pages client manquantes
+import MesCampagnesPage from './pages/MesCampagnes';
+import CertificatsPage from './pages/Certificats';
+import PaiementsPage from './pages/Paiements';
+import ProfilPage from './pages/Profil';
 
 const Login               = lazy(() => import('./pages/Login'));
 const Dashboard           = lazy(() => import('./pages/Dashboard'));
-const AdminDashboard      = lazy(() => import('./pages/AdminDashboard')); // 🔑 AJOUTÉ
+const AdminDashboard      = lazy(() => import('./pages/AdminDashboard'));
 const Clients             = lazy(() => import('./pages/Clients'));
-const Campagnes           = lazy(() => import('./pages/Campagnes'));
-const Contacts            = lazy(() => import('./pages/Contacts'));
 const Segments            = lazy(() => import('./pages/Segments'));
 const Reporting           = lazy(() => import('./pages/Reporting'));
 const UsersPage           = lazy(() => import('./pages/UsersPage'));
@@ -23,15 +30,14 @@ const AccessDenied        = lazy(() => import('./pages/AccessDenied'));
 const DevOpsCentral       = lazy(() => import('./pages/DevOpsCentral'));
 const PipelineStatus      = lazy(() => import('./pages/PipelineStatus'));
 const MesCampagnes        = lazy(() => import('./pages/MesCampagnes'));
-const CampagneDetail      = lazy(() => import('./pages/CampagneDetail'));
 const CampagneAdminDetail = lazy(() => import('./pages/CampagneAdminDetail'));
 const Register            = lazy(() => import('./pages/Register'));
-const CloudOperations     = lazy(() => import('./pages/CloudOperations')); // 🔑 AJOUTÉ
+const CloudOperations     = lazy(() => import('./pages/CloudOperations'));
 
 const Loading = () => (
   <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#080c14', fontFamily:"'Inter',sans-serif" }}>
     <div style={{ textAlign:'center' }}>
-      <div style={{ width:40, height:40, border:'3px solid rgba(245,166,35,0.2)', borderTop:'3px solid #f5a623', borderRadius:'50%', animation:'spin 1s linear infinite', margin:'0 auto 16px' }}/>
+      <div style={{ width:40, height:40, border:'3px solid rgba(245,166,35,0.2)', borderTop:'3px solid #f5a623', borderRadius:'50%', animation:'spin 1s linear infinite', margin:'0 auto 16px'}}/>
       <p style={{ color:'rgba(255,255,255,0.4)', fontSize:14 }}>Chargement...</p>
     </div>
     <style>{`@keyframes spin { to { transform:rotate(360deg); } }`}</style>
@@ -43,17 +49,48 @@ const RoleRedirect = () => {
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : {};
   const role = (user.role || '').toUpperCase();
-  
+
   if (role === 'ADMIN') return <Navigate to="/admin/dashboard" replace />;
   return <Navigate to="/dashboard" replace />;
 };
+
+// 🔑 AJOUTÉ : Vérifier si l'utilisateur est connecté ET client
+const isClientConnected = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const role = (payload.role || '').toUpperCase();
+    return role === 'CLIENT';
+  } catch (e) {
+    return false;
+  }
+};
+
+// 🔑 AJOUTÉ : Wrapper avec SidebarClient pour les pages publiques aussi
+function ClientLayout({ children }) {
+  const showSidebar = isClientConnected();
+
+  if (!showSidebar) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div style={{ display: 'flex' }}>
+      <SidebarClient />
+      <div style={{ marginLeft: 280, flex: 1, minHeight: '100vh' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function App() {
   return (
     <BrowserRouter>
       <Suspense fallback={<Loading />}>
         <Routes>
-
           {/* ── PUBLIQUES ── */}
           <Route path="/"              element={<HomePage />} />
           <Route path="/login"         element={<Login />} />
@@ -82,9 +119,38 @@ function App() {
             </PrivateRoute>
           } />
 
-          {/* ── FLUX CLIENT : voir et s'inscrire aux campagnes ── */}
-          <Route path="/campagnes"     element={<MesCampagnes />} />
-          <Route path="/campagnes/:id" element={<CampagneDetail />} />
+          {/* 🔑 MODIFIÉ : FORMATIONS avec SidebarClient si client connecté */}
+          <Route path="/campagnes" element={
+            <ClientLayout><Campagnes /></ClientLayout>
+          } />
+          <Route path="/campagnes/:id" element={
+            <ClientLayout><CampagneDetail /></ClientLayout>
+          } />
+
+          {/* 🔑 AJOUTÉ : ROUTES CLIENT avec SidebarClient */}
+          <Route path="/mescampagnes" element={
+            <PrivateRoute roles={['CLIENT']}>
+              <ClientLayout><MesCampagnesPage /></ClientLayout>
+            </PrivateRoute>
+          } />
+
+          <Route path="/certificats" element={
+            <PrivateRoute roles={['CLIENT']}>
+              <ClientLayout><CertificatsPage /></ClientLayout>
+            </PrivateRoute>
+          } />
+
+          <Route path="/paiements" element={
+            <PrivateRoute roles={['CLIENT']}>
+              <ClientLayout><PaiementsPage /></ClientLayout>
+            </PrivateRoute>
+          } />
+
+          <Route path="/profil" element={
+            <PrivateRoute roles={['CLIENT']}>
+              <ClientLayout><ProfilPage /></ClientLayout>
+            </PrivateRoute>
+          } />
 
           {/* ── GESTION CAMPAGNES (Admin + Responsable Marketing) ── */}
           <Route path="/gestion-campagnes" element={
@@ -107,11 +173,7 @@ function App() {
           <Route path="/settings" element={
             <PrivateRoute><Layout><Settings /></Layout></PrivateRoute>
           } />
-          <Route path="/contacts" element={
-            <PrivateRoute roles={['ADMIN','RESPONSABLE_MARKETING','CLIENT']}>
-              <Layout><Contacts /></Layout>
-            </PrivateRoute>
-          } />
+
           <Route path="/segments" element={
             <PrivateRoute roles={['ADMIN','RESPONSABLE_MARKETING','CLIENT']}>
               <Layout><Segments /></Layout>
@@ -147,7 +209,7 @@ function App() {
             <PrivateRoute roles={['ADMIN']}><Layout><PipelineStatus /></Layout></PrivateRoute>
           } />
           <Route path="/cloud-operations" element={
-            <PrivateRoute roles={['ADMIN','RESPONSABLE_MARKETING']}>
+            <PrivateRoute roles={['ADMIN']}>
               <Layout><CloudOperations /></Layout>
             </PrivateRoute>
           } />

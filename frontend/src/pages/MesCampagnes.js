@@ -1,353 +1,772 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import api from '../api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ArrowLeft, Calendar, Clock, MapPin, CheckCircle, Award, 
+  Download, ChevronRight, BookOpen, TrendingUp, Star, 
+  AlertCircle, Sparkles, Zap, Palette, PlayCircle, Users
+} from 'lucide-react';
+import SidebarClient from '../components/SidebarClient';
 
-const T = {
-  gold:'#f5a623', goldDk:'#d4881a', bg:'#080c14', bg2:'#0d1420',
-  card:'#141c2e', border:'rgba(255,255,255,0.07)', blue:'#4f8ef7',
-  purple:'#7c3aed', green:'#10b981', white:'#ffffff',
-  gray:'rgba(255,255,255,0.45)', font:"'Inter','DM Sans',sans-serif",
+const COLORS = {
+  primary: '#F5A623',
+  primaryLight: '#FFF8E7',
+  primaryDark: '#D48A1A',
+  dark: '#0A0A0A',
+  gray: '#666666',
+  grayLight: '#F5F5F5',
+  grayBorder: '#E5E5E5',
+  white: '#FFFFFF',
+  green: '#10B981',
+  red: '#EF4444',
+  blue: '#3B82F6',
 };
 
-const TYPE_CFG = {
-  email:{ label:'Email', icon:'✉', color:T.blue  },
-  sms:  { label:'SMS',   icon:'💬', color:T.green },
-  push: { label:'Push',  icon:'🔔', color:T.gold  },
-};
+const CAMPAGNES_DATA = [
+  {
+    id: 'formation-digital-marketing-ai',
+    title: 'Formation Digital Marketing & AI',
+    description: "Maîtrisez l'avenir du Marketing Digital avec l'Intelligence Artificielle ! Formation exclusive alliant les stratégies de Marketing Digital incontournables et la puissance de l'IA.",
+    image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800',
+    date: '30 Avril 2026',
+    dureeHeures: 40,
+    prix: 850,
+    status: 'en_cours',
+    progress: 65,
+    formateur: 'Expert certifié en IA & Marketing',
+    certificat: false,
+    icon: Sparkles,
+    couleur: COLORS.primary,
+    tags: ['IA', 'Marketing Digital', 'Certifiant']
+  },
+  {
+    id: 'formation-web-wordpress',
+    title: 'Formation Web WordPress',
+    description: "Maîtrisez le web en seulement 18 heures ! Créez votre site internet performant sans coder. Formation intensive et pratique.",
+    image: 'https://images.unsplash.com/photo-1461749280684-dccae630cd35?w=800',
+    date: '8 Avril 2026',
+    dureeHeures: 18,
+    prix: 450,
+    status: 'terminee',
+    progress: 100,
+    formateur: 'Développeur Web & Expert WordPress',
+    certificat: true,
+    icon: Zap,
+    couleur: COLORS.blue,
+    tags: ['WordPress', 'Web', 'Site Pro']
+  },
+  {
+    id: 'formation-design-graphique-marketing',
+    title: 'Formation Design Graphique & Marketing Digital',
+    description: "Boostez votre carrière avec DigiLab Solutions ! Formation intensive de 60H en Design Graphique et Marketing Digital. 100% Pratique.",
+    image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800',
+    date: '3 Avril 2026',
+    dureeHeures: 60,
+    prix: 1200,
+    status: 'en_cours',
+    progress: 30,
+    formateur: 'Designer Graphique & Directeur Artistique',
+    certificat: false,
+    icon: Palette,
+    couleur: '#EC4899',
+    tags: ['Design', 'Graphisme', 'Marketing']
+  }
+];
 
-const CAMP_IMGS = {
-  email:'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&q=80',
-  sms:  'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&q=80',
-  push: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=600&q=80',
-};
+const FormationCard = ({ formation, index }) => {
+  const navigate = useNavigate();
+  const IconComponent = formation.icon;
+  const isTerminee = formation.status === 'terminee';
+  const isEnCours = formation.status === 'en_cours';
 
-function AuroraBg() {
-  const ref = useRef(null);
-  useEffect(() => {
-    const canvas = ref.current; if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let t = 0, raf;
-    const orbs = [
-      { bx:0.1, by:0.2, rx:0.2,  ry:0.15, freq:0.22, ph:0,   r:600, col:[79,142,247],  a:0.25 },
-      { bx:0.9, by:0.1, rx:0.16, ry:0.12, freq:0.17, ph:1.1, r:550, col:[124,58,237],  a:0.22 },
-      { bx:0.5, by:0.6, rx:0.22, ry:0.18, freq:0.13, ph:2.2, r:700, col:[245,166,35],  a:0.14 },
-      { bx:0.8, by:0.8, rx:0.18, ry:0.14, freq:0.19, ph:3.5, r:600, col:[16,185,129],  a:0.18 },
-      { bx:0.3, by:0.5, rx:0.18, ry:0.14, freq:0.25, ph:4.8, r:580, col:[160,60,255],  a:0.18 },
-    ];
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-    resize(); window.addEventListener('resize', resize);
-    const draw = () => {
-      const {width:W, height:H} = canvas;
-      ctx.fillStyle = '#080c14'; ctx.fillRect(0,0,W,H);
-      ctx.strokeStyle = 'rgba(255,255,255,0.015)'; ctx.lineWidth = 0.5;
-      for(let x=0;x<W;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-      for(let y=0;y<H;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-      orbs.forEach(o => {
-        const cx=(o.bx+Math.sin(t*o.freq+o.ph)*o.rx)*W;
-        const cy=(o.by+Math.cos(t*o.freq*0.7+o.ph+1)*o.ry)*H;
-        const r=o.r*(1+Math.sin(t*o.freq*1.3+o.ph)*0.1);
-        const g=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
-        g.addColorStop(0,`rgba(${o.col},${o.a})`);
-        g.addColorStop(0.3,`rgba(${o.col},${(o.a*0.5).toFixed(2)})`);
-        g.addColorStop(1,`rgba(${o.col},0)`);
-        ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-      });
-      t+=0.008; raf=requestAnimationFrame(draw);
-    };
-    draw();
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize',resize); };
-  }, []);
-  return <canvas ref={ref} style={{position:'fixed',inset:0,width:'100%',height:'100%',zIndex:0,pointerEvents:'none'}} />;
-}
-
-function CampagneCard({ c, isInscrit, idx }) {
-  const tc = TYPE_CFG[c.type?.toLowerCase()] || TYPE_CFG.email;
   return (
-    <div
-      className="camp-card"
-      onClick={() => { window.location.href = `/campagnes/${c.id}`; }}
-      style={{ background:T.card, border:`1px solid ${isInscrit ? 'rgba(16,185,129,0.25)' : T.border}`, borderRadius:18, overflow:'hidden', boxShadow: isInscrit ? '0 4px 24px rgba(16,185,129,0.08)' : '0 4px 24px rgba(0,0,0,0.25)', animation:`fadeUp 0.5s ease ${idx*60}ms both` }}
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1, duration: 0.5 }}
+      className="formation-card"
     >
-      <div style={{ height:175, overflow:'hidden', position:'relative' }}>
-        <img src={CAMP_IMGS[c.type?.toLowerCase()]||CAMP_IMGS.email} alt={c.title}
-          style={{ width:'100%',height:'100%',objectFit:'cover',transition:'transform 0.4s' }}
-          onMouseEnter={e=>e.target.style.transform='scale(1.05)'}
-          onMouseLeave={e=>e.target.style.transform='scale(1)'}
-          onError={e=>{e.target.src=`https://picsum.photos/seed/${c.id}/600/400`;}}
-        />
-        <div style={{ position:'absolute',inset:0,background:'linear-gradient(to bottom,transparent 40%,rgba(20,28,46,0.95))' }} />
-        <div style={{ position:'absolute',top:12,left:12,background:'rgba(0,0,0,0.55)',backdropFilter:'blur(8px)',border:`1px solid ${tc.color}40`,borderRadius:20,padding:'4px 10px',display:'flex',alignItems:'center',gap:5 }}>
-          <span style={{ fontSize:12 }}>{tc.icon}</span>
-          <span style={{ fontSize:11,fontWeight:700,color:tc.color }}>{tc.label}</span>
+      <div className="card-image-wrapper">
+        <img src={formation.image} alt={formation.title} className="card-image" />
+        <div className="card-status-badge" style={{ 
+          background: isTerminee ? COLORS.green : COLORS.primary,
+          color: COLORS.white
+        }}>
+          {isTerminee ? <CheckCircle size={14} /> : <Clock size={14} />}
+          {isTerminee ? 'Terminée' : 'En cours'}
         </div>
-        {isInscrit && (
-          <div style={{ position:'absolute',top:12,right:12,background:'rgba(16,185,129,0.18)',backdropFilter:'blur(8px)',border:'1px solid rgba(16,185,129,0.4)',borderRadius:20,padding:'4px 10px' }}>
-            <span style={{ fontSize:11,fontWeight:700,color:T.green }}>✓ Inscrit</span>
+
+        {formation.certificat && (
+          <div className="card-cert-badge">
+            <Award size={14} /> Certificat
           </div>
         )}
       </div>
-      <div style={{ padding:'16px 18px 18px' }}>
-        {c.client?.name && <p style={{ fontSize:11,color:'rgba(255,255,255,0.3)',marginBottom:5 }}>🏢 {c.client.name}</p>}
-        <h3 style={{ fontSize:15,fontWeight:700,marginBottom:7,lineHeight:1.35,color:T.white }}>{c.title}</h3>
-        {c.description && <p style={{ fontSize:12.5,color:T.gray,lineHeight:1.55,marginBottom:13,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden' }}>{c.description}</p>}
-        <button
-          onClick={e => { e.stopPropagation(); window.location.href = `/campagnes/${c.id}`; }}
-          style={{
-            width:'100%', padding:'11px', borderRadius:10,
-            background: isInscrit ? 'rgba(16,185,129,0.12)' : T.gold,
-            color: isInscrit ? T.green : '#111',
-            fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:T.font,
-            border: isInscrit ? '1px solid rgba(16,185,129,0.3)' : 'none',
-          }}>
-          {isInscrit ? '✓ Voir ma participation →' : 'Voir & S\'inscrire →'}
-        </button>
+
+      <div className="card-content">
+        <div className="card-header">
+          <div className="card-icon" style={{ background: formation.couleur + '15', color: formation.couleur }}>
+            <IconComponent size={20} />
+          </div>
+          <div className="card-tags">
+            {formation.tags.map((tag, i) => (
+              <span key={i} className="tag">{tag}</span>
+            ))}
+          </div>
+        </div>
+
+        <h3 className="card-title">{formation.title}</h3>
+        <p className="card-description">{formation.description.substring(0, 100)}...</p>
+
+        <div className="card-meta">
+          <span><Calendar size={14} /> {formation.date}</span>
+          <span><Clock size={14} /> {formation.dureeHeures}h</span>
+          <span><MapPin size={14} /> Sfax</span>
+        </div>
+
+        <div className="card-formateur">
+          <Users size={12} /> Formateur : {formation.formateur}
+        </div>
+
+        <div className="progress-section">
+          <div className="progress-header">
+            <span>Progression</span>
+            <span>{formation.progress}%</span>
+          </div>
+          <div className="progress-bar-bg">
+            <motion.div 
+              className="progress-bar-fill"
+              initial={{ width: 0 }}
+              animate={{ width: formation.progress + '%' }}
+              transition={{ duration: 1, delay: 0.5 }}
+              style={{ background: isTerminee ? COLORS.green : COLORS.primary }}
+            />
+          </div>
+        </div>
+
+        <div className="card-footer">
+          <div className="card-prix">{formation.prix} TND</div>
+          <div className="card-actions">
+            {formation.certificat && (
+              <button className="btn-certificat" onClick={() => alert('Téléchargement du certificat...')}>
+                <Download size={14} /> Certificat
+              </button>
+            )}
+            <button 
+              className="btn-voir"
+              onClick={() => navigate('/campagnes/' + formation.id)}
+            >
+              Voir <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
-}
+};
 
 export default function MesCampagnes() {
   const navigate = useNavigate();
-  const [campagnes, setCampagnes] = useState([]);
-  const [inscriptions, setInscriptions] = useState([]);
+  const [formations, setFormations] = useState(CAMPAGNES_DATA);
+  const [filtre, setFiltre] = useState('tous');
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
-  const [search, setSearch] = useState('');
-  const [tab, setTab] = useState('all'); // 'all' | 'inscrit'
-  const [showMenu, setShowMenu] = useState(false);
 
   const token = localStorage.getItem('token');
   if (!token) {
-    sessionStorage.setItem('redirect_after_login', '/campagnes');
     return <Navigate to="/login" replace />;
   }
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    if (payload.role === 'ADMIN' || payload.role === 'RESPONSABLE_MARKETING') {
-      return <Navigate to="/gestion-campagnes" replace />;
-    }
-  } catch(e) {}
 
   const userName = localStorage.getItem('userName') || 'Client';
-  const userEmail = localStorage.getItem('userEmail') || '';
-  const initiale = userName[0].toUpperCase();
+  const initiale = userName[0]?.toUpperCase() || 'C';
 
   useEffect(() => {
-    Promise.all([
-      api.get('/api/campagnes/public'),
-      api.get('/api/campagnes/mes-inscriptions').catch(() => ({ data: [] })),
-    ])
-      .then(([c, i]) => {
-        setCampagnes(Array.isArray(c.data) ? c.data : []);
-        setInscriptions(Array.isArray(i.data) ? i.data.map(x => x.campagneId || x.id) : []);
-      })
-      .catch(() => setCampagnes([]))
-      .finally(() => setLoading(false));
+    setTimeout(() => setLoading(false), 800);
   }, []);
 
-  const logout = () => { localStorage.clear(); navigate('/login'); };
+  const formationsFiltrees = filtre === 'tous' 
+    ? formations 
+    : formations.filter(f => f.status === filtre);
 
-  const filtered = campagnes.filter(c => {
-    const matchType   = filter === 'all' || c.type?.toLowerCase() === filter;
-    const matchSearch = c.title?.toLowerCase().includes(search.toLowerCase());
-    const matchTab    = tab === 'all' || (tab === 'inscrit' && inscriptions.includes(c.id));
-    return matchType && matchSearch && matchTab;
-  });
-
-  const inscritCount = inscriptions.length;
-  const disponibleCount = campagnes.length - inscriptions.filter(id => campagnes.find(c=>c.id===id)).length;
+  const terminees = formations.filter(f => f.status === 'terminee').length;
+  const enCours = formations.filter(f => f.status === 'en_cours').length;
+  const certificats = formations.filter(f => f.certificat).length;
+  const totalHeures = formations.reduce((sum, f) => sum + f.dureeHeures, 0);
 
   return (
-    <div style={{ fontFamily: T.font, minHeight: '100vh', color: T.white, overflowX: 'hidden' }}>
+    <div className="page-wrapper">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-        * { box-sizing:border-box; margin:0; padding:0; }
-        ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:rgba(245,166,35,0.4);border-radius:2px}
-        .camp-card { transition: all 0.3s cubic-bezier(0.34,1.2,0.64,1); cursor:pointer; }
-        .camp-card:hover { transform: translateY(-6px) scale(1.01); box-shadow: 0 28px 56px rgba(0,0,0,0.5) !important; border-color: rgba(245,166,35,0.3) !important; }
-        .filter-btn { transition: all 0.2s; border:none; cursor:pointer; font-family:inherit; }
-        .filter-btn:hover { opacity:0.85; }
-        .tab-btn { transition: all 0.2s; cursor:pointer; font-family:inherit; border:none; }
-        .search-input:focus { outline:none; border-color:rgba(245,166,35,0.5) !important; box-shadow:0 0 0 3px rgba(245,166,35,0.1); }
-        .menu-btn:hover { background: rgba(255,255,255,0.1) !important; }
-        @keyframes fadeUp  { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
-        @keyframes fadeIn  { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
-        @keyframes spin    { to{transform:rotate(360deg)} }
-        @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        .page-wrapper {
+          display: flex;
+          min-height: 100vh;
+          background: ${COLORS.grayLight};
+          font-family: 'Inter', 'DM Sans', sans-serif;
+        }
+
+        .main-content-area {
+          flex: 1;
+          margin-left: 0px;
+          min-height: 100vh;
+          background: ${COLORS.grayLight};
+        }
+
+        @media (max-width: 1024px) {
+          .main-content-area { margin-left: 0; }
+        }
+
+        /* CONTENEUR CENTRÉ avec marges égales */
+        .page-container {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 40px 60px;
+        }
+
+        @media (max-width: 1200px) {
+          .page-container { padding: 40px 40px; }
+        }
+        @media (max-width: 768px) {
+          .page-container { padding: 20px 20px; }
+        }
+
+        /* HEADER */
+        .page-header-section {
+          text-align: center;
+          margin-bottom: 50px;
+        }
+
+        .back-nav {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: ${COLORS.gray};
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 0.95rem;
+          margin-bottom: 20px;
+          transition: color 0.3s;
+        }
+        .back-nav:hover { color: ${COLORS.dark}; }
+
+        .welcome-section {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 16px;
+          margin-bottom: 30px;
+        }
+        .welcome-avatar {
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, ${COLORS.primary}, #7c3aed);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 22px;
+          font-weight: 800;
+          color: #fff;
+        }
+        .welcome-text h1 {
+          font-size: 2.5rem;
+          font-weight: 800;
+          color: ${COLORS.dark};
+          margin-bottom: 12px;
+        }
+        .welcome-text p {
+          font-size: 1.1rem;
+          color: ${COLORS.gray};
+          max-width: 600px;
+          margin: 0 auto;
+        }
+        .welcome-text .highlight {
+          color: ${COLORS.primary};
+        }
+
+        /* STATS */
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 20px;
+          margin-bottom: 50px;
+          max-width: 900px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        .stat-card {
+          background: ${COLORS.white};
+          border: 1px solid ${COLORS.grayBorder};
+          border-radius: 16px;
+          padding: 24px;
+          text-align: center;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+          transition: all 0.3s;
+        }
+        .stat-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        .stat-icon-box {
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 12px;
+        }
+        .stat-number {
+          font-size: 2rem;
+          font-weight: 800;
+          color: ${COLORS.primary};
+          margin-bottom: 4px;
+        }
+        .stat-label {
+          font-size: 0.9rem;
+          color: ${COLORS.gray};
+        }
+
+        /* FILTRES */
+        .filters-section {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin-bottom: 30px;
+          flex-wrap: wrap;
+          gap: 16px;
+        }
+        .filter-tabs {
+          display: flex;
+          gap: 10px;
+          justify-content: center;
+        }
+        .filter-tab {
+          padding: 10px 20px;
+          border-radius: 25px;
+          border: 2px solid ${COLORS.grayBorder};
+          background: ${COLORS.white};
+          color: ${COLORS.gray};
+          font-weight: 600;
+          font-size: 0.9rem;
+          cursor: pointer;
+          transition: all 0.3s;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .filter-tab:hover {
+          border-color: ${COLORS.primary};
+          color: ${COLORS.primary};
+        }
+        .filter-tab.active {
+          background: ${COLORS.primary};
+          color: ${COLORS.white};
+          border-color: ${COLORS.primary};
+        }
+        .filter-badge {
+          background: ${COLORS.grayLight};
+          color: ${COLORS.dark};
+          padding: 2px 8px;
+          border-radius: 10px;
+          font-size: 0.75rem;
+          font-weight: 700;
+        }
+        .filter-tab.active .filter-badge {
+          background: rgba(0,0,0,0.15);
+          color: ${COLORS.white};
+        }
+
+        .total-heures {
+          font-size: 0.9rem;
+          color: ${COLORS.gray};
+          text-align: center;
+          margin-bottom: 30px;
+        }
+
+        /* GRID - centrée avec max-width */
+        .formations-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+          gap: 30px;
+          justify-content: center;
+          max-width: 1000px;
+          margin: 0 auto;
+        }
+
+        /* CARD */
+        .formation-card {
+          background: ${COLORS.white};
+          border: 1px solid ${COLORS.grayBorder};
+          border-radius: 20px;
+          overflow: hidden;
+          transition: all 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .formation-card:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+          border-color: ${COLORS.primary}40;
+        }
+
+        .card-image-wrapper {
+          position: relative;
+          height: 200px;
+          overflow: hidden;
+        }
+        .card-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.5s;
+        }
+        .formation-card:hover .card-image {
+          transform: scale(1.05);
+        }
+
+        .card-status-badge {
+          position: absolute;
+          top: 12px;
+          left: 12px;
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-size: 0.85rem;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .card-cert-badge {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          background: ${COLORS.green};
+          color: ${COLORS.white};
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-size: 0.85rem;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .card-content {
+          padding: 24px;
+        }
+
+        .card-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 14px;
+        }
+        .card-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .card-tags {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+        .card-tags .tag {
+          background: ${COLORS.primaryLight};
+          color: ${COLORS.primaryDark};
+          padding: 4px 12px;
+          border-radius: 15px;
+          font-size: 0.8rem;
+          font-weight: 500;
+        }
+
+        .card-title {
+          font-size: 1.2rem;
+          font-weight: 700;
+          color: ${COLORS.dark};
+          margin-bottom: 10px;
+          line-height: 1.3;
+        }
+        .card-description {
+          font-size: 0.9rem;
+          color: ${COLORS.gray};
+          line-height: 1.5;
+          margin-bottom: 16px;
+        }
+
+        .card-meta {
+          display: flex;
+          gap: 16px;
+          margin-bottom: 12px;
+          flex-wrap: wrap;
+        }
+        .card-meta span {
+          font-size: 0.85rem;
+          color: ${COLORS.gray};
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .card-formateur {
+          font-size: 0.85rem;
+          color: ${COLORS.gray};
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 16px;
+        }
+
+        /* PROGRESS */
+        .progress-section {
+          margin-bottom: 18px;
+        }
+        .progress-header {
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.85rem;
+          color: ${COLORS.gray};
+          margin-bottom: 8px;
+        }
+        .progress-bar-bg {
+          height: 8px;
+          background: ${COLORS.grayLight};
+          border-radius: 4px;
+          overflow: hidden;
+        }
+        .progress-bar-fill {
+          height: 100%;
+          border-radius: 4px;
+          transition: width 1s ease;
+        }
+
+        /* FOOTER CARD */
+        .card-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-top: 16px;
+          border-top: 1px solid ${COLORS.grayBorder};
+        }
+        .card-prix {
+          font-size: 1.4rem;
+          font-weight: 800;
+          color: ${COLORS.primary};
+        }
+        .card-actions {
+          display: flex;
+          gap: 10px;
+        }
+        .btn-certificat {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 10px 16px;
+          background: ${COLORS.green}15;
+          border: 1px solid ${COLORS.green}40;
+          color: ${COLORS.green};
+          border-radius: 10px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+        .btn-certificat:hover {
+          background: ${COLORS.green}25;
+        }
+        .btn-voir {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 10px 20px;
+          background: ${COLORS.primary};
+          color: ${COLORS.white};
+          border: none;
+          border-radius: 12px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+        .btn-voir:hover {
+          background: ${COLORS.primaryDark};
+          transform: scale(1.05);
+        }
+
+        /* EMPTY STATE */
+        .empty-state {
+          text-align: center;
+          padding: 80px 20px;
+        }
+        .empty-state-icon {
+          font-size: 64px;
+          margin-bottom: 20px;
+          opacity: 0.3;
+        }
+        .empty-state h3 {
+          font-size: 1.3rem;
+          color: ${COLORS.dark};
+          margin-bottom: 8px;
+        }
+        .empty-state p {
+          color: ${COLORS.gray};
+          margin-bottom: 24px;
+        }
+        .btn-explorer {
+          padding: 12px 28px;
+          background: ${COLORS.primary};
+          color: ${COLORS.white};
+          border: none;
+          border-radius: 12px;
+          font-weight: 700;
+          font-size: 0.95rem;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+        .btn-explorer:hover {
+          background: ${COLORS.primaryDark};
+          transform: translateY(-2px);
+        }
+
+        /* LOADING */
+        .loading-state {
+          text-align: center;
+          padding: 100px 20px;
+        }
+        .spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid ${COLORS.grayBorder};
+          border-top: 3px solid ${COLORS.primary};
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin: 0 auto 16px;
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+          .formations-grid {
+            grid-template-columns: 1fr;
+          }
+          .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .page-container {
+            padding: 20px 20px;
+          }
+          .welcome-text h1 {
+            font-size: 1.8rem;
+          }
+        }
       `}</style>
 
-      <AuroraBg />
+      <SidebarClient />
 
-      <div style={{ position:'relative', zIndex:1 }}>
-
-        {/* ── NAVBAR ── */}
-        <nav style={{ height:64, padding:'0 5%', display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(8,12,20,0.8)', backdropFilter:'blur(24px)', borderBottom:`1px solid ${T.border}`, position:'sticky', top:0, zIndex:100 }}>
-          {/* Logo */}
-          <div onClick={() => navigate('/')} style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
-            <div style={{ width:34,height:34,background:T.gold,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontWeight:900,color:'#111' }}>D</div>
-            <span style={{ fontSize:18,fontWeight:800 }}>Digi<span style={{color:T.gold}}>Pip</span></span>
-          </div>
-
-          {/* User menu */}
-          <div style={{ position:'relative' }}>
-            <button className="menu-btn" onClick={() => setShowMenu(m=>!m)} style={{
-              display:'flex', alignItems:'center', gap:10,
-              background:'rgba(255,255,255,0.05)', border:`1px solid ${T.border}`,
-              borderRadius:12, padding:'7px 14px 7px 8px', cursor:'pointer',
-              transition:'background 0.2s',
-            }}>
-              <div style={{ width:32,height:32,borderRadius:'50%',background:`linear-gradient(135deg,${T.gold},${T.purple})`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800,color:'#fff', flexShrink:0 }}>
-                {initiale}
-              </div>
-              <div style={{ textAlign:'left' }}>
-                <div style={{ fontSize:13,fontWeight:600,color:T.white,lineHeight:1.2 }}>{userName}</div>
-                <div style={{ fontSize:11,color:T.gray }}>Client</div>
-              </div>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginLeft:4, opacity:0.4 }}>
-                <path d="M2 4l4 4 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
+      <div className="main-content-area">
+        <div className="page-container">
+          {/* HEADER CENTRÉ */}
+          <div className="page-header-section">
+            <button className="back-nav" onClick={() => navigate('/campagnes')}>
+              <ArrowLeft size={18} /> Retour aux formations
             </button>
 
-            {showMenu && (
-              <div style={{ position:'absolute', right:0, top:'calc(100% + 8px)', background:'#1a2035', border:`1px solid ${T.border}`, borderRadius:14, padding:'8px', minWidth:220, boxShadow:'0 20px 50px rgba(0,0,0,0.5)', animation:'fadeIn 0.2s ease' }}>
-                {/* Info user */}
-                <div style={{ padding:'10px 12px 12px', borderBottom:`1px solid ${T.border}`, marginBottom:6 }}>
-                  <div style={{ fontSize:13,fontWeight:700,color:T.white,marginBottom:2 }}>{userName}</div>
-                  <div style={{ fontSize:11,color:T.gray }}>{userEmail}</div>
-                </div>
-                {/* Stats rapides */}
-                <div style={{ padding:'8px 12px', display:'flex', gap:8, marginBottom:6 }}>
-                  <div style={{ flex:1, background:'rgba(16,185,129,0.08)', border:'1px solid rgba(16,185,129,0.2)', borderRadius:8, padding:'8px', textAlign:'center' }}>
-                    <div style={{ fontSize:18,fontWeight:800,color:T.green }}>{inscritCount}</div>
-                    <div style={{ fontSize:10,color:T.gray }}>Inscriptions</div>
-                  </div>
-                  <div style={{ flex:1, background:'rgba(245,166,35,0.08)', border:'1px solid rgba(245,166,35,0.2)', borderRadius:8, padding:'8px', textAlign:'center' }}>
-                    <div style={{ fontSize:18,fontWeight:800,color:T.gold }}>{campagnes.length}</div>
-                    <div style={{ fontSize:10,color:T.gray }}>Campagnes</div>
-                  </div>
-                </div>
-                {/* Actions */}
-                <button onClick={() => { setShowMenu(false); navigate('/profile'); }} style={{ width:'100%', padding:'10px 12px', background:'none', border:'none', borderRadius:8, color:'rgba(255,255,255,0.7)', fontSize:13, fontWeight:500, cursor:'pointer', textAlign:'left', display:'flex', alignItems:'center', gap:8, transition:'background 0.15s' }}
-                  onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.06)'}
-                  onMouseLeave={e=>e.currentTarget.style.background='none'}>
-                  👤 Mon profil
-                </button>
-                <button onClick={logout} style={{ width:'100%', padding:'10px 12px', background:'none', border:'none', borderRadius:8, color:'#ef4444', fontSize:13, fontWeight:600, cursor:'pointer', textAlign:'left', display:'flex', alignItems:'center', gap:8, transition:'background 0.15s' }}
-                  onMouseEnter={e=>e.currentTarget.style.background='rgba(239,68,68,0.08)'}
-                  onMouseLeave={e=>e.currentTarget.style.background='none'}>
-                  🚪 Déconnexion
-                </button>
-              </div>
-            )}
-          </div>
-        </nav>
-
-        {/* ── HERO HEADER ── */}
-        <div style={{ padding:'44px 5% 0', maxWidth:1200, margin:'0 auto' }}>
-          <div style={{ animation:'fadeUp 0.5s ease' }}>
-            {/* Greeting */}
-            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:24 }}>
-              <div style={{ width:48,height:48,borderRadius:'50%',background:`linear-gradient(135deg,${T.gold},${T.purple})`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,fontWeight:800,color:'#fff',flexShrink:0 }}>
-                {initiale}
-              </div>
-              <div>
-                <div style={{ fontSize:13,color:T.gray,marginBottom:2 }}>Bienvenue,</div>
-                <div style={{ fontSize:20,fontWeight:800,color:T.white }}>{userName} 👋</div>
+            <div className="welcome-section">
+              <div className="welcome-avatar">{initiale}</div>
+              <div className="welcome-text">
+                <h1>Mes <span className="highlight">Inscriptions</span></h1>
+                <p>Suivez votre progression et accédez à vos formations</p>
               </div>
             </div>
+          </div>
 
-            {/* Stats cards */}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:36 }}>
-              {[
-                { icon:'📢', label:'Campagnes disponibles', value: campagnes.length, color: T.blue,   dim:'rgba(79,142,247,0.08)',  border:'rgba(79,142,247,0.2)'  },
-                { icon:'✅', label:'Mes inscriptions',       value: inscritCount,     color: T.green,  dim:'rgba(16,185,129,0.08)',  border:'rgba(16,185,129,0.2)'  },
-                { icon:'🔔', label:'À découvrir',            value: Math.max(0, campagnes.length - inscritCount), color: T.gold, dim:'rgba(245,166,35,0.08)', border:'rgba(245,166,35,0.2)' },
-              ].map((s,i) => (
-                <div key={i} style={{ background:s.dim, border:`1px solid ${s.border}`, borderRadius:14, padding:'16px 18px', display:'flex', alignItems:'center', gap:12, animation:`fadeUp 0.5s ease ${i*80}ms both` }}>
-                  <span style={{ fontSize:22 }}>{s.icon}</span>
-                  <div>
-                    <div style={{ fontSize:24,fontWeight:800,color:s.color,lineHeight:1 }}>{loading ? '—' : s.value}</div>
-                    <div style={{ fontSize:11,color:T.gray,marginTop:3 }}>{s.label}</div>
-                  </div>
-                </div>
-              ))}
+          {/* STATS CENTRÉES */}
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon-box" style={{ background: COLORS.primaryLight, color: COLORS.primary }}>
+                <BookOpen size={22} />
+              </div>
+              <div className="stat-number">{formations.length}</div>
+              <div className="stat-label">Formations</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon-box" style={{ background: COLORS.green + '15', color: COLORS.green }}>
+                <CheckCircle size={22} />
+              </div>
+              <div className="stat-number">{terminees}</div>
+              <div className="stat-label">Terminées</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon-box" style={{ background: COLORS.blue + '15', color: COLORS.blue }}>
+                <Clock size={22} />
+              </div>
+              <div className="stat-number">{enCours}</div>
+              <div className="stat-label">En cours</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon-box" style={{ background: '#EC4899' + '15', color: '#EC4899' }}>
+                <Award size={22} />
+              </div>
+              <div className="stat-number">{certificats}</div>
+              <div className="stat-label">Certificats</div>
             </div>
           </div>
-        </div>
 
-        {/* ── TABS ── */}
-        <div style={{ padding:'0 5%', maxWidth:1200, margin:'0 auto', marginBottom:20 }}>
-          <div style={{ display:'flex', gap:4, background:'rgba(255,255,255,0.03)', border:`1px solid ${T.border}`, borderRadius:14, padding:4, width:'fit-content' }}>
-            {[
-              ['all',     '🌐 Toutes les campagnes', campagnes.length],
-              ['inscrit', '✅ Mes inscriptions',      inscritCount    ],
-            ].map(([val, label, count]) => (
-              <button key={val} className="tab-btn" onClick={() => setTab(val)} style={{
-                padding:'9px 18px', borderRadius:10, fontSize:13, fontWeight:600,
-                background: tab===val ? T.gold : 'none',
-                color: tab===val ? '#111' : T.gray,
-                display:'flex', alignItems:'center', gap:7,
-              }}>
-                {label}
-                <span style={{ fontSize:11,fontWeight:800, background: tab===val ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.08)', borderRadius:20, padding:'2px 8px', color: tab===val ? '#111' : T.gray }}>
-                  {count}
-                </span>
+          {/* FILTRES CENTRÉS */}
+          <div className="filters-section">
+            <div className="filter-tabs">
+              <button 
+                className={"filter-tab " + (filtre === 'tous' ? 'active' : '')}
+                onClick={() => setFiltre('tous')}
+              >
+                Toutes <span className="filter-badge">{formations.length}</span>
               </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ── FILTRES + SEARCH ── */}
-        <div style={{ padding:'0 5% 24px', maxWidth:1200, margin:'0 auto', display:'flex', gap:10, flexWrap:'wrap', alignItems:'center' }}>
-          <div style={{ display:'flex', gap:5 }}>
-            {[['all','Tous'], ['email','Email'], ['sms','SMS'], ['push','Push']].map(([val,label]) => (
-              <button key={val} className="filter-btn" onClick={() => setFilter(val)} style={{
-                padding:'7px 16px', borderRadius:20, fontSize:12.5, fontWeight:600,
-                background: filter===val ? T.gold : 'rgba(255,255,255,0.04)',
-                color: filter===val ? '#111' : T.gray,
-                border: `1px solid ${filter===val ? T.gold : T.border}`,
-              }}>{label}</button>
-            ))}
-          </div>
-          <input className="search-input" value={search} onChange={e=>setSearch(e.target.value)}
-            placeholder="🔍  Rechercher une campagne..."
-            style={{ flex:1, minWidth:200, padding:'9px 16px', background:'rgba(255,255,255,0.04)', border:`1px solid ${T.border}`, borderRadius:20, fontSize:13, color:T.white, fontFamily:T.font, transition:'border .2s, box-shadow .2s' }}
-          />
-          <span style={{ fontSize:12,color:T.gray }}>{filtered.length} résultat{filtered.length!==1?'s':''}</span>
-        </div>
-
-        {/* ── GRID ── */}
-        <div style={{ padding:'0 5% 80px', maxWidth:1200, margin:'0 auto' }}>
-          {loading ? (
-            <div style={{ textAlign:'center', padding:80 }}>
-              <div style={{ width:36,height:36,border:`3px solid rgba(245,166,35,0.15)`,borderTop:`3px solid ${T.gold}`,borderRadius:'50%',animation:'spin 1s linear infinite',margin:'0 auto 16px' }} />
-              <p style={{ color:T.gray }}>Chargement des campagnes...</p>
+              <button 
+                className={"filter-tab " + (filtre === 'en_cours' ? 'active' : '')}
+                onClick={() => setFiltre('en_cours')}
+              >
+                <Clock size={14} /> En cours <span className="filter-badge">{enCours}</span>
+              </button>
+              <button 
+                className={"filter-tab " + (filtre === 'terminee' ? 'active' : '')}
+                onClick={() => setFiltre('terminee')}
+              >
+                <CheckCircle size={14} /> Terminées <span className="filter-badge">{terminees}</span>
+              </button>
             </div>
-          ) : filtered.length === 0 ? (
-            <div style={{ textAlign:'center', padding:'60px 0' }}>
-              <div style={{ fontSize:48,marginBottom:16,opacity:0.2 }}>
-                {tab === 'inscrit' ? '✅' : '📢'}
-              </div>
-              <p style={{ color:T.gray, fontSize:15 }}>
-                {tab === 'inscrit'
-                  ? "Vous n'êtes inscrit à aucune campagne pour l'instant."
-                  : 'Aucune campagne trouvée.'}
-              </p>
-              {tab === 'inscrit' && (
-                <button onClick={() => setTab('all')} style={{ marginTop:16, padding:'10px 24px', background:T.gold, color:'#111', border:'none', borderRadius:10, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:T.font }}>
-                  Découvrir les campagnes →
-                </button>
-              )}
+          </div>
+
+          <div className="total-heures">
+            {totalHeures} heures de formation au total
+          </div>
+
+          {/* GRID */}
+          {loading ? (
+            <div className="loading-state">
+              <div className="spinner" />
+              <p style={{ color: COLORS.gray }}>Chargement de vos formations...</p>
+            </div>
+          ) : formationsFiltrees.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">📚</div>
+              <h3>Aucune formation</h3>
+              <p>Vous n'avez pas encore d'inscription active.</p>
+              <button className="btn-explorer" onClick={() => navigate('/campagnes')}>
+                Découvrir les formations →
+              </button>
             </div>
           ) : (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:20 }}>
-              {filtered.map((c, idx) => (
-                <CampagneCard key={c.id} c={c} isInscrit={inscriptions.includes(c.id)} idx={idx} />
-              ))}
+            <div className="formations-grid">
+              <AnimatePresence>
+                {formationsFiltrees.map((formation, index) => (
+                  <FormationCard key={formation.id} formation={formation} index={index} />
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </div>
-
       </div>
     </div>
   );

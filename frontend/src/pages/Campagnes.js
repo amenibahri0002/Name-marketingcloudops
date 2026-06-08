@@ -1,666 +1,332 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Calendar, Clock, MapPin, Users, Tag, ArrowRight, 
+  Sparkles, Zap, Palette, TrendingUp, BookOpen, Award
+} from 'lucide-react';
 
-/* ─── Palette DigiLab ────────────────────────────────────────── */
-const C = {
-  bg:         '#f4f6fb',
-  card:       '#ffffff',
-  navy:       '#16120d',
-  gold:       '#f5a623',
-  goldDark:   '#c8831a',
-  goldDim:    'rgba(245,166,35,0.10)',
-  goldBorder: 'rgba(245,166,35,0.28)',
-  border:     '#e5e9f2',
-  text:       '#1a1f3c',
-  textMuted:  '#6b7280',
-  blue:       '#3b82f6',
-  blueDim:    'rgba(59,130,246,0.10)',
-  green:      '#22c55e',
-  greenDim:   'rgba(34,197,94,0.10)',
-  red:        '#ef4444',
-  redDim:     'rgba(239,68,68,0.10)',
-  purple:     '#8b5cf6',
-  purpleDim:  'rgba(139,92,246,0.10)',
-  shadow:     '0 1px 8px rgba(10,14,42,0.07)',
-  shadowMd:   '0 4px 20px rgba(10,14,42,0.12)',
+// ============================================================
+// COULEURS OFFICIELLES DIGILAB SOLUTIONS
+// ============================================================
+const COLORS = {
+  primary: '#F5A623',      // Orange/Or DigiLab (boutons, accents)
+  primaryLight: '#FFF8E7', // Orange très clair (fonds)
+  primaryDark: '#D48A1A',  // Orange foncé (hover)
+  dark: '#0A0A0A',         // Noir profond (textes)
+  darkLight: '#1A1A2E',    // Noir bleuté (header/footer)
+  gray: '#666666',         // Gris moyen (textes secondaires)
+  grayLight: '#F5F5F5',    // Gris très clair (fonds sections)
+  grayBorder: '#E5E5E5',   // Gris bordures
+  white: '#FFFFFF',        // Blanc
+  green: '#10B981',        // Vert (succès, disponible)
+  red: '#EF4444',          // Rouge (urgence, remise)
+  blue: '#3B82F6',         // Bleu (info)
 };
 
-/* ─── Status & Type configs ───────────────────────────────────── */
-const STATUS = {
-  sent:      { label: 'Envoyée',   color: '#16a34a', bg: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.25)'   },
-  scheduled: { label: 'Planifiée', color: '#2563eb', bg: 'rgba(59,130,246,0.10)',  border: 'rgba(59,130,246,0.25)'  },
-  draft:     { label: 'Brouillon', color: '#d97706', bg: 'rgba(245,166,35,0.10)',  border: 'rgba(245,166,35,0.25)'  },
+// ============================================================
+// IMAGES DES FORMATIONS
+// ============================================================
+const CAMP_IMGS = {
+  formation_digital_ai: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800',
+  formation_web: 'https://images.unsplash.com/photo-1461749280684-dccae630cd35?w=800',
+  formation_design: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800',
+  formation_marketing: 'https://images.unsplash.com/photo-1533750349088-cd871a92f312?w=800',
 };
 
-const TYPE = {
-  email: { label: 'Email', icon: '📧', color: '#3b82f6', bg: 'rgba(59,130,246,0.10)',  border: 'rgba(59,130,246,0.25)'  },
-  sms:   { label: 'SMS',   icon: '📱', color: '#22c55e', bg: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.25)'   },
-  push:  { label: 'Push',  icon: '🔔', color: '#f5a623', bg: 'rgba(245,166,35,0.10)',  border: 'rgba(245,166,35,0.25)'  },
-};
-
-/* ─── CSS ────────────────────────────────────────────────────── */
-const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-  @keyframes fadeUp {
-    from { opacity:0; transform:translateY(12px); }
-    to   { opacity:1; transform:translateY(0); }
+// ============================================================
+// DONNÉES DES 4 FORMATIONS
+// ============================================================
+const CAMPAGNES_DATA = [
+  {
+    id: 'formation-digital-marketing-ai',
+    title: 'Formation Digital Marketing & AI',
+    type: 'formation',
+    description: "Maitrisez l'avenir du Marketing Digital avec l'Intelligence Artificielle ! Formation exclusive alliant les strategies de Marketing Digital incontournables et la puissance de l'IA. 100% Pratique : Apprenez en manipulant les meilleurs outils (Meta, ChatGPT, WordPress, et plus encore). Formation Certifiante : Valorisez votre profil professionnel avec un certificat reconnu.",
+    duration: 'Variable selon programme',
+    format: '100% Pratique · Certifiante',
+    tools: ['Meta', 'ChatGPT', 'WordPress', 'Google Analytics', 'Canva'],
+    contact: '+216 22 044 105',
+    location: 'Route Bouzayen Km 5, Immeuble El Bachir, 4eme etage App 4-2 – Sfax, Tunisia',
+    image: CAMP_IMGS.formation_digital_ai,
+    date: '30 Avril 2026',
+    tags: ['IA', 'Marketing Digital', 'Certifiant'],
+    status: 'active',
+    prix: 850,
+    prixOriginal: 1200,
+    placesTotal: 25,
+    placesRestantes: 12,
+    dureeHeures: 40,
+    icon: Sparkles,
+    couleur: COLORS.primary,
+    prerequis: 'Aucun prerequis',
+    inclus: ['Certificat reconnu', 'Support de cours', 'Acces aux outils', 'Coaching post-formation']
+  },
+  {
+    id: 'formation-web-wordpress',
+    title: 'Formation Web WordPress',
+    type: 'formation',
+    description: "Maitrisez le web en seulement 18 heures ! Creez votre site internet performant sans coder. Notre formation WordPress est concue pour vous donner toutes les cles en main afin de lancer votre projet professionnel. Duree : 18 heures de formation intensive.",
+    duration: '18 heures',
+    format: 'Intensive · Pratique',
+    tools: ['WordPress', 'Elementor', 'SEO', 'WooCommerce'],
+    contact: '+216 22 044 105',
+    location: 'Route Bouzayen Km 5, Immeuble El Bachir, 4eme etage App 4-2 – Sfax, Tunisia',
+    image: CAMP_IMGS.formation_web,
+    date: '8 Avril 2026',
+    tags: ['WordPress', 'Web', 'Site Pro'],
+    status: 'active',
+    prix: 450,
+    prixOriginal: 650,
+    placesTotal: 20,
+    placesRestantes: 8,
+    dureeHeures: 18,
+    icon: Zap,
+    couleur: COLORS.primary,
+    prerequis: 'Ordinateur portable',
+    inclus: ['Certificat', 'Theme premium', 'Hebergement 1 an', 'Support technique']
+  },
+  {
+    id: 'formation-design-graphique-marketing',
+    title: 'Formation Design Graphique & Marketing Digital',
+    type: 'formation',
+    description: "Boostez votre carriere avec DigiLab Solutions ! Formation intensive de 60H en Design Graphique et Marketing Digital. 100% Pratique : Apprenez en faisant. Flexibilite : Des cours programmes le week-end pour s'adapter a votre emploi du temps.",
+    duration: '60 heures',
+    format: 'Week-end · 100% Pratique',
+    tools: ['Photoshop', 'Illustrator', 'Canva', 'Meta Ads', 'Google Ads'],
+    contact: '+216 22 044 105',
+    location: 'Route Bouzayen Km 5, Immeuble El Bachir, 4eme etage App 4-2 – Sfax, Tunisia',
+    image: CAMP_IMGS.formation_design,
+    date: '3 Avril 2026',
+    tags: ['Design', 'Graphisme', 'Marketing'],
+    status: 'active',
+    prix: 1200,
+    prixOriginal: 1500,
+    placesTotal: 15,
+    placesRestantes: 5,
+    dureeHeures: 60,
+    icon: Palette,
+    couleur: COLORS.primary,
+    prerequis: 'Ordinateur avec 8GB RAM',
+    inclus: ['Certificat', 'Pack Adobe', 'Portfolio guide', 'Stage pratique']
+  },
+  {
+    id: 'formation-marketing-digital-40h',
+    title: 'Formation Marketing Digital 40H',
+    type: 'formation',
+    description: "40H pour devenir un pro du Digital ! Maitrisez l'ecosysteme du web. Formation complete et pratique pour dompter les algorithmes et booster votre visibilite. Meta, Google Ads, SEO, WordPress et bien plus encore.",
+    duration: '40 heures',
+    format: 'Intensive · Complet',
+    tools: ['Meta', 'Google Ads', 'SEO', 'WordPress', 'Growth Hacking'],
+    contact: '+216 22 044 105',
+    location: 'Route Bouzayen Km 5, Immeuble El Bachir, 4eme etage App 4-2 – Sfax, Tunisia',
+    image: CAMP_IMGS.formation_marketing,
+    date: '27 Mars 2026',
+    tags: ['SEO', 'Google Ads', 'Growth Hacking'],
+    status: 'active',
+    prix: 950,
+    prixOriginal: 1200,
+    placesTotal: 30,
+    placesRestantes: 18,
+    dureeHeures: 40,
+    icon: TrendingUp,
+    couleur: COLORS.primary,
+    prerequis: 'Connaissances de base en informatique',
+    inclus: ['Certificat', 'Outils premium', 'Communaute privee', 'Mentorat 3 mois']
   }
-  @keyframes shimmer {
-    0%   { background-position:-500px 0; }
-    100% { background-position: 500px 0; }
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+];
 
-  .dl-stat { transition:all 0.22s ease!important; cursor:default; }
-  .dl-stat:hover { transform:translateY(-3px)!important; box-shadow:0 8px 28px rgba(245,166,35,0.15)!important; border-color:#f5a623!important; }
-  .dl-row { transition:background .15s; }
-  .dl-row:hover td { background:#fafbff!important; }
-  .dl-btn { transition:all 0.15s!important; }
-  .dl-btn:hover { opacity:0.85!important; transform:translateY(-1px)!important; }
-  .dl-btn-add { transition:all 0.2s!important; }
-  .dl-btn-add:hover { transform:translateY(-2px)!important; box-shadow:0 8px 22px rgba(245,166,35,0.35)!important; }
-  .dl-input:focus { border-color:#f5a623!important; box-shadow:0 0 0 3px rgba(245,166,35,0.12)!important; outline:none; }
-  .dl-input-blue:focus { border-color:#3b82f6!important; box-shadow:0 0 0 3px rgba(59,130,246,0.12)!important; outline:none; }
-  .dl-filter { transition:all 0.18s!important; cursor:pointer; }
-  .dl-channel-pick { transition:all 0.18s!important; cursor:pointer; }
-  .dl-channel-pick:hover { transform:translateY(-2px)!important; }
-`;
-
-/* ─── Helpers ─────────────────────────────────────────────────── */
-function Skel({ w = '100%', h = 16, r = 6 }) {
-  return (
-    <div style={{
-      width: w, height: h, borderRadius: r,
-      background: 'linear-gradient(90deg,#eef1f8 25%,#f6f8fd 50%,#eef1f8 75%)',
-      backgroundSize: '500px 100%',
-      animation: 'shimmer 1.4s infinite linear',
-      flexShrink: 0,
-    }} />
-  );
-}
-
-function Pill({ label, color, bg, border }) {
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center',
-      padding: '4px 11px', borderRadius: 20,
-      fontSize: 11.5, fontWeight: 700, color,
-      background: bg, border: `1px solid ${border}`,
-      whiteSpace: 'nowrap',
-    }}>{label}</span>
-  );
-}
-
-function FieldLabel({ children }) {
-  return (
-    <label style={{
-      fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
-      color: C.text, display: 'block', marginBottom: 7,
-    }}>{children}</label>
-  );
-}
-
-const inputBase = {
-  width: '100%', padding: '11px 14px',
-  border: `1.5px solid ${C.border}`, borderRadius: 10,
-  fontSize: 13.5, color: C.text, background: '#fafbfd',
-  boxSizing: 'border-box', fontFamily: 'inherit',
-  transition: 'border-color .2s, box-shadow .2s',
-};
-
-/* ─── Modal créer campagne ────────────────────────────────────── */
-function CreateModal({ clients, onClose, onSave }) {
-  const [form, setForm]     = useState({ title: '', type: 'email', clientId: '', dateScheduled: '' });
-  const [saving, setSaving] = useState(false);
-
-  const handle = async e => {
-    e.preventDefault();
-    if (!form.title.trim() || !form.clientId) return;
-    setSaving(true);
-    try { await api.post('/api/campagnes', form); onSave(); onClose(); }
-    catch (err) { alert('Erreur: ' + err.message); }
-    finally { setSaving(false); }
-  };
+// ============================================================
+// COMPOSANT CARTE DE FORMATION
+// ============================================================
+const FormationCard = ({ campagne, index }) => {
+  const navigate = useNavigate();
+  const IconComponent = campagne.icon;
+  const remise = Math.round(((campagne.prixOriginal - campagne.prix) / campagne.prixOriginal) * 100);
+  const placesPourcentage = (campagne.placesRestantes / campagne.placesTotal) * 100;
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 1000,
-      background: 'rgba(10,14,42,0.6)', backdropFilter: 'blur(5px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-      animation: 'fadeUp 0.2s ease',
-    }} onClick={e => e.target === e.currentTarget && onClose()}>
-
-      <div style={{
-        background: C.card, borderRadius: 20,
-        width: '100%', maxWidth: 540,
-        border: `1.5px solid ${C.border}`,
-        boxShadow: '0 28px 70px rgba(10,14,42,0.22)', overflow: 'hidden',
-      }}>
-        {/* modal header navy */}
-        <div style={{
-          background: C.navy, padding: '20px 26px',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.15, duration: 0.6 }}
+      className="formation-card"
+    >
+      <div className="card-image-wrapper">
+        <img src={campagne.image} alt={campagne.title} className="card-image" />
+        <div className="card-badge-remise">-{remise}%</div>
+        <div className="card-badge-places" style={{ 
+          background: placesPourcentage < 30 ? COLORS.red : placesPourcentage < 60 ? '#F59E0B' : COLORS.green 
         }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <div style={{ width: 18, height: 2, background: C.gold, borderRadius: 2 }} />
-              <span style={{ fontSize: 10, fontWeight: 800, color: C.gold, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-                Nouvelle Campagne
-              </span>
-            </div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>Créer une campagne</div>
-          </div>
-          <button onClick={onClose} style={{
-            width: 32, height: 32, borderRadius: 9,
-            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
-            color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 16,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>✕</button>
-        </div>
-
-        <form onSubmit={handle} style={{ padding: '24px 26px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-          {/* Titre + type */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <div>
-              <FieldLabel>Titre de la campagne *</FieldLabel>
-              <input className="dl-input" value={form.title}
-                onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-                placeholder="Ex: Promo Ramadan 2026"
-                required style={inputBase} />
-            </div>
-            <div>
-              <FieldLabel>Client *</FieldLabel>
-              <select className="dl-input" value={form.clientId}
-                onChange={e => setForm(p => ({ ...p, clientId: e.target.value }))}
-                required style={inputBase}>
-                <option value="">— Sélectionner —</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {/* Canal selector */}
-          <div>
-            <FieldLabel>Canal d'envoi</FieldLabel>
-            <div style={{ display: 'flex', gap: 10 }}>
-              {Object.entries(TYPE).map(([key, t]) => (
-                <div key={key} className="dl-channel-pick"
-                  onClick={() => setForm(p => ({ ...p, type: key }))}
-                  style={{
-                    flex: 1, padding: '12px 8px', borderRadius: 12, textAlign: 'center',
-                    border: `1.5px solid ${form.type === key ? t.color : C.border}`,
-                    background: form.type === key ? t.bg : '#fafbfd',
-                    boxShadow: form.type === key ? `0 4px 14px ${t.bg}` : 'none',
-                  }}>
-                  <div style={{ fontSize: 20, marginBottom: 5 }}>{t.icon}</div>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: form.type === key ? t.color : C.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Date planifiée */}
-          <div>
-            <FieldLabel>Date planifiée <span style={{ color: C.textMuted, fontWeight: 500 }}>(optionnelle)</span></FieldLabel>
-            <input className="dl-input" type="datetime-local"
-              value={form.dateScheduled}
-              onChange={e => setForm(p => ({ ...p, dateScheduled: e.target.value }))}
-              style={inputBase} />
-          </div>
-
-          {/* Actions */}
-          <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-            <button type="button" onClick={onClose} style={{
-              flex: 1, padding: '11px', borderRadius: 10,
-              border: `1.5px solid ${C.border}`, background: 'none',
-              fontSize: 13, fontWeight: 700, color: C.textMuted, cursor: 'pointer',
-            }}>Annuler</button>
-            <button className="dl-btn-add" type="submit" disabled={saving} style={{
-              flex: 2, padding: '11px', borderRadius: 10,
-              border: 'none', background: C.gold,
-              fontSize: 13, fontWeight: 800, color: C.navy,
-              cursor: saving ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 14px rgba(245,166,35,0.25)',
-              opacity: saving ? 0.7 : 1,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}>
-              {saving
-                ? <><span style={{ width: 13, height: 13, border: `2px solid ${C.navy}`, borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} /> Création...</>
-                : '✓ Créer la campagne'
-              }
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Modal planifier ─────────────────────────────────────────── */
-function ScheduleModal({ modal, onClose, onConfirm, loading }) {
-  const [date, setDate] = useState(modal.date || '');
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 1000,
-      background: 'rgba(10,14,42,0.6)', backdropFilter: 'blur(5px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-      animation: 'fadeUp 0.2s ease',
-    }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{
-        background: C.card, borderRadius: 20,
-        width: '100%', maxWidth: 420,
-        border: `1.5px solid ${C.border}`,
-        boxShadow: '0 28px 70px rgba(10,14,42,0.22)', overflow: 'hidden',
-      }}>
-        <div style={{
-          background: C.navy, padding: '20px 26px',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <div style={{ width: 18, height: 2, background: C.blue, borderRadius: 2 }} />
-              <span style={{ fontSize: 10, fontWeight: 800, color: C.blue, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Planification</span>
-            </div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>Choisir une date d'envoi</div>
-          </div>
-          <button onClick={onClose} style={{
-            width: 32, height: 32, borderRadius: 9,
-            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
-            color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 16,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>✕</button>
-        </div>
-
-        <div style={{ padding: '24px 26px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div>
-            <FieldLabel>Date et heure d'envoi</FieldLabel>
-            <input className="dl-input-blue" type="datetime-local"
-              value={date} min={new Date().toISOString().slice(0, 16)}
-              onChange={e => setDate(e.target.value)}
-              style={inputBase} />
-          </div>
-
-          {date && (
-            <div style={{
-              background: C.blueDim, border: '1px solid rgba(59,130,246,0.22)',
-              borderRadius: 10, padding: '12px 16px',
-            }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.blue, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>Envoi prévu le</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>
-                {new Date(date).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' })}
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={onClose} style={{
-              flex: 1, padding: '11px', borderRadius: 10,
-              border: `1.5px solid ${C.border}`, background: 'none',
-              fontSize: 13, fontWeight: 700, color: C.textMuted, cursor: 'pointer',
-            }}>Annuler</button>
-            <button className="dl-btn" onClick={() => onConfirm(modal.id, date)}
-              disabled={!date || loading}
-              style={{
-                flex: 2, padding: '11px', borderRadius: 10,
-                border: 'none', background: C.blue,
-                fontSize: 13, fontWeight: 800, color: '#fff',
-                cursor: (!date || loading) ? 'not-allowed' : 'pointer',
-                opacity: (!date || loading) ? 0.6 : 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              }}>
-              {loading
-                ? <><span style={{ width: 13, height: 13, border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} /> Planification...</>
-                : '🕐 Confirmer'}
-            </button>
-          </div>
+          <Users size={12} />
+          {campagne.placesRestantes} places restantes
         </div>
       </div>
-    </div>
-  );
-}
 
-/* ═══════════════════════════════════════════════════════════════ */
+      <div className="card-content">
+        <div className="card-header">
+          <div className="card-icon" style={{ background: COLORS.primaryLight, color: COLORS.primary }}>
+            <IconComponent size={22} />
+          </div>
+          <div className="card-meta">
+            <span className="card-type">Formation</span>
+            <span className="card-date"><Calendar size={12} /> {campagne.date}</span>
+          </div>
+        </div>
+
+        <h3 className="card-title">{campagne.title}</h3>
+        <p className="card-description">{campagne.description.substring(0, 140)}...</p>
+
+        <div className="card-details">
+          <span className="detail-item"><Clock size={14} /> {campagne.dureeHeures}h</span>
+          <span className="detail-item"><MapPin size={14} /> Sfax</span>
+          <span className="detail-item"><BookOpen size={14} /> {campagne.format}</span>
+        </div>
+
+        <div className="card-tools">
+          {campagne.tools.slice(0, 4).map((tool, i) => (
+            <span key={i} className="tool-tag">{tool}</span>
+          ))}
+          {campagne.tools.length > 4 && <span className="tool-tag">+{campagne.tools.length - 4}</span>}
+        </div>
+
+        <div className="card-tags">
+          {campagne.tags.map((tag, i) => (
+            <span key={i} className="tag-item"><Tag size={10} /> {tag}</span>
+          ))}
+        </div>
+
+        <div className="card-footer">
+          <div className="card-prix">
+            <span className="prix-original">{campagne.prixOriginal} TND</span>
+            <span className="prix-actuel" style={{ color: COLORS.primary }}>{campagne.prix} TND</span>
+          </div>
+          <button 
+            className="btn-inscrire"
+            onClick={() => navigate('/campagnes/' + campagne.id)}
+          >
+            Voir & S'inscrire <ArrowRight size={16} />
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// ============================================================
+// PAGE PRINCIPALE : CAMPAGNES
+// ============================================================
 export default function Campagnes() {
-  const [campagnes,     setCampagnes]     = useState([]);
-  const [clients,       setClients]       = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [showCreate,    setShowCreate]    = useState(false);
-  const [scheduleModal, setScheduleModal] = useState(null);
-  const [actionId,      setActionId]      = useState(null);
-  const [filter,        setFilter]        = useState('all');
-  const [typeFilter,    setTypeFilter]    = useState('all');
-  const [search,        setSearch]        = useState('');
+  const [filtre, setFiltre] = useState('tous');
 
-  const fetchAll = async () => {
-    try {
-      const [c, cl] = await Promise.all([api.get('/api/campagnes'), api.get('/api/clients')]);
-      setCampagnes(Array.isArray(c.data) ? c.data : c.data.data || []);
-      setClients(Array.isArray(cl.data) ? cl.data : []);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchAll(); }, []);
-
-  const handleSend = async id => {
-    if (!window.confirm('Envoyer cette campagne maintenant ?')) return;
-    setActionId(id);
-    try { await api.post(`/api/campagnes/send/${id}`); fetchAll(); }
-    catch { alert("Erreur lors de l'envoi"); }
-    finally { setActionId(null); }
-  };
-
-  const handleSchedule = async (id, date) => {
-    if (!date) return;
-    setActionId(id);
-    try {
-      await api.patch(`/api/campagnes/${id}`, { status: 'scheduled', dateScheduled: date });
-      setScheduleModal(null); fetchAll();
-    } catch { alert('Erreur planification'); }
-    finally { setActionId(null); }
-  };
-
-  const handleToDraft = async id => {
-    if (!window.confirm('Remettre en brouillon ?')) return;
-    setActionId(id);
-    try { await api.patch(`/api/campagnes/${id}`, { status: 'draft', dateScheduled: null }); fetchAll(); }
-    catch { alert('Erreur'); }
-    finally { setActionId(null); }
-  };
-
-  const handleDelete = async id => {
-    if (!window.confirm('Supprimer cette campagne ?')) return;
-    try { await api.delete(`/api/campagnes/${id}`); fetchAll(); }
-    catch { alert('Erreur suppression'); }
-  };
-
-  const filtered = campagnes.filter(c => {
-    const mS = filter === 'all'     || c.status === filter;
-    const mT = typeFilter === 'all' || c.type?.toLowerCase() === typeFilter;
-    const mQ = !search || c.title?.toLowerCase().includes(search.toLowerCase()) || c.client?.name?.toLowerCase().includes(search.toLowerCase());
-    return mS && mT && mQ;
-  });
-
-  const stats = [
-    { label: 'Total',      value: campagnes.length,                               color: C.gold,   dim: C.goldDim,  icon: '📢' },
-    { label: 'Envoyées',   value: campagnes.filter(c => c.status === 'sent').length,      color: C.green,  dim: C.greenDim, icon: '✅' },
-    { label: 'Planifiées', value: campagnes.filter(c => c.status === 'scheduled').length, color: C.blue,   dim: C.blueDim,  icon: '🕐' },
-    { label: 'Brouillons', value: campagnes.filter(c => c.status === 'draft').length,     color: C.purple, dim: C.purpleDim,icon: '📝' },
-  ];
-
-  const STATUS_FILTERS = [['all','Tous'], ['sent','Envoyées'], ['scheduled','Planifiées'], ['draft','Brouillons']];
-  const TYPE_FILTERS   = [['all','Tous types'], ['email','📧 Email'], ['sms','📱 SMS'], ['push','🔔 Push']];
-  const TABLE_HEADS    = ['TITRE & CLIENT', 'CANAL', 'STATUT', 'DATE', 'ACTIONS'];
-
-  const formatDate = d => d
-    ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
-    : '—';
+  const formationsFiltrees = filtre === 'tous' 
+    ? CAMPAGNES_DATA 
+    : CAMPAGNES_DATA.filter(c => c.tags.some(t => t.toLowerCase().includes(filtre.toLowerCase())));
 
   return (
-    <div style={{
-      background: C.bg, minHeight: '100vh',
-      padding: '28px 32px',
-      fontFamily: "'Plus Jakarta Sans','Segoe UI',sans-serif",
-      color: C.text, boxSizing: 'border-box',
-    }}>
-      <style>{css}</style>
+    <div className="campagnes-page">
+      <style>{`
+        .campagnes-page { min-height: 100vh; background: ${COLORS.grayLight}; padding: 40px 20px; }
+        .campagnes-container { max-width: 1280px; margin: 0 auto; }
 
-      {showCreate && <CreateModal clients={clients} onClose={() => setShowCreate(false)} onSave={fetchAll} />}
-      {scheduleModal && <ScheduleModal modal={scheduleModal} onClose={() => setScheduleModal(null)} onConfirm={handleSchedule} loading={actionId === scheduleModal.id} />}
+        .page-header { text-align: center; margin-bottom: 50px; }
+        .page-header h1 { font-size: 2.5rem; font-weight: 800; color: ${COLORS.dark}; margin-bottom: 12px; }
+        .page-header p { font-size: 1.1rem; color: ${COLORS.gray}; max-width: 600px; margin: 0 auto; }
+        .page-header .highlight { color: ${COLORS.primary}; }
 
-      {/* ── Header ── */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-        marginBottom: 26, animation: 'fadeUp 0.35s ease both',
-      }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <div style={{ width: 4, height: 22, background: `linear-gradient(180deg,${C.gold},${C.goldDark})`, borderRadius: 2 }} />
-            <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Campagnes</h1>
+        .filtres { display: flex; gap: 10px; justify-content: center; margin-bottom: 40px; flex-wrap: wrap; }
+        .filtre-btn { padding: 8px 20px; border-radius: 25px; border: 2px solid ${COLORS.grayBorder}; background: ${COLORS.white}; color: ${COLORS.gray}; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .filtre-btn:hover, .filtre-btn.actif { background: ${COLORS.primary}; color: ${COLORS.white}; border-color: ${COLORS.primary}; }
+
+        .formations-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 30px; }
+
+        .formation-card { background: ${COLORS.white}; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(10,10,10,0.08); transition: all 0.3s; border: 1px solid ${COLORS.grayBorder}; }
+        .formation-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(10,10,10,0.15); border-color: ${COLORS.primary}; }
+
+        .card-image-wrapper { position: relative; height: 200px; overflow: hidden; }
+        .card-image { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+        .formation-card:hover .card-image { transform: scale(1.05); }
+        .card-badge-remise { position: absolute; top: 12px; left: 12px; background: ${COLORS.red}; color: ${COLORS.white}; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
+        .card-badge-places { position: absolute; top: 12px; right: 12px; color: ${COLORS.white}; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.8rem; display: flex; align-items: center; gap: 4px; }
+
+        .card-content { padding: 24px; }
+        .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+        .card-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+        .card-meta { display: flex; flex-direction: column; }
+        .card-type { font-size: 0.75rem; color: ${COLORS.gray}; text-transform: uppercase; letter-spacing: 1px; }
+        .card-date { font-size: 0.85rem; color: ${COLORS.gray}; display: flex; align-items: center; gap: 4px; }
+
+        .card-title { font-size: 1.2rem; font-weight: 700; color: ${COLORS.dark}; margin-bottom: 10px; line-height: 1.3; }
+        .card-description { font-size: 0.9rem; color: ${COLORS.gray}; line-height: 1.5; margin-bottom: 16px; }
+
+        .card-details { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+        .detail-item { font-size: 0.8rem; color: ${COLORS.gray}; display: flex; align-items: center; gap: 4px; }
+
+        .card-tools { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+        .tool-tag { background: ${COLORS.grayLight}; color: ${COLORS.dark}; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 500; border: 1px solid ${COLORS.grayBorder}; }
+
+        .card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+        .tag-item { background: ${COLORS.primaryLight}; color: ${COLORS.primaryDark}; padding: 3px 10px; border-radius: 15px; font-size: 0.75rem; display: flex; align-items: center; gap: 3px; font-weight: 500; }
+
+        .card-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px solid ${COLORS.grayBorder}; }
+        .card-prix { display: flex; flex-direction: column; }
+        .prix-original { font-size: 0.85rem; color: ${COLORS.gray}; text-decoration: line-through; }
+        .prix-actuel { font-size: 1.4rem; font-weight: 800; }
+        .btn-inscrire { color: ${COLORS.white}; background: ${COLORS.primary}; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.3s; font-size: 0.9rem; }
+        .btn-inscrire:hover { background: ${COLORS.primaryDark}; transform: scale(1.05); }
+
+        .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 40px; }
+        .stat-card { background: ${COLORS.white}; padding: 24px; border-radius: 16px; text-align: center; box-shadow: 0 2px 10px rgba(10,10,10,0.05); border: 1px solid ${COLORS.grayBorder}; }
+        .stat-number { font-size: 2rem; font-weight: 800; color: ${COLORS.primary}; }
+        .stat-label { font-size: 0.9rem; color: ${COLORS.gray}; margin-top: 4px; }
+
+        @media (max-width: 768px) {
+          .formations-grid { grid-template-columns: 1fr; }
+          .page-header h1 { font-size: 1.8rem; }
+          .stats-bar { grid-template-columns: repeat(2, 1fr); }
+        }
+      `}</style>
+
+      <div className="campagnes-container">
+        <div className="page-header">
+          <h1>Nos <span className="highlight">Formations</span> Professionnelles</h1>
+          <p>Devenez un expert du digital avec nos formations pratiques et certifiantes. 100% orientees metier.</p>
+        </div>
+
+        <div className="stats-bar">
+          <div className="stat-card">
+            <div className="stat-number">4</div>
+            <div className="stat-label">Formations</div>
           </div>
-          <p style={{ color: C.textMuted, fontSize: 13, margin: 0, marginLeft: 14 }}>
-            Gérez et suivez toutes vos campagnes marketing
-          </p>
-        </div>
-        <button className="dl-btn-add" onClick={() => setShowCreate(true)} style={{
-          background: C.gold, color: C.navy,
-          border: 'none', padding: '11px 22px',
-          borderRadius: 11, fontSize: 13, fontWeight: 800,
-          cursor: 'pointer', boxShadow: '0 4px 14px rgba(245,166,35,0.25)',
-          display: 'flex', alignItems: 'center', gap: 7,
-        }}>
-          <span style={{ fontSize: 16 }}>+</span> Nouvelle campagne
-        </button>
-      </div>
-
-      {/* ── Stats ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
-        {stats.map((s, i) => (
-          <div key={i} className="dl-stat" style={{
-            background: C.card, borderRadius: 14,
-            border: `1.5px solid ${C.border}`,
-            padding: '18px 20px', boxShadow: C.shadow,
-            display: 'flex', alignItems: 'center', gap: 14,
-            animation: `fadeUp 0.4s ease ${i * 70}ms both`,
-          }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: '50%',
-              background: s.dim, fontSize: 20,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}>{s.icon}</div>
-            <div>
-              <div style={{ fontSize: 30, fontWeight: 800, color: s.color, lineHeight: 1, letterSpacing: '-0.03em' }}>
-                {loading ? <Skel w={36} h={26} /> : s.value}
-              </div>
-              <div style={{ fontSize: 11.5, color: C.textMuted, marginTop: 4, fontWeight: 500 }}>{s.label}</div>
-            </div>
+          <div className="stat-card">
+            <div className="stat-number">158H</div>
+            <div className="stat-label">Heures de cours</div>
           </div>
-        ))}
-      </div>
-
-      {/* ── Toolbar (search + filtres) ── */}
-      <div style={{
-        background: C.card, borderRadius: 14,
-        border: `1.5px solid ${C.border}`,
-        padding: '14px 18px', marginBottom: 18,
-        display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap',
-        boxShadow: C.shadow,
-        animation: 'fadeUp 0.4s ease 300ms both',
-      }}>
-        {/* Search */}
-        <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-          <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: C.textMuted }}>🔍</span>
-          <input className="dl-input"
-            value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher une campagne..."
-            style={{ ...inputBase, paddingLeft: 40, padding: '9px 14px 9px 40px' }}
-          />
+          <div className="stat-card">
+            <div className="stat-number">90+</div>
+            <div className="stat-label">Places disponibles</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-number">100%</div>
+            <div className="stat-label">Pratique</div>
+          </div>
         </div>
 
-        {/* Séparateur */}
-        <div style={{ width: 1, height: 28, background: C.border }} />
-
-        {/* Status filters */}
-        <div style={{ display: 'flex', gap: 5 }}>
-          {STATUS_FILTERS.map(([val, lbl]) => (
-            <button key={val} className="dl-filter"
-              onClick={() => setFilter(val)}
-              style={{
-                padding: '6px 13px', borderRadius: 20, fontSize: 11.5, fontWeight: 700,
-                border: `1.5px solid ${filter === val ? C.gold : C.border}`,
-                background: filter === val ? C.goldDim : 'none',
-                color: filter === val ? C.goldDark : C.textMuted,
-              }}>{lbl}</button>
-          ))}
+        <div className="filtres">
+          <button className={"filtre-btn " + (filtre === 'tous' ? 'actif' : '')} onClick={() => setFiltre('tous')}>Tous</button>
+          <button className={"filtre-btn " + (filtre === 'IA' ? 'actif' : '')} onClick={() => setFiltre('IA')}>IA</button>
+          <button className={"filtre-btn " + (filtre === 'Marketing' ? 'actif' : '')} onClick={() => setFiltre('Marketing')}>Marketing</button>
+          <button className={"filtre-btn " + (filtre === 'Design' ? 'actif' : '')} onClick={() => setFiltre('Design')}>Design</button>
+          <button className={"filtre-btn " + (filtre === 'Web' ? 'actif' : '')} onClick={() => setFiltre('Web')}>Web</button>
         </div>
 
-        {/* Séparateur */}
-        <div style={{ width: 1, height: 28, background: C.border }} />
-
-        {/* Type filters */}
-        <div style={{ display: 'flex', gap: 5 }}>
-          {TYPE_FILTERS.map(([val, lbl]) => (
-            <button key={val} className="dl-filter"
-              onClick={() => setTypeFilter(val)}
-              style={{
-                padding: '6px 13px', borderRadius: 20, fontSize: 11.5, fontWeight: 700,
-                border: `1.5px solid ${typeFilter === val ? C.blue : C.border}`,
-                background: typeFilter === val ? C.blueDim : 'none',
-                color: typeFilter === val ? C.blue : C.textMuted,
-              }}>{lbl}</button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Table ── */}
-      <div style={{
-        background: C.card, borderRadius: 16,
-        border: `1.5px solid ${C.border}`,
-        boxShadow: C.shadow, overflow: 'hidden',
-        animation: 'fadeUp 0.4s ease 360ms both',
-      }}>
-        {/* table top bar */}
-        <div style={{
-          padding: '13px 20px', borderBottom: `1.5px solid ${C.border}`,
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          background: '#fafbfd',
-        }}>
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>
-            Liste des campagnes
-            <span style={{
-              marginLeft: 10, fontSize: 11, fontWeight: 700,
-              background: C.goldDim, color: C.goldDark,
-              border: `1px solid ${C.goldBorder}`,
-              padding: '2px 9px', borderRadius: 20,
-            }}>{filtered.length} / {campagnes.length}</span>
-          </span>
-          {search && <span style={{ fontSize: 12, color: C.textMuted }}>Résultats pour "<b>{search}</b>"</span>}
-        </div>
-
-        {loading ? (
-          <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {[...Array(4)].map((_, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ flex: 2 }}><Skel h={14} w="70%" /><div style={{ marginTop: 6 }}><Skel h={11} w="40%" r={4} /></div></div>
-                <Skel w={70} h={24} r={20} />
-                <Skel w={80} h={24} r={20} />
-                <Skel w={90} h={14} r={4} />
-                <div style={{ display: 'flex', gap: 6 }}><Skel w={70} h={30} r={8} /><Skel w={70} h={30} r={8} /></div>
-              </div>
+        <div className="formations-grid">
+          <AnimatePresence>
+            {formationsFiltrees.map((campagne, index) => (
+              <FormationCard key={campagne.id} campagne={campagne} index={index} />
             ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ padding: '60px 20px', textAlign: 'center', color: C.textMuted }}>
-            <div style={{ fontSize: 44, opacity: 0.2, marginBottom: 14 }}>📢</div>
-            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Aucune campagne trouvée</div>
-            <div style={{ fontSize: 13 }}>
-              {search ? `Aucun résultat pour "${search}"` : 'Créez votre première campagne'}
-            </div>
-          </div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: C.navy }}>
-                {TABLE_HEADS.map(h => (
-                  <th key={h} style={{
-                    padding: '13px 18px', textAlign: 'left',
-                    fontSize: 10, fontWeight: 800,
-                    letterSpacing: '0.16em', color: C.gold,
-                  }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c, idx) => {
-                const sc  = STATUS[c.status] || STATUS.draft;
-                const tc  = TYPE[c.type?.toLowerCase()];
-                const isL = actionId === c.id;
-                return (
-                  <tr key={c.id} className="dl-row" style={{
-                    borderBottom: `1px solid ${C.border}`,
-                    animation: `fadeUp 0.3s ease ${idx * 40}ms both`,
-                  }}>
-                    {/* Titre & Client */}
-                    <td style={{ padding: '14px 18px' }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text, marginBottom: 3 }}>{c.title}</div>
-                      <div style={{ fontSize: 12, color: C.textMuted, fontWeight: 500 }}>{c.client?.name || '—'}</div>
-                    </td>
-
-                    {/* Canal */}
-                    <td style={{ padding: '14px 18px' }}>
-                      {tc
-                        ? <Pill label={`${tc.icon} ${tc.label}`} color={tc.color} bg={tc.bg} border={tc.border} />
-                        : <span style={{ fontSize: 12, color: C.textMuted }}>{c.type}</span>
-                      }
-                    </td>
-
-                    {/* Statut */}
-                    <td style={{ padding: '14px 18px' }}>
-                      <Pill label={sc.label} color={sc.color} bg={sc.bg} border={sc.border} />
-                    </td>
-
-                    {/* Date */}
-                    <td style={{ padding: '14px 18px', fontSize: 12.5, color: C.textMuted, fontWeight: 500 }}>
-                      {formatDate(c.dateScheduled)}
-                    </td>
-
-                    {/* Actions */}
-                    <td style={{ padding: '14px 18px' }}>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {/* Envoyer */}
-                        {c.status !== 'sent' && (
-                          <button className="dl-btn" onClick={() => handleSend(c.id)} disabled={isL}
-                            style={{
-                              background: C.goldDim, color: C.goldDark,
-                              border: `1px solid ${C.goldBorder}`,
-                              padding: '6px 13px', borderRadius: 8,
-                              fontSize: 11.5, fontWeight: 700, cursor: isL ? 'not-allowed' : 'pointer',
-                              opacity: isL ? 0.5 : 1,
-                            }}>▶ Envoyer</button>
-                        )}
-
-                        {/* Planifier */}
-                        {c.status === 'draft' && (
-                          <button className="dl-btn"
-                            onClick={() => setScheduleModal({ id: c.id, date: c.dateScheduled || '' })}
-                            disabled={isL}
-                            style={{
-                              background: C.blueDim, color: C.blue,
-                              border: '1px solid rgba(59,130,246,0.25)',
-                              padding: '6px 13px', borderRadius: 8,
-                              fontSize: 11.5, fontWeight: 700, cursor: isL ? 'not-allowed' : 'pointer',
-                              opacity: isL ? 0.5 : 1,
-                            }}>🕐 Planifier</button>
-                        )}
-
-                        {/* Brouillon */}
-                        {(c.status === 'scheduled' || c.status === 'sent') && (
-                          <button className="dl-btn" onClick={() => handleToDraft(c.id)} disabled={isL}
-                            style={{
-                              background: C.purpleDim, color: C.purple,
-                              border: '1px solid rgba(139,92,246,0.25)',
-                              padding: '6px 13px', borderRadius: 8,
-                              fontSize: 11.5, fontWeight: 700, cursor: isL ? 'not-allowed' : 'pointer',
-                              opacity: isL ? 0.5 : 1,
-                            }}>📝 Brouillon</button>
-                        )}
-
-                        {/* Supprimer */}
-                        <button className="dl-btn" onClick={() => handleDelete(c.id)}
-                          style={{
-                            background: C.redDim, color: C.red,
-                            border: '1px solid rgba(239,68,68,0.22)',
-                            padding: '6px 13px', borderRadius: 8,
-                            fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-                          }}>🗑</button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );

@@ -28,13 +28,10 @@ const marketingMenu = [
     { path: '/campagnes', icon: '📢', label: 'Campagnes' },
   ]},
   { section: 'Gestion', items: [
-    { path: '/contacts', icon: '👥', label: 'Contacts' },
     { path: '/clients', icon: '🏢', label: 'Clients' },
     { path: '/segments', icon: '🎯', label: 'Segments' },
   ]},
-  { section: 'Cloud', items: [
-    { path: '/cloud-operations', icon: '☁️', label: 'Cloud Operations' },
-  ]},
+  
   { section: 'Analytics', items: [
     { path: '/reporting', icon: '📈', label: 'Suivi' },
     { path: '/analytics', icon: '📉', label: 'KPIs' },
@@ -50,14 +47,13 @@ const clientMenu = [
     { path: '/reporting', icon: '📊', label: 'Résultats' },
   ]},
   { section: 'Mes Données', items: [
-    { path: '/contacts', icon: '👥', label: 'Mes Contacts' },
     { path: '/segments', icon: '🎯', label: 'Mes Segments' },
   ]},
   { section: 'Cloud', items: [
     { path: '/cloud-operations', icon: '☁️', label: 'Mon Cloud' },
   ]},
   { section: 'Compte', items: [
-    { path: '/profile', icon: '👤', label: 'Mon Profil' },
+    { path: '/profil', icon: '👤', label: 'Mon Profil' },
   ]},
 ];
 
