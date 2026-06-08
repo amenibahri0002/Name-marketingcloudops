@@ -10,8 +10,9 @@ import PublicCampagnes from './pages/PublicCampagnes';
 import Campagnes from './pages/Campagnes';
 import CampagneDetail from './pages/CampagneDetail';
 import SidebarClient from './components/SidebarClient';
+import GestionCampagnesMarketing from './pages/GestionCampagnesMarketing'; 
 
-// 🔑 AJOUTÉ : Pages client manquantes
+// Pages client manquantes
 import MesCampagnesPage from './pages/MesCampagnes';
 import CertificatsPage from './pages/Certificats';
 import PaiementsPage from './pages/Paiements';
@@ -44,33 +45,35 @@ const Loading = () => (
   </div>
 );
 
-// 🔑 AJOUTÉ : Redirection selon le rôle
-const RoleRedirect = () => {
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : {};
-  const role = (user.role || '').toUpperCase();
-
-  if (role === 'ADMIN') return <Navigate to="/admin/dashboard" replace />;
-  return <Navigate to="/dashboard" replace />;
-};
-
-// 🔑 AJOUTÉ : Vérifier si l'utilisateur est connecté ET client
-const isClientConnected = () => {
+// Get user role from token or localStorage
+const getUserRole = () => {
   const token = localStorage.getItem('token');
-  if (!token) return false;
+  const userStr = localStorage.getItem('user');
 
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const role = (payload.role || '').toUpperCase();
-    return role === 'CLIENT';
-  } catch (e) {
-    return false;
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return (payload.role || '').toUpperCase();
+    } catch (e) {}
   }
+
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      return (user.role || '').toUpperCase();
+    } catch (e) {}
+  }
+
+  return '';
 };
 
-// 🔑 AJOUTÉ : Wrapper avec SidebarClient pour les pages publiques aussi
+// Check if user is CLIENT
+const isClient = () => getUserRole() === 'CLIENT';
+
+// ClientLayout: ONLY renders SidebarClient for CLIENT role
 function ClientLayout({ children }) {
-  const showSidebar = isClientConnected();
+  const userRole = getUserRole();
+  const showSidebar = userRole === 'CLIENT';
 
   if (!showSidebar) {
     return <>{children}</>;
@@ -83,6 +86,24 @@ function ClientLayout({ children }) {
         {children}
       </div>
     </div>
+  );
+}
+
+// MarketingLayout: Uses existing Layout (admin sidebar), NEVER shows SidebarClient
+function MarketingLayout({ children }) {
+  return (
+    <Layout>
+      {children}
+    </Layout>
+  );
+}
+
+// AdminLayout: Uses existing Layout
+function AdminLayout({ children }) {
+  return (
+    <Layout>
+      {children}
+    </Layout>
   );
 }
 
@@ -108,18 +129,25 @@ function App() {
           {/* ── DASHBOARD ADMIN ── */}
           <Route path="/admin/dashboard" element={
             <PrivateRoute roles={['ADMIN']}>
-              <Layout><AdminDashboard /></Layout>
+              <AdminLayout><AdminDashboard /></AdminLayout>
             </PrivateRoute>
           } />
 
-          {/* ── DASHBOARD MARKETING/CLIENT ── */}
+          {/* ── DASHBOARD MARKETING (separate from CLIENT) ── */}
           <Route path="/dashboard" element={
-            <PrivateRoute roles={['RESPONSABLE_MARKETING', 'CLIENT']}>
-              <Layout><Dashboard /></Layout>
+            <PrivateRoute roles={['RESPONSABLE_MARKETING']}>
+              <MarketingLayout><Dashboard /></MarketingLayout>
             </PrivateRoute>
           } />
 
-          {/* 🔑 MODIFIÉ : FORMATIONS avec SidebarClient si client connecté */}
+          {/* ── DASHBOARD CLIENT (with SidebarClient) ── */}
+          <Route path="/client/dashboard" element={
+            <PrivateRoute roles={['CLIENT']}>
+              <ClientLayout><Dashboard /></ClientLayout>
+            </PrivateRoute>
+          } />
+
+          {/* ── FORMATIONS PUBLIQUES (with SidebarClient only for CLIENT) ── */}
           <Route path="/campagnes" element={
             <ClientLayout><Campagnes /></ClientLayout>
           } />
@@ -127,7 +155,7 @@ function App() {
             <ClientLayout><CampagneDetail /></ClientLayout>
           } />
 
-          {/* 🔑 AJOUTÉ : ROUTES CLIENT avec SidebarClient */}
+          {/* ── ROUTES CLIENT (SidebarClient noir) ── */}
           <Route path="/mescampagnes" element={
             <PrivateRoute roles={['CLIENT']}>
               <ClientLayout><MesCampagnesPage /></ClientLayout>
@@ -152,7 +180,14 @@ function App() {
             </PrivateRoute>
           } />
 
-          {/* ── GESTION CAMPAGNES (Admin + Responsable Marketing) ── */}
+          {/* ── GESTION CAMPAGNES MARKETING (Layout admin, NO SidebarClient) ── */}
+          <Route path="/gestion-campagnes-marketing" element={
+            <PrivateRoute roles={['RESPONSABLE_MARKETING']}>
+              <MarketingLayout><GestionCampagnesMarketing /></MarketingLayout>
+            </PrivateRoute>
+          } />
+
+          {/* ── GESTION CAMPAGNES (Admin + Marketing) ── */}
           <Route path="/gestion-campagnes" element={
             <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
               <Layout><Campagnes /></Layout>
@@ -161,7 +196,7 @@ function App() {
 
           {/* ── DETAIL ADMIN campagne ── */}
           <Route path="/admin/campagnes/:id" element={
-            <PrivateRoute roles={['ADMIN', 'RESPONSABLE_MARKETING']}>
+            <PrivateRoute roles={['ADMIN']}>
               <CampagneAdminDetail />
             </PrivateRoute>
           } />
@@ -220,6 +255,16 @@ function App() {
       </Suspense>
     </BrowserRouter>
   );
+}
+
+// Role redirect component
+function RoleRedirect() {
+  const role = getUserRole();
+
+  if (role === 'ADMIN') return <Navigate to="/admin/dashboard" replace />;
+  if (role === 'RESPONSABLE_MARKETING') return <Navigate to="/dashboard" replace />;
+  if (role === 'CLIENT') return <Navigate to="/campagnes" replace />;
+  return <Navigate to="/login" replace />;
 }
 
 export default App;

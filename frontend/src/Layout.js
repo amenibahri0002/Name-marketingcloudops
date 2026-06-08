@@ -25,7 +25,7 @@ const adminMenu = [
 const marketingMenu = [
   { section: 'Campagnes', items: [
     { path: '/dashboard', icon: '⬛', label: 'Dashboard' },
-    { path: '/campagnes', icon: '📢', label: 'Campagnes' },
+    { path: '/gestion-campagnes-marketing', icon: '📢', label: 'Gestion des Campagnes' },
   ]},
   { section: 'Gestion', items: [
     { path: '/clients', icon: '🏢', label: 'Clients' },
