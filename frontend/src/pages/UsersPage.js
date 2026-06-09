@@ -1,639 +1,863 @@
-import React, { useState, useEffect } from 'react';
-import api from '../api';
+import React, { useState } from 'react';
 
-const C = {
-  bg:'#f8fafc', card:'#ffffff', navy:'#0f172a', gold:'#f5a623', goldDark:'#d97706',
-  goldDim:'rgba(245,166,35,0.08)', goldBorder:'rgba(245,166,35,0.20)',
-  border:'#e2e8f0', text:'#0f172a', textMuted:'#64748b',
-  blue:'#3b82f6', blueDim:'rgba(59,130,246,0.08)',
-  green:'#10b981', greenDim:'rgba(16,185,129,0.08)',
-  red:'#ef4444', redDim:'rgba(239,68,68,0.08)',
-  purple:'#8b5cf6', purpleDim:'rgba(139,92,246,0.08)',
-  shadow:'0 1px 4px rgba(0,0,0,0.04)',
+const gold = '#f5a623';
+const dark = '#0A0A0A';
+const white = '#FFFFFF';
+const gray = '#F5F5F5';
+const textGray = '#666666';
+
+const ROLE_COLORS = {
+  'ADMIN': { bg: '#FEE2E2', color: '#DC2626', border: '#EF4444', label: 'Administrateur' },
+  'RESPONSABLE_MARKETING': { bg: '#FEF3C7', color: '#D97706', border: '#F59E0B', label: 'Resp. Marketing' },
+  'CLIENT': { bg: '#DBEAFE', color: '#2563EB', border: '#3B82F6', label: 'Client' }
 };
 
-const ROLES = {
-  ADMIN:'ADMIN', RESPONSABLE_MARKETING:'RESPONSABLE_MARKETING', CLIENT:'CLIENT'
-};
+const ROLE_OPTIONS = [
+  { value: 'ADMIN', label: 'Administrateur', description: 'Accès complet à toutes les fonctionnalités' },
+  { value: 'RESPONSABLE_MARKETING', label: 'Responsable Marketing', description: 'Gestion des campagnes et clients' },
+  { value: 'CLIENT', label: 'Client', description: 'Accès aux formations et inscriptions' }
+];
 
-const ROLE_STYLE = {
-  ADMIN:{bg:C.goldDim,color:C.goldDark,border:C.goldBorder,icon:'👑',label:'Admin'},
-  RESPONSABLE_MARKETING:{bg:C.blueDim,color:C.blue,border:'rgba(59,130,246,0.3)',icon:'🎯',label:'Marketing'},
-  CLIENT:{bg:C.greenDim,color:C.green,border:'rgba(16,185,129,0.3)',icon:'👤',label:'Client'},
-};
+const INITIAL_USERS = [
+  { id: 1, name: 'Ahmed Ben Ali', email: 'ahmed@digilab.tn', role: 'CLIENT', clientId: 1, createdAt: '2026-01-15', status: 'active', lastLogin: '2026-06-08' },
+  { id: 2, name: 'Fatima Trabelsi', email: 'fatima@digilab.tn', role: 'CLIENT', clientId: 2, createdAt: '2026-02-20', status: 'active', lastLogin: '2026-06-07' },
+  { id: 3, name: 'Karim Mansour', email: 'karim@digilab.tn', role: 'RESPONSABLE_MARKETING', clientId: null, createdAt: '2026-01-10', status: 'active', lastLogin: '2026-06-08' },
+  { id: 4, name: 'Leila Ben Ammar', email: 'leila@digilab.tn', role: 'CLIENT', clientId: 3, createdAt: '2026-03-05', status: 'inactive', lastLogin: '2026-05-20' },
+  { id: 5, name: 'Sami Ben Salah', email: 'sami@digilab.tn', role: 'CLIENT', clientId: 4, createdAt: '2026-04-12', status: 'active', lastLogin: '2026-06-06' },
+  { id: 6, name: 'Admin Principal', email: 'admin@digilab.tn', role: 'ADMIN', clientId: null, createdAt: '2025-12-01', status: 'active', lastLogin: '2026-06-08' },
+];
 
-const AVATAR_COLORS = [C.gold,C.blue,C.green,C.purple,'#ec4899','#14b8a6','#f97316'];
-const avatarColor = name => AVATAR_COLORS[(name?.charCodeAt(0)||0)%AVATAR_COLORS.length];
-const initials = name => name?name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2):'??';
-const formatDate = d => d?new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}):'—';
-
-const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-  @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-  .dl-stat{transition:all 0.22s ease!important}
-  .dl-stat:hover{transform:translateY(-3px)!important;box-shadow:0 8px 24px rgba(245,166,35,0.10)!important;border-color:#f5a623!important}
-  .dl-row:hover{background:#fefce8!important}
-  .dl-btn-del{transition:all 0.15s}
-  .dl-btn-del:hover{background:rgba(239,68,68,0.10)!important}
-  .dl-btn-edit{transition:all 0.15s}
-  .dl-btn-edit:hover{background:rgba(59,130,246,0.10)!important}
-  .dl-btn-add{transition:all 0.2s}
-  .dl-btn-add:hover{transform:translateY(-2px)!important;box-shadow:0 8px 22px rgba(245,166,35,0.25)!important}
-  .dl-input:focus{border-color:#f5a623!important;box-shadow:0 0 0 3px rgba(245,166,35,0.10)!important;outline:none}
-`;
-
-function Skel({w='100%',h=16,r=6}){
-  return(<div style={{
-    width:w,height:h,borderRadius:r,flexShrink:0,
-    background:'linear-gradient(90deg,#f1f5f9 25%,#f8fafc 50%,#f1f5f9 75%)',
-    backgroundSize:'500px 100%',animation:'shimmer 1.4s infinite linear'
-  }}/>);
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   MODAL ÉDITION UTILISATEUR
-═══════════════════════════════════════════════════════════════ */
-function EditUserModal({ user, onClose, onSave }) {
-  const [form, setForm] = useState({
-    name: user.name || '',
-    email: user.email || '',
-    role: user.role || ROLES.CLIENT,
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const handle = async () => {
-    if (!form.name.trim() || !form.email.trim()) {
-      setError('Nom et email sont requis');
-      return;
-    }
-    setSaving(true); setError('');
-    try {
-      await api.put(`/api/users/${user.id}`, form);
-      onSave(); onClose();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la modification');
-      // Fallback: modification locale si API indisponible
-      onSave();
-      onClose();
-    } finally { setSaving(false); }
-  };
-
-  return (
-    <div style={{
-      position:'fixed',inset:0,zIndex:1000,
-      background:'rgba(15,23,42,0.50)',backdropFilter:'blur(5px)',
-      display:'flex',alignItems:'center',justifyContent:'center',padding:24,
-      animation:'fadeUp 0.2s ease',
-    }} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{
-        background:C.card,borderRadius:20,width:'100%',maxWidth:500,
-        border:`1.5px solid ${C.border}`,
-        boxShadow:'0 28px 70px rgba(15,23,42,0.18)',overflow:'hidden',
-      }}>
-        <div style={{
-          background:C.navy,padding:'20px 26px',
-          display:'flex',justifyContent:'space-between',alignItems:'center',
-        }}>
-          <div>
-            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-              <div style={{width:18,height:2,background:C.gold,borderRadius:2}}/>
-              <span style={{fontSize:10,fontWeight:800,color:C.gold,letterSpacing:'0.18em',textTransform:'uppercase'}}>Modifier Utilisateur</span>
-            </div>
-            <div style={{fontSize:17,fontWeight:800,color:'#fff'}}>{user.name}</div>
-          </div>
-          <button onClick={onClose} style={{
-            width:32,height:32,borderRadius:9,
-            background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.12)',
-            color:'rgba(255,255,255,0.5)',cursor:'pointer',fontSize:16,
-            display:'flex',alignItems:'center',justifyContent:'center',
-          }}>✕</button>
-        </div>
-
-        <div style={{padding:'24px 26px'}}>
-          {error&&(<div style={{
-            background:C.redDim,border:'1px solid rgba(239,68,68,0.20)',
-            borderRadius:10,padding:'10px 14px',marginBottom:18,
-            fontSize:13,color:C.red,fontWeight:600,
-            display:'flex',alignItems:'center',gap:8,
-          }}>⚠️ {error}</div>)}
-
-          {/* Nom */}
-          <div style={{marginBottom:16}}>
-            <label style={{fontSize:11,fontWeight:700,color:C.text,display:'block',marginBottom:7,letterSpacing:'0.04em'}}>Nom complet *</label>
-            <input className="dl-input" value={form.name}
-              onChange={e=>setForm(p=>({...p,name:e.target.value}))}
-              style={{width:'100%',padding:'11px 14px',border:`1.5px solid ${C.border}`,borderRadius:10,fontSize:13.5,color:C.text,background:'#f8fafc',boxSizing:'border-box',fontFamily:'inherit',transition:'border-color .2s, box-shadow .2s'}}
-            />
-          </div>
-
-          {/* Email */}
-          <div style={{marginBottom:16}}>
-            <label style={{fontSize:11,fontWeight:700,color:C.text,display:'block',marginBottom:7,letterSpacing:'0.04em'}}>Email *</label>
-            <input className="dl-input" type="email" value={form.email}
-              onChange={e=>setForm(p=>({...p,email:e.target.value}))}
-              style={{width:'100%',padding:'11px 14px',border:`1.5px solid ${C.border}`,borderRadius:10,fontSize:13.5,color:C.text,background:'#f8fafc',boxSizing:'border-box',fontFamily:'inherit',transition:'border-color .2s, box-shadow .2s'}}
-            />
-          </div>
-
-          {/* Rôle */}
-          <div style={{marginBottom:24}}>
-            <label style={{fontSize:11,fontWeight:700,color:C.text,display:'block',marginBottom:10,letterSpacing:'0.04em'}}>Rôle *</label>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
-              {Object.entries(ROLES).map(([key,val])=>{
-                const rs=ROLE_STYLE[val];
-                const selected=form.role===val;
-                return(
-                  <div key={key} onClick={()=>setForm(p=>({...p,role:val}))}
-                    style={{
-                      padding:'12px 10px',borderRadius:12,textAlign:'center',
-                      border:`1.5px solid ${selected?rs.color:C.border}`,
-                      background:selected?rs.bg:'#f8fafc',
-                      cursor:'pointer',transition:'all 0.15s',
-                      boxShadow:selected?`0 4px 14px ${rs.bg}`:'none',
-                    }}>
-                    <div style={{fontSize:22,marginBottom:6}}>{rs.icon}</div>
-                    <div style={{fontSize:11,fontWeight:800,color:selected?rs.color:C.textMuted,textTransform:'uppercase',letterSpacing:'0.06em'}}>{rs.label}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div style={{display:'flex',gap:10}}>
-            <button onClick={onClose} style={{
-              flex:1,padding:'11px',borderRadius:10,
-              border:`1.5px solid ${C.border}`,background:'none',
-              fontSize:13,fontWeight:700,color:C.textMuted,cursor:'pointer',
-            }}>Annuler</button>
-            <button className="dl-btn-add" onClick={handle} disabled={saving} style={{
-              flex:2,padding:'11px',borderRadius:10,
-              border:'none',background:C.gold,
-              fontSize:13,fontWeight:800,color:'#fff',
-              cursor:saving?'not-allowed':'pointer',
-              boxShadow:'0 4px 14px rgba(245,166,35,0.25)',
-              opacity:saving?0.7:1,
-            }}>
-              {saving?'Sauvegarde...':'💾 Sauvegarder'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   MODAL AJOUT UTILISATEUR
-═══════════════════════════════════════════════════════════════ */
-function AddUserModal({ onClose, onSave }) {
-  const [form, setForm] = useState({ name:'', email:'', password:'', role:ROLES.CLIENT });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [showPass, setShowPass] = useState(false);
-
-  const handle = async () => {
-    if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
-      setError('Tous les champs sont requis');
-      return;
-    }
-    setSaving(true); setError('');
-    try {
-      await api.post('/api/users', form);
-      onSave(); onClose();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la création');
-    } finally { setSaving(false); }
-  };
-
-  return (
-    <div style={{
-      position:'fixed',inset:0,zIndex:1000,
-      background:'rgba(15,23,42,0.50)',backdropFilter:'blur(5px)',
-      display:'flex',alignItems:'center',justifyContent:'center',padding:24,
-      animation:'fadeUp 0.2s ease',
-    }} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{
-        background:C.card,borderRadius:20,width:'100%',maxWidth:500,
-        border:`1.5px solid ${C.border}`,
-        boxShadow:'0 28px 70px rgba(15,23,42,0.18)',overflow:'hidden',
-      }}>
-        <div style={{
-          background:C.navy,padding:'20px 26px',
-          display:'flex',justifyContent:'space-between',alignItems:'center',
-        }}>
-          <div>
-            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-              <div style={{width:18,height:2,background:C.gold,borderRadius:2}}/>
-              <span style={{fontSize:10,fontWeight:800,color:C.gold,letterSpacing:'0.18em',textTransform:'uppercase'}}>Nouvel Utilisateur</span>
-            </div>
-            <div style={{fontSize:17,fontWeight:800,color:'#fff'}}>Créer un compte</div>
-          </div>
-          <button onClick={onClose} style={{
-            width:32,height:32,borderRadius:9,
-            background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.12)',
-            color:'rgba(255,255,255,0.5)',cursor:'pointer',fontSize:16,
-            display:'flex',alignItems:'center',justifyContent:'center',
-          }}>✕</button>
-        </div>
-
-        <div style={{padding:'24px 26px'}}>
-          {error&&(<div style={{
-            background:C.redDim,border:'1px solid rgba(239,68,68,0.20)',
-            borderRadius:10,padding:'10px 14px',marginBottom:18,
-            fontSize:13,color:C.red,fontWeight:600,
-            display:'flex',alignItems:'center',gap:8,
-          }}>⚠️ {error}</div>)}
-
-          {/* Rôle */}
-          <div style={{marginBottom:20}}>
-            <label style={{fontSize:11,fontWeight:700,color:C.text,display:'block',marginBottom:10,letterSpacing:'0.04em'}}>Rôle *</label>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
-              {Object.entries(ROLES).map(([key,val])=>{
-                const rs=ROLE_STYLE[val];
-                const selected=form.role===val;
-                return(
-                  <div key={key} onClick={()=>setForm(p=>({...p,role:val}))}
-                    style={{
-                      padding:'12px 10px',borderRadius:12,textAlign:'center',
-                      border:`1.5px solid ${selected?rs.color:C.border}`,
-                      background:selected?rs.bg:'#f8fafc',
-                      cursor:'pointer',transition:'all 0.15s',
-                      boxShadow:selected?`0 4px 14px ${rs.bg}`:'none',
-                    }}>
-                    <div style={{fontSize:22,marginBottom:6}}>{rs.icon}</div>
-                    <div style={{fontSize:11,fontWeight:800,color:selected?rs.color:C.textMuted,textTransform:'uppercase',letterSpacing:'0.06em'}}>{rs.label}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Nom + Email */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14}}>
-            <div>
-              <label style={{fontSize:11,fontWeight:700,color:C.text,display:'block',marginBottom:7,letterSpacing:'0.04em'}}>Nom complet *</label>
-              <input className="dl-input" value={form.name}
-                onChange={e=>setForm(p=>({...p,name:e.target.value}))}
-                placeholder="Ex: Ahmed Ben Ali"
-                style={{width:'100%',padding:'11px 14px',border:`1.5px solid ${C.border}`,borderRadius:10,fontSize:13.5,color:C.text,background:'#f8fafc',boxSizing:'border-box',fontFamily:'inherit',transition:'border-color .2s, box-shadow .2s'}}
-              />
-            </div>
-            <div>
-              <label style={{fontSize:11,fontWeight:700,color:C.text,display:'block',marginBottom:7,letterSpacing:'0.04em'}}>Email *</label>
-              <input className="dl-input" type="email" value={form.email}
-                onChange={e=>setForm(p=>({...p,email:e.target.value}))}
-                placeholder="email@exemple.com"
-                style={{width:'100%',padding:'11px 14px',border:`1.5px solid ${C.border}`,borderRadius:10,fontSize:13.5,color:C.text,background:'#f8fafc',boxSizing:'border-box',fontFamily:'inherit',transition:'border-color .2s, box-shadow .2s'}}
-              />
-            </div>
-          </div>
-
-          {/* Password */}
-          <div style={{marginBottom:24}}>
-            <label style={{fontSize:11,fontWeight:700,color:C.text,display:'block',marginBottom:7,letterSpacing:'0.04em'}}>Mot de passe *</label>
-            <div style={{position:'relative'}}>
-              <input className="dl-input"
-                type={showPass?'text':'password'}
-                value={form.password}
-                onChange={e=>setForm(p=>({...p,password:e.target.value}))}
-                placeholder="Minimum 8 caractères"
-                style={{width:'100%',padding:'11px 44px 11px 14px',border:`1.5px solid ${C.border}`,borderRadius:10,fontSize:13.5,color:C.text,background:'#f8fafc',boxSizing:'border-box',fontFamily:'inherit',transition:'border-color .2s, box-shadow .2s'}}
-              />
-              <button type="button" onClick={()=>setShowPass(p=>!p)} style={{
-                position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',
-                background:'none',border:'none',cursor:'pointer',fontSize:16,color:C.textMuted,
-              }}>{showPass?'🙈':'👁️'}</button>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div style={{display:'flex',gap:10}}>
-            <button onClick={onClose} style={{
-              flex:1,padding:'11px',borderRadius:10,
-              border:`1.5px solid ${C.border}`,background:'none',
-              fontSize:13,fontWeight:700,color:C.textMuted,cursor:'pointer',
-            }}>Annuler</button>
-            <button className="dl-btn-add" onClick={handle} disabled={saving} style={{
-              flex:2,padding:'11px',borderRadius:10,
-              border:'none',background:C.gold,
-              fontSize:13,fontWeight:800,color:'#fff',
-              cursor:saving?'not-allowed':'pointer',
-              boxShadow:'0 4px 14px rgba(245,166,35,0.25)',
-              opacity:saving?0.7:1,
-            }}>
-              {saving?'Création...':'+ Créer un utilisateur'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   PAGE UTILISATEURS
-═══════════════════════════════════════════════════════════════ */
-export default function UsersPage() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+function UsersPage() {
+  const [users, setUsers] = useState(INITIAL_USERS);
+  const [filter, setFilter] = useState('tous');
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('ALL');
-  const [showForm, setShowForm] = useState(false);
-  const [editUser, setEditUser] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
 
-  useEffect(()=>{loadUsers();},[]);
-
-  const loadUsers = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('/api/users');
-      const data = Array.isArray(res.data)?res.data:res.data?.data||[];
-      // Enrichir avec secteur si disponible
-      const enriched = data.map(u=>({
-        ...u,
-        sector: getSector(u)
-      }));
-      setUsers(enriched);
-    } catch {
-      // Données DigiLab si API indisponible
-      setUsers(DIGILAB_USERS);
-    } finally { setLoading(false); }
-  };
-
-  const getSector = (user) => {
-    if (user.role==='ADMIN') return 'DigiLab Solutions';
-    if (user.role==='RESPONSABLE_MARKETING') return 'DigiLab Marketing';
-    // Détecter secteur depuis l'email ou le nom
-    const email = user.email?.toLowerCase()||'';
-    const name = user.name?.toLowerCase()||'';
-    if (email.includes('telecom')||name.includes('telecom')) return 'Télécommunications';
-    if (email.includes('zitouna')||name.includes('zitouna')) return 'Finance Islamique';
-    if (email.includes('ooredoo')||name.includes('ooredoo')) return 'Télécommunications';
-    if (email.includes('tech')||name.includes('tech')) return 'Technologie';
-    if (email.includes('carthage')||name.includes('carthage')) return 'Immobilier';
-    if (email.includes('startup')||name.includes('startup')) return 'Startup';
-    if (email.includes('travel')||name.includes('travel')||name.includes('sahara')) return 'Tourisme';
-    if (email.includes('auto')||name.includes('auto')) return 'Automobile';
-    return 'Freelance';
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Supprimer cet utilisateur ? Cette action est irréversible.')) return;
-    try {
-      await api.delete(`/api/users/${id}`);
-      setUsers(prev=>prev.filter(u=>u.id!==id));
-    } catch (err) {
-      // Suppression locale si API indisponible
-      setUsers(prev=>prev.filter(u=>u.id!==id));
-    }
-  };
-
-  const handleEdit = (user) => {
-    setEditUser(user);
-  };
-
-  const handleSaveEdit = () => {
-    loadUsers();
-    setEditUser(null);
-  };
-
-  const filtered = users.filter(u=>{
-    const matchSearch = !search || u.name?.toLowerCase().includes(search.toLowerCase()) || u.email?.toLowerCase().includes(search.toLowerCase());
-    const matchRole = roleFilter==='ALL' || u.role===roleFilter;
-    return matchSearch && matchRole;
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'CLIENT',
+    clientId: ''
   });
 
-  const total = users.length;
-  const admins = users.filter(u=>u.role===ROLES.ADMIN).length;
-  const marketing = users.filter(u=>u.role===ROLES.RESPONSABLE_MARKETING).length;
-  const clients = users.filter(u=>u.role===ROLES.CLIENT).length;
+  const [editUser, setEditUser] = useState({
+    name: '',
+    email: '',
+    role: 'CLIENT',
+    status: 'active'
+  });
 
-  const statCards = [
-    {label:'Total',value:total,icon:'👥',color:C.gold,bg:C.goldDim},
-    {label:'Admins',value:admins,icon:'👑',color:C.goldDark,bg:C.goldDim},
-    {label:'Marketing',value:marketing,icon:'🎯',color:C.blue,bg:C.blueDim},
-    {label:'Clients',value:clients,icon:'👤',color:C.purple,bg:C.purpleDim},
-  ];
+  const filteredUsers = users.filter(user => {
+    if (filter !== 'tous' && user.role !== filter) return false;
+    if (search && !user.name.toLowerCase().includes(search.toLowerCase()) && 
+        !user.email.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  }).sort((a, b) => {
+    const aVal = a[sortBy];
+    const bVal = b[sortBy];
+    if (sortOrder === 'asc') return aVal > bVal ? 1 : -1;
+    return aVal < bVal ? 1 : -1;
+  });
 
-  const roleTabs = [
-    {key:'ALL',label:'Tous',count:total},
-    {key:ROLES.ADMIN,label:'Admin',count:admins,icon:'👑'},
-    {key:ROLES.RESPONSABLE_MARKETING,label:'Marketing',count:marketing,icon:'🎯'},
-    {key:ROLES.CLIENT,label:'Client',count:clients,icon:'👤'},
-  ];
+  const handleCreateUser = () => {
+    const user = {
+      ...newUser,
+      id: users.length + 1,
+      createdAt: new Date().toISOString().split('T')[0],
+      status: 'active',
+      lastLogin: '-'
+    };
+    setUsers([...users, user]);
+    setShowCreateModal(false);
+    setNewUser({ name: '', email: '', password: '', role: 'CLIENT', clientId: '' });
+  };
+
+  const handleEditUser = (user) => {
+    setSelectedUser(user);
+    setEditUser({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = () => {
+    setUsers(users.map(u => 
+      u.id === selectedUser.id ? { ...u, ...editUser } : u
+    ));
+    setShowEditModal(false);
+    setSelectedUser(null);
+  };
+
+  const handleDeleteUser = (userId) => {
+    setUsers(users.filter(u => u.id !== userId));
+    setShowDeleteConfirm(false);
+    setSelectedUser(null);
+  };
+
+  const handleToggleStatus = (userId) => {
+    setUsers(users.map(u => 
+      u.id === userId ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' } : u
+    ));
+  };
+
+  const getInitials = (name) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const getAvatarColor = (role) => {
+    if (role === 'ADMIN') return '#DC2626';
+    if (role === 'RESPONSABLE_MARKETING') return '#D97706';
+    return '#2563EB';
+  };
 
   return (
-    <div style={{background:C.bg,minHeight:'100vh',fontFamily:"'Plus Jakarta Sans','Inter',sans-serif",padding:'28px 32px'}}>
-      <style>{css}</style>
-
-      {showForm && <AddUserModal onClose={()=>setShowForm(false)} onSave={loadUsers}/>}
-      {editUser && <EditUserModal user={editUser} onClose={()=>setEditUser(null)} onSave={handleSaveEdit}/>}
-
+    <div style={{ 
+      minHeight: '100vh', 
+      background: gray, 
+      fontFamily: "'Inter', sans-serif",
+      padding: '40px 60px'
+    }}>
       {/* Header */}
-      <div style={{marginBottom:28}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <div>
-            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:6}}>
-              <div style={{width:4,height:24,background:C.gold,borderRadius:2}}/>
-              <h1 style={{fontSize:24,fontWeight:800,color:C.text,margin:0}}>Utilisateurs</h1>
-            </div>
-            <p style={{fontSize:13,color:C.textMuted,margin:0,marginLeft:14}}>
-              {total} utilisateur{total>1?'s':''} enregistré{total>1?'s':''} · DigiLab Solutions Tunisie
-            </p>
+            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: dark, margin: '0 0 8px' }}>
+              Gestion des Utilisateurs
+            </h1>
+
           </div>
-          <button className="dl-btn-add" onClick={()=>setShowForm(true)} style={{
-            padding:'11px 22px',borderRadius:10,
-            background:C.gold,color:'#fff',
-            border:'none',fontSize:13,fontWeight:800,
-            cursor:'pointer',display:'flex',alignItems:'center',gap:8,
-            boxShadow:'0 4px 14px rgba(245,166,35,0.25)',
-          }}>
-            <span style={{fontSize:16}}>+</span> Nouvel utilisateur
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              padding: '14px 28px',
+              borderRadius: 12,
+              border: 'none',
+              background: gold,
+              color: 'white',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: '1rem'
+            }}
+          >
+            <span>+</span>
+            Nouvel Utilisateur
           </button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:28}}>
-        {statCards.map((s,i)=>(
-          <div key={i} className="dl-stat" style={{
-            background:C.card,borderRadius:16,padding:'20px 22px',
-            border:`1.5px solid ${C.border}`,
-            boxShadow:C.shadow,
-            animation:`fadeUp 0.5s ease ${i*80}ms both`,
-          }}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-              <span style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:'uppercase',letterSpacing:'1.2px'}}>{s.label}</span>
-              <div style={{
-                width:40,height:40,borderRadius:10,
-                background:s.bg,border:`1px solid ${s.color}20`,
-                display:'flex',alignItems:'center',justifyContent:'center',
-                fontSize:20,
-              }}>{s.icon}</div>
-            </div>
-            <div style={{fontSize:32,fontWeight:800,color:s.color,lineHeight:1}}>{s.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Search & Filters */}
-      <div style={{display:'flex',gap:12,marginBottom:20,alignItems:'center'}}>
-        <div style={{flex:1,position:'relative'}}>
-          <span style={{position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',fontSize:16,color:C.textMuted}}>🔍</span>
-          <input
-            value={search}
-            onChange={e=>setSearch(e.target.value)}
-            placeholder="Rechercher un utilisateur DigiLab..."
-            style={{
-              width:'100%',padding:'11px 14px 11px 40px',
-              border:`1.5px solid ${C.border}`,borderRadius:12,
-              fontSize:13.5,color:C.text,background:C.card,
-              boxSizing:'border-box',fontFamily:'inherit',
-              outline:'none',transition:'border-color .2s',
-            }}
-            onFocus={e=>e.target.style.borderColor=C.gold}
-            onBlur={e=>e.target.style.borderColor=C.border}
-          />
-        </div>
-        <div style={{display:'flex',gap:6}}>
-          {roleTabs.map(tab=>{
-            const active=roleFilter===tab.key;
-            return(
-              <button key={tab.key} onClick={()=>setRoleFilter(tab.key)}
-                style={{
-                  padding:'9px 16px',borderRadius:10,
-                  background:active?C.gold:C.card,
-                  color:active?'#fff':C.textMuted,
-                  border:`1.5px solid ${active?C.gold:C.border}`,
-                  fontSize:12,fontWeight:700,
-                  cursor:'pointer',display:'flex',alignItems:'center',gap:6,
-                  transition:'all 0.15s',
-                }}>
-                {tab.icon&&<span>{tab.icon}</span>}
-                {tab.label}
-                <span style={{fontSize:10,opacity:0.7,marginLeft:4}}>({tab.count})</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Table */}
-      <div style={{background:C.card,borderRadius:18,border:`1.5px solid ${C.border}`,overflow:'hidden',boxShadow:C.shadow}}>
-        {/* Header */}
-        <div style={{
-          display:'grid',gridTemplateColumns:'2.5fr 2fr 1fr 1fr 1fr 140px',
-          padding:'14px 24px',background:C.navy,
-          gap:16,alignItems:'center',
-        }}>
-          {['UTILISATEUR','EMAIL','RÔLE','SECTEUR','CRÉÉ LE','ACTIONS'].map((h,i)=>(
-            <span key={i} style={{
-              fontSize:10,fontWeight:800,color:C.gold,
-              letterSpacing:'0.12em',textTransform:'uppercase',
-              textAlign:i>=2?'center':'left',
-            }}>{h}</span>
+      {/* Filters and Search */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: 24,
+        flexWrap: 'wrap',
+        gap: 12
+      }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {['tous', 'ADMIN', 'RESPONSABLE_MARKETING', 'CLIENT'].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              style={{
+                padding: '10px 20px',
+                borderRadius: 20,
+                border: '1px solid #E5E5E5',
+                background: filter === f ? gold : white,
+                color: filter === f ? 'white' : dark,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontSize: '0.875rem'
+              }}
+            >
+              {f === 'tous' ? 'Tous' : f === 'ADMIN' ? 'Admins' : f === 'RESPONSABLE_MARKETING' ? 'Resp.Marketing' : 'Clients'}
+            </button>
           ))}
         </div>
 
-        {/* Body */}
-        {loading?(
-          <div style={{padding:'30px 24px'}}>
-            {[1,2,3,4].map(i=>(
-              <div key={i} style={{display:'flex',alignItems:'center',gap:16,padding:'14px 0',borderBottom:`1px solid ${C.border}`}}>
-                <Skel w={40} h={40} r={10}/>
-                <div style={{flex:1}}><Skel w={120} h={14} r={4}/><div style={{marginTop:6}}><Skel w={80} h={11} r={3}/></div></div>
-                <Skel w={160} h={14} r={4}/>
-                <Skel w={80} h={14} r={4}/>
-                <Skel w={90} h={14} r={4}/>
-                <Skel w={120} h={14} r={4}/>
-              </div>
-            ))}
-          </div>
-        ):filtered.length===0?(
-          <div style={{padding:60,textAlign:'center'}}>
-            <div style={{fontSize:48,marginBottom:12}}>🔍</div>
-            <div style={{fontSize:15,fontWeight:700,color:C.text}}>Aucun utilisateur trouvé</div>
-            <div style={{fontSize:13,color:C.textMuted,marginTop:4}}>Essayez une autre recherche</div>
-          </div>
-        ):(
-          filtered.map((u,i)=>{
-            const rs=ROLE_STYLE[u.role]||ROLE_STYLE.CLIENT;
-            const ac=avatarColor(u.name);
-            const init=initials(u.name);
-            const sector=u.sector||getSector(u);
-            return(
-              <div key={u.id} className="dl-row" style={{
-                display:'grid',gridTemplateColumns:'2.5fr 2fr 1fr 1fr 1fr 140px',
-                padding:'14px 24px',gap:16,alignItems:'center',
-                borderBottom:i<filtered.length-1?`1px solid ${C.border}`:'none',
-                transition:'background 0.15s',
-                animation:`fadeUp 0.4s ease ${i*50}ms both`,
-              }}>
-                {/* Utilisateur */}
-                <div style={{display:'flex',alignItems:'center',gap:12}}>
-                  <div style={{
-                    width:40,height:40,borderRadius:10,
-                    background:`${ac}15`,border:`2px solid ${ac}30`,
-                    display:'flex',alignItems:'center',justifyContent:'center',
-                    fontSize:14,fontWeight:800,color:ac,
-                    flexShrink:0,
-                  }}>{u.avatar||init}</div>
-                  <div>
-                    <div style={{fontSize:13.5,fontWeight:700,color:C.text}}>{u.name}</div>
-                    <div style={{fontSize:11,color:C.textMuted,fontFamily:"'JetBrains Mono',monospace"}}>ID #{u.id}</div>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <select
+            value={`${sortBy}-${sortOrder}`}
+            onChange={(e) => {
+              const [field, order] = e.target.value.split('-');
+              setSortBy(field);
+              setSortOrder(order);
+            }}
+            style={{
+              padding: '10px 16px',
+              borderRadius: 10,
+              border: '1px solid #E5E5E5',
+              background: white,
+              fontSize: '0.875rem',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="createdAt-desc">Plus récents</option>
+            <option value="createdAt-asc">Plus anciens</option>
+            <option value="name-asc">Nom A-Z</option>
+            <option value="name-desc">Nom Z-A</option>
+            <option value="lastLogin-desc">Dernière connexion</option>
+          </select>
+
+          <input
+            type="text"
+            placeholder="Rechercher un utilisateur..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              padding: '10px 20px',
+              borderRadius: 12,
+              border: '1px solid #E5E5E5',
+              background: white,
+              width: 280,
+              fontSize: '0.875rem'
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Users Table */}
+      <div style={{
+        background: white,
+        borderRadius: 16,
+        border: '1px solid #E5E5E5',
+        overflow: 'hidden'
+      }}>
+        {/* Table Header */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '2fr 2fr 1.5fr 1fr 1fr 1.5fr 1fr',
+          padding: '16px 24px',
+          background: '#FAFAFA',
+          borderBottom: '1px solid #E5E5E5',
+          fontWeight: 700,
+          fontSize: '0.875rem',
+          color: textGray
+        }}>
+          <div>Utilisateur</div>
+          <div>Email</div>
+          <div>Rôle</div>
+          <div>Statut</div>
+          <div>Créé le</div>
+          <div>Dernière connexion</div>
+          <div style={{ textAlign: 'center' }}>Actions</div>
+        </div>
+
+        {/* Table Body */}
+        {filteredUsers.map(user => {
+          const roleStyle = ROLE_COLORS[user.role] || ROLE_COLORS.CLIENT;
+
+          return (
+            <div key={user.id} style={{
+              display: 'grid',
+              gridTemplateColumns: '2fr 2fr 1.5fr 1fr 1fr 1.5fr 1fr',
+              padding: '16px 24px',
+              borderBottom: '1px solid #F0F0F0',
+              alignItems: 'center'
+            }}>
+              {/* User */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  background: getAvatarColor(user.role),
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: '0.875rem'
+                }}>
+                  {getInitials(user.name)}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, color: dark, fontSize: '0.875rem' }}>
+                    {user.name}
                   </div>
-                </div>
-
-                {/* Email */}
-                <div style={{fontSize:13,color:C.blue,fontWeight:500}}>{u.email}</div>
-
-                {/* Rôle */}
-                <div style={{display:'flex',justifyContent:'center'}}>
-                  <span style={{
-                    fontSize:10,fontWeight:700,textTransform:'uppercase',
-                    padding:'4px 12px',borderRadius:20,
-                    background:rs.bg,color:rs.color,
-                    border:`1px solid ${rs.border}`,
-                    display:'flex',alignItems:'center',gap:5,
-                  }}>
-                    <span style={{fontSize:11}}>{rs.icon}</span>
-                    {rs.label}
-                  </span>
-                </div>
-
-                {/* Secteur */}
-                <div style={{textAlign:'center',fontSize:12,color:C.textMuted}}>{sector}</div>
-
-                {/* Créé le */}
-                <div style={{textAlign:'center',fontSize:12,color:C.textMuted}}>{formatDate(u.createdAt)}</div>
-
-                {/* Actions - MODIFIER + SUPPRIMER */}
-                <div style={{display:'flex',justifyContent:'center',gap:8}}>
-                  <button className="dl-btn-edit" onClick={()=>handleEdit(u)} style={{
-                    padding:'7px 12px',borderRadius:8,
-                    background:'none',border:`1.5px solid ${C.blue}30`,
-                    color:C.blue,fontSize:11,fontWeight:700,
-                    cursor:'pointer',display:'flex',alignItems:'center',gap:4,
-                  }}>
-                    ✏️ Modifier
-                  </button>
-                  <button className="dl-btn-del" onClick={()=>handleDelete(u.id)} style={{
-                    padding:'7px 12px',borderRadius:8,
-                    background:'none',border:`1.5px solid ${C.red}30`,
-                    color:C.red,fontSize:11,fontWeight:700,
-                    cursor:'pointer',display:'flex',alignItems:'center',gap:4,
-                  }}>
-                    🗑️ Supprimer
-                  </button>
+                  {user.clientId && (
+                    <div style={{ fontSize: '0.75rem', color: textGray }}>
+                      Client ID: {user.clientId}
+                    </div>
+                  )}
                 </div>
               </div>
-            );
-          })
+
+              {/* Email */}
+              <div style={{ fontSize: '0.875rem', color: textGray }}>
+                {user.email}
+              </div>
+
+              {/* Role */}
+              <div>
+                <span style={{
+                  padding: '4px 12px',
+                  borderRadius: 20,
+                  background: roleStyle.bg,
+                  color: roleStyle.color,
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  border: `1px solid ${roleStyle.border}`
+                }}>
+                  {roleStyle.label}
+                </span>
+              </div>
+
+              {/* Status */}
+              <div>
+                <button
+                  onClick={() => handleToggleStatus(user.id)}
+                  style={{
+                    padding: '4px 12px',
+                    borderRadius: 20,
+                    border: 'none',
+                    background: user.status === 'active' ? '#ECFDF5' : '#F3F4F6',
+                    color: user.status === 'active' ? '#047857' : '#6B7280',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}
+                >
+                  {user.status === 'active' ? '🟢' : '⚪'}
+                  {user.status === 'active' ? 'Actif' : 'Inactif'}
+                </button>
+              </div>
+
+              {/* Created At */}
+              <div style={{ fontSize: '0.875rem', color: textGray }}>
+                {user.createdAt}
+              </div>
+
+              {/* Last Login */}
+              <div style={{ fontSize: '0.875rem', color: textGray }}>
+                {user.lastLogin}
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                <button
+                  onClick={() => { setSelectedUser(user); setShowDetailsModal(true); }}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    border: '1px solid #E5E5E5',
+                    background: white,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.875rem'
+                  }}
+                  title="Voir détails"
+                >
+                  👁
+                </button>
+                <button
+                  onClick={() => handleEditUser(user)}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    border: '1px solid #E5E5E5',
+                    background: white,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.875rem'
+                  }}
+                  title="Modifier"
+                >
+                  ✏️
+                </button>
+                <button
+                  onClick={() => { setSelectedUser(user); setShowDeleteConfirm(true); }}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    border: '1px solid #E5E5E5',
+                    background: white,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.875rem'
+                  }}
+                  title="Supprimer"
+                >
+                  🗑
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+        {filteredUsers.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: textGray }}>
+            <div style={{ fontSize: '3rem', marginBottom: 16 }}>🔍</div>
+            <p>Aucun utilisateur trouvé</p>
+          </div>
         )}
       </div>
+
+      {/* Modal: Create User */}
+      {showCreateModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: 20
+        }}>
+          <div style={{
+            background: white,
+            borderRadius: 20,
+            width: '100%',
+            maxWidth: 550,
+            maxHeight: '90vh',
+            overflow: 'auto',
+            padding: '40px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: dark, margin: 0 }}>
+                Nouvel Utilisateur
+              </h2>
+              <button 
+                onClick={() => setShowCreateModal(false)}
+                style={{ width: 32, height: 32, borderRadius: '50%', border: '1px solid #E5E5E5', background: white, cursor: 'pointer', fontSize: '1.25rem' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, color: dark, fontSize: '0.875rem' }}>Nom complet</label>
+                <input
+                  type="text"
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                  placeholder="Ex: Ahmed Ben Ali"
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid #E5E5E5', fontSize: '0.875rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, color: dark, fontSize: '0.875rem' }}>Email</label>
+                <input
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                  placeholder="exemple@digilab.tn"
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid #E5E5E5', fontSize: '0.875rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, color: dark, fontSize: '0.875rem' }}>Mot de passe</label>
+                <input
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                  placeholder="Minimum 8 caractères"
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid #E5E5E5', fontSize: '0.875rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, color: dark, fontSize: '0.875rem' }}>Rôle</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {ROLE_OPTIONS.map(role => (
+                    <button
+                      key={role.value}
+                      onClick={() => setNewUser({...newUser, role: role.value})}
+                      style={{
+                        padding: '12px 16px',
+                        borderRadius: 10,
+                        border: newUser.role === role.value ? `2px solid ${gold}` : '1px solid #E5E5E5',
+                        background: newUser.role === role.value ? '#FFF8E7' : white,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12
+                      }}
+                    >
+                      <div style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: '50%',
+                        border: newUser.role === role.value ? `2px solid ${gold}` : '2px solid #E5E5E5',
+                        background: newUser.role === role.value ? gold : 'transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        {newUser.role === role.value && <span style={{ color: 'white', fontSize: '0.75rem' }}>✓</span>}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: dark, fontSize: '0.875rem' }}>{role.label}</div>
+                        <div style={{ fontSize: '0.75rem', color: textGray }}>{role.description}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {newUser.role === 'CLIENT' && (
+                <div>
+                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, color: dark, fontSize: '0.875rem' }}>ID Client (optionnel)</label>
+                  <input
+                    type="number"
+                    value={newUser.clientId}
+                    onChange={(e) => setNewUser({...newUser, clientId: e.target.value})}
+                    placeholder="Numéro de client"
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid #E5E5E5', fontSize: '0.875rem' }}
+                  />
+                </div>
+              )}
+
+              <button
+                onClick={handleCreateUser}
+                disabled={!newUser.name || !newUser.email || !newUser.password}
+                style={{
+                  padding: '14px 24px',
+                  borderRadius: 12,
+                  border: 'none',
+                  background: (!newUser.name || !newUser.email || !newUser.password) ? '#D1D5DB' : gold,
+                  color: 'white',
+                  fontWeight: 700,
+                  cursor: (!newUser.name || !newUser.email || !newUser.password) ? 'not-allowed' : 'pointer',
+                  fontSize: '1rem',
+                  marginTop: 8
+                }}
+              >
+                Créer l'utilisateur
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit User */}
+      {showEditModal && selectedUser && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: 20
+        }}>
+          <div style={{
+            background: white,
+            borderRadius: 20,
+            width: '100%',
+            maxWidth: 550,
+            maxHeight: '90vh',
+            overflow: 'auto',
+            padding: '40px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: dark, margin: 0 }}>
+                Modifier l'Utilisateur
+              </h2>
+              <button 
+                onClick={() => { setShowEditModal(false); setSelectedUser(null); }}
+                style={{ width: 32, height: 32, borderRadius: '50%', border: '1px solid #E5E5E5', background: white, cursor: 'pointer', fontSize: '1.25rem' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, color: dark, fontSize: '0.875rem' }}>Nom complet</label>
+                <input
+                  type="text"
+                  value={editUser.name}
+                  onChange={(e) => setEditUser({...editUser, name: e.target.value})}
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid #E5E5E5', fontSize: '0.875rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, color: dark, fontSize: '0.875rem' }}>Email</label>
+                <input
+                  type="email"
+                  value={editUser.email}
+                  onChange={(e) => setEditUser({...editUser, email: e.target.value})}
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid #E5E5E5', fontSize: '0.875rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, color: dark, fontSize: '0.875rem' }}>Rôle</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {ROLE_OPTIONS.map(role => (
+                    <button
+                      key={role.value}
+                      onClick={() => setEditUser({...editUser, role: role.value})}
+                      style={{
+                        padding: '12px 16px',
+                        borderRadius: 10,
+                        border: editUser.role === role.value ? `2px solid ${gold}` : '1px solid #E5E5E5',
+                        background: editUser.role === role.value ? '#FFF8E7' : white,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12
+                      }}
+                    >
+                      <div style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: '50%',
+                        border: editUser.role === role.value ? `2px solid ${gold}` : '2px solid #E5E5E5',
+                        background: editUser.role === role.value ? gold : 'transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        {editUser.role === role.value && <span style={{ color: 'white', fontSize: '0.75rem' }}>✓</span>}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: dark, fontSize: '0.875rem' }}>{role.label}</div>
+                        <div style={{ fontSize: '0.75rem', color: textGray }}>{role.description}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, color: dark, fontSize: '0.875rem' }}>Statut</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => setEditUser({...editUser, status: 'active'})}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      borderRadius: 10,
+                      border: editUser.status === 'active' ? '2px solid #10B981' : '1px solid #E5E5E5',
+                      background: editUser.status === 'active' ? '#ECFDF5' : white,
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      color: editUser.status === 'active' ? '#047857' : textGray
+                    }}
+                  >
+                    🟢 Actif
+                  </button>
+                  <button
+                    onClick={() => setEditUser({...editUser, status: 'inactive'})}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      borderRadius: 10,
+                      border: editUser.status === 'inactive' ? '2px solid #6B7280' : '1px solid #E5E5E5',
+                      background: editUser.status === 'inactive' ? '#F3F4F6' : white,
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      color: editUser.status === 'inactive' ? '#6B7280' : textGray
+                    }}
+                  >
+                    ⚪ Inactif
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={handleUpdateUser}
+                style={{
+                  padding: '14px 24px',
+                  borderRadius: 12,
+                  border: 'none',
+                  background: gold,
+                  color: 'white',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  marginTop: 8
+                }}
+              >
+                💾 Enregistrer les modifications
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: User Details */}
+      {showDetailsModal && selectedUser && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: 20
+        }}>
+          <div style={{
+            background: white,
+            borderRadius: 20,
+            width: '100%',
+            maxWidth: 500,
+            maxHeight: '90vh',
+            overflow: 'auto',
+            padding: '40px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: dark, margin: 0 }}>
+                Détails de l'Utilisateur
+              </h2>
+              <button 
+                onClick={() => { setShowDetailsModal(false); setSelectedUser(null); }}
+                style={{ width: 32, height: 32, borderRadius: '50%', border: '1px solid #E5E5E5', background: white, cursor: 'pointer', fontSize: '1.25rem' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 }}>
+              <div style={{
+                width: 80,
+                height: 80,
+                borderRadius: '50%',
+                background: getAvatarColor(selectedUser.role),
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: '1.5rem',
+                marginBottom: 16
+              }}>
+                {getInitials(selectedUser.name)}
+              </div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: dark, margin: '0 0 4px' }}>
+                {selectedUser.name}
+              </h3>
+              <p style={{ color: textGray, margin: 0 }}>{selectedUser.email}</p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                { label: 'ID', value: selectedUser.id },
+                { label: 'Rôle', value: (ROLE_COLORS[selectedUser.role] || ROLE_COLORS.CLIENT).label },
+                { label: 'Statut', value: selectedUser.status === 'active' ? '🟢 Actif' : '⚪ Inactif' },
+                { label: 'Date de création', value: selectedUser.createdAt },
+                { label: 'Dernière connexion', value: selectedUser.lastLogin },
+                { label: 'ID Client', value: selectedUser.clientId || 'N/A' }
+              ].map((item, i) => (
+                <div key={i} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '12px 16px',
+                  background: gray,
+                  borderRadius: 10
+                }}>
+                  <span style={{ color: textGray, fontSize: '0.875rem' }}>{item.label}</span>
+                  <span style={{ color: dark, fontWeight: 600, fontSize: '0.875rem' }}>{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Delete Confirmation */}
+      {showDeleteConfirm && selectedUser && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: 20
+        }}>
+          <div style={{
+            background: white,
+            borderRadius: 20,
+            width: '100%',
+            maxWidth: 450,
+            padding: '40px',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '4rem', marginBottom: 16 }}>⚠️</div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: dark, margin: '0 0 12px' }}>
+              Confirmer la suppression
+            </h2>
+            <p style={{ color: textGray, fontSize: '1rem', marginBottom: 24 }}>
+              Êtes-vous sûr de vouloir supprimer l'utilisateur <strong>"{selectedUser.name}"</strong> ?<br/>
+              Cette action est irréversible.
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setSelectedUser(null); }}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: 12,
+                  border: '1px solid #E5E5E5',
+                  background: white,
+                  color: dark,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: '0.875rem'
+                }}
+              >
+                ❌ Annuler
+              </button>
+              <button
+                onClick={() => handleDeleteUser(selectedUser.id)}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: 12,
+                  border: 'none',
+                  background: '#EF4444',
+                  color: 'white',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: '0.875rem'
+                }}
+              >
+                🗑 Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+export default UsersPage;

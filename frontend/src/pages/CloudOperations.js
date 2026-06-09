@@ -1,1000 +1,1072 @@
-import React, { useState, useEffect } from 'react';
-import api from '../api';
+import React, { useState, useMemo , useEffect } from 'react';
+
+const GlobalStyles = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    .cloud-ops * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+    .anim-fade { animation: fadeInUp .4s ease-out forwards; }
+    .card-hover { transition: all .3s cubic-bezier(.4,0,.2,1); }
+    .card-hover:hover { transform: translateY(-3px); box-shadow: 0 20px 40px -12px rgba(0,0,0,.12); }
+    ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  `}</style>
+);
 
 const C = {
-  bg:'#f5f7fa', surface:'#ffffff', surface2:'#f1f4f9', surface3:'#e8edf5',
-  border:'#e2e8f0', borderDk:'#cbd5e1', text:'#0f172a', textMid:'#334155', muted:'#94a3b8',
-  gold:'#f5a623', goldLt:'#fef3c7', goldDk:'#d4881a',
-  green:'#059669', greenLt:'#d1fae5',
-  red:'#dc2626', redLt:'#fee2e2', blue:'#2563eb', blueLt:'#dbeafe',
-  purple:'#7c3aed', purpleLt:'#ede9fe', cyan:'#0891b2', cyanLt:'#cffafe',
-  orange:'#ea580c', orangeLt:'#ffedd5', navy:'#0f172a',
-  mono:"'IBM Plex Mono',monospace", sans:"'Sora',sans-serif"
+  bg: '#f8fafc', surface: '#ffffff', surface2: '#f1f5f9',
+  border: '#e2e8f0', border2: '#cbd5e1',
+  text: '#0f172a', text2: '#475569', muted: '#94a3b8',
+  gold: '#f5a623', goldL: '#fef3c7', goldD: '#d4881a',
+  green: '#10b981', greenL: '#d1fae5', greenD: '#059669',
+  red: '#ef4444', redL: '#fee2e2', redD: '#dc2626',
+  blue: '#3b82f6', blueL: '#dbeafe', blueD: '#2563eb',
+  orange: '#f59e0b', orangeL: '#fef3c7',
+  purple: '#8b5cf6', purpleL: '#ede9fe',
+  mono: "'Inter', sans-serif"
 };
 
-function PulseDot({color,size=8}){return(<span style={{position:'relative',display:'inline-flex',width:size,height:size,flexShrink:0}}><span style={{position:'absolute',inset:-2,borderRadius:'50%',background:color,opacity:0.25,animation:'ping 2s cubic-bezier(0,0,0.2,1) infinite'}}/><span style={{width:size,height:size,borderRadius:'50%',background:color,display:'block',position:'relative',zIndex:1}}/></span>);}
-function Badge({label,color,bg}){return(<span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'3px 10px',borderRadius:20,fontSize:11,fontWeight:600,color,background:bg,whiteSpace:'nowrap'}}>{label}</span>);}
-function Card({children,style={},onClick}){const[h,setH]=useState(false);return(<div onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{background:C.surface,borderRadius:12,border:`1px solid ${h?C.borderDk:C.border}`,overflow:'hidden',transition:'all 0.18s',boxShadow:h?'0 8px 24px rgba(15,23,42,0.10)':'0 1px 4px rgba(15,23,42,0.05)',cursor:onClick?'pointer':'default',...style}}>{children}</div>);}
-function MiniBar({value,color,height=4}){const col=value>80?C.red:value>60?C.gold:color;return(<div style={{height,borderRadius:4,background:C.surface3,overflow:'hidden',flex:1}}><div style={{height:'100%',width:`${Math.min(value,100)}%`,background:col,borderRadius:4,transition:'width 1s ease'}}/></div>);}
-
-/* ═══════════════════════════════════════════════════════════════════
-   ║  DONNÉES RÉELLES DIGILAB SOLUTIONS                            ║
-   ║  Sources: digilabsolutions.tn + Facebook officiel             ║
-   ║  Agence Créative & Centre de Formation · Sfax, Tunisie        ║
-   ═══════════════════════════════════════════════════════════════════ */
-
-// ✅ DONNÉES PUBLIQUES (visibles sur le site et Facebook)
-const DIGILAB_PUBLIC = {
-  name: 'DigiLab Solutions',
-  slogan: 'Développez votre marque. Votre succès, notre vision.',
-  address: 'Route Bouzayen Km 5, Immeuble El Bachir, 4ème étage App 4-2, Sfax, Tunisie',
-  phone: '+216 22 044 105',
-  email: 'contact@digilabsolutions.tn',
-  website: 'digilabsolutions.tn',
-  facebook: 'facebook.com/AgenceDigilabSolutions',
-  stats: {
-    visitors: '30K+',
-    experience: '50+',
-    satisfaction: '99.9%',
-    countries: '10+'
+/* ═══════════════════════════════════════════════════════════════
+   DONNÉES MÉTIER — Pas de jargon technique
+   ═══════════════════════════════════════════════════════════════ */
+const DATA = {
+  overview: {
+    clientsActive: 142, clientsTotal: 156,
+    formations: 847, formationsGrowth: 12,
+    satisfaction: 94.2, satisfactionGrowth: 2.3,
+    revenue: 847500, revenueGrowth: 8.5,
   },
+
+  clients: [
+    { id: 1, name: 'Ahmed Ben Ali', email: 'ahmed@digilab.tn', role: 'CLIENT', status: 'active', formations: 2, spent: 1250, lastActive: '2026-06-08T14:23', alerts: 0 },
+    { id: 2, name: 'Fatima Trabelsi', email: 'fatima@digilab.tn', role: 'CLIENT', status: 'active', formations: 1, spent: 850, lastActive: '2026-06-08T11:45', alerts: 1 },
+    { id: 3, name: 'Karim Mansour', email: 'karim@digilab.tn', role: 'RESPONSABLE_MARKETING', status: 'active', formations: 0, spent: 0, lastActive: '2026-06-08T16:02', alerts: 0 },
+    { id: 4, name: 'Leila Ben Ammar', email: 'leila@digilab.tn', role: 'CLIENT', status: 'inactive', formations: 0, spent: 0, lastActive: '2026-05-20T09:15', alerts: 0 },
+    { id: 5, name: 'Sami Ben Salah', email: 'sami@digilab.tn', role: 'CLIENT', status: 'active', formations: 3, spent: 2100, lastActive: '2026-06-07T18:30', alerts: 2 },
+    { id: 6, name: 'Admin Principal', email: 'admin@digilab.tn', role: 'ADMIN', status: 'active', formations: 0, spent: 0, lastActive: '2026-06-08T17:45', alerts: 0 },
+    { id: 7, name: 'Nadia Ferjani', email: 'nadia@digilab.tn', role: 'CLIENT', status: 'active', formations: 1, spent: 950, lastActive: '2026-06-08T10:15', alerts: 0 },
+    { id: 8, name: 'Mohamed Gharbi', email: 'mohamed@digilab.tn', role: 'CLIENT', status: 'pending', formations: 0, spent: 0, lastActive: '2026-06-06T14:20', alerts: 1 },
+  ],
+
   services: [
-    { name:'Création Graphique', icon:'🎨', description:'Conception visuelle professionnelle pour votre marque' },
-    { name:'Community Management', icon:'📱', description:'Gestion complète de vos réseaux sociaux' },
-    { name:'Production Vidéo', icon:'🎬', description:'Création de contenu vidéo professionnel' },
-    { name:'Développement Web', icon:'💻', description:'Sites web et applications sur mesure' },
+    { name: 'Site Web DigiLab', status: 'up', health: 99.99, speed: 'Rapide', region: 'Tunis', users: 12500 },
+    { name: 'Plateforme DigiPip', status: 'up', health: 99.97, speed: 'Rapide', region: 'Sfax', users: 8400 },
+    { name: 'Base de Données', status: 'up', health: 99.95, speed: 'Rapide', region: 'Sfax', users: 6200 },
+    { name: 'Email Marketing', status: 'warn', health: 99.82, speed: 'Lent', region: 'Tunis', users: 4500 },
+    { name: 'Notifications', status: 'down', health: 98.50, speed: '—', region: '—', users: 0 },
+    { name: 'Dashboard Admin', status: 'up', health: 99.91, speed: 'Rapide', region: 'Sfax', users: 12 },
+    { name: 'Sauvegardes', status: 'up', health: 99.98, speed: 'Normal', region: 'Tunis', users: 0 },
+    { name: 'Déploiements', status: 'up', health: 99.99, speed: 'Rapide', region: 'Tunis', users: 0 },
   ],
-  testimonials: [
-    { name:'Cameron Williamson', role:'Business Owner', text:"DigiLab Solutions a transformé notre présence digitale. Leur équipe créative et réactive a dépassé toutes nos attentes." },
-    { name:'Mily Jackson', role:'Directrice Marketing', text:"La gestion centralisée de nos campagnes via DigiPip est intuitive et puissante." },
-    { name:'Diana Panty', role:'Fondatrice', text:"Leur expertise en marketing digital nous a permis de scaler nos opérations rapidement." }
-  ],
-  clients: ['Aurora','Supreme','Star','Company'],
-  process: [
-    { step:1, title:'Audit & Stratégie', desc:'Analyse de votre présence digitale et définition d\'une stratégie personnalisée' },
-    { step:2, title:'Création & Déploiement', desc:'Conception et mise en œuvre de vos campagnes avec nos outils DigiPip' },
-    { step:3, title:'Analyse & Optimisation', desc:'Suivi des performances en temps réel et ajustements continus' }
+
+  storage: {
+    total: 500, used: 287, unit: 'GB',
+    byType: [
+      { type: 'Données Clients', used: 98, total: 200, color: C.blue, growth: 12 },
+      { type: 'Médias & Fichiers', used: 76, total: 150, color: C.green, growth: 8 },
+      { type: 'Archives & Logs', used: 69, total: 100, color: C.orange, growth: 15 },
+      { type: 'Cache & Temporaire', used: 44, total: 50, color: C.purple, growth: 5 },
+    ],
+    history: [
+      { month: 'Jan', used: 180 }, { month: 'Fév', used: 195 }, { month: 'Mar', used: 210 },
+      { month: 'Avr', used: 235 }, { month: 'Mai', used: 258 }, { month: 'Juin', used: 287 },
+    ]
+  },
+
+  costs: {
+    current: 2840, forecast: 3200, budget: 3500, currency: 'TND',
+    byCategory: [
+      { name: 'Serveurs & Calcul', cost: 980, pct: 34.5, trend: 5, color: C.blue },
+      { name: 'Stockage Fichiers', cost: 620, pct: 21.8, trend: 12, color: C.green },
+      { name: 'Base de Données', cost: 540, pct: 19.0, trend: 8, color: C.orange },
+      { name: 'Réseau & Accès', cost: 380, pct: 13.4, trend: -3, color: C.purple },
+      { name: 'Sécurité', cost: 220, pct: 7.7, trend: 2, color: C.red },
+      { name: 'Supervision', cost: 100, pct: 3.5, trend: 0, color: C.muted },
+    ],
+    optimizations: [
+      { title: 'Réduction Nocturne', desc: 'Moins de ressources la nuit (20h-8h)', savings: 420, status: 'active' },
+      { title: 'Compression Auto', desc: 'Fichiers plus légers automatiquement', savings: 180, status: 'active' },
+      { title: 'Archivage Ancien', desc: 'Vieilles données vers stockage économique', savings: 240, status: 'planned' },
+      { title: 'Cache Intelligent', desc: 'Pages plus rapides avec mémoire cache', savings: 95, status: 'active' },
+      { title: 'Instances Spot', desc: 'Serveurs temporaires pour traitements', savings: 310, status: 'planned' },
+    ],
+    monthly: [
+      { month: 'Jan', actual: 2100, optimized: 1950 }, { month: 'Fév', actual: 2280, optimized: 2100 },
+      { month: 'Mar', actual: 2450, optimized: 2200 }, { month: 'Avr', actual: 2620, optimized: 2350 },
+      { month: 'Mai', actual: 2750, optimized: 2420 }, { month: 'Juin', actual: 2840, optimized: 2480 },
+    ]
+  },
+
+  crm: {
+    pipeline: [
+      { stage: 'Prospect', count: 45, value: 0, color: '#94a3b8' },
+      { stage: 'Qualifié', count: 31, value: 15500, color: '#64748b' },
+      { stage: 'Proposition', count: 16, value: 24800, color: C.blue },
+      { stage: 'Négociation', count: 12, value: 31200, color: C.orange },
+      { stage: 'Gagné', count: 9, value: 28500, color: C.green },
+    ],
+    interactions: [
+      { client: 'Société Alpha', type: 'Email', action: 'Devis envoyé', date: '2026-06-08 14:30', status: 'pending', value: 4500 },
+      { client: 'Entreprise Beta', type: 'Appel', action: 'Démonstration produit', date: '2026-06-08 11:00', status: 'completed', value: 8200 },
+      { client: 'Startup Gamma', type: 'Réunion', action: 'Signature contrat', date: '2026-06-07 16:00', status: 'completed', value: 12000 },
+      { client: 'Groupe Delta', type: 'Email', action: 'Relance paiement', date: '2026-06-07 09:15', status: 'urgent', value: 3800 },
+      { client: 'Société Epsilon', type: 'Support', action: 'Ticket résolu', date: '2026-06-06 15:45', status: 'completed', value: 0 },
+    ],
+    metrics: { total: 156, active: 142, new: 18, churn: 2.3, revenue: 847500, mrr: 70500 }
+  },
+
+  security: {
+    score: 94, grade: 'A+', lastAudit: '2026-06-01', nextAudit: '2026-09-01',
+    protections: [
+      { name: 'Accès Sécurisé', status: 'active', score: 98, desc: 'Connexions protégées et vérifiées' },
+      { name: 'Chiffrement Données', status: 'active', score: 100, desc: 'Données illisibles sans clé' },
+      { name: 'Protection Attaques', status: 'active', score: 96, desc: 'Filtre des connexions dangereuses' },
+      { name: 'Journal Activités', status: 'active', score: 92, desc: 'Historique de toutes les actions' },
+      { name: 'Gestion Secrets', status: 'active', score: 95, desc: 'Mots de passe et clés protégés' },
+      { name: 'Conformité SOC2', status: 'review', score: 88, desc: 'Normes internationales de sécurité' },
+    ],
+    events: [
+      { id: 'EVT-001', type: 'Tentative intrusion', level: 'medium', source: 'IP externe', status: 'bloqué', time: '2026-06-08 03:12', detail: '45 tentatives en 2 min · Bloqué auto' },
+      { id: 'EVT-002', type: 'Requête anormale', level: 'high', source: 'Pare-feu', status: 'bloqué', time: '2026-06-07 14:23', detail: 'Requête suspecte détectée et nettoyée' },
+      { id: 'EVT-003', type: 'Dépassement limite', level: 'low', source: 'Monitoring', status: 'résolu', time: '2026-06-07 09:45', detail: 'Limite dépassée · Ralentissement appliqué' },
+    ]
+  },
+
+  incidents: [
+    { id: 'INC-005', level: 'critical', title: 'Perte connexion principale', service: 'Base de Données', status: 'resolved', duration: '3 min', started: '2026-06-04 22:18', resolved: '2026-06-04 22:21', impact: 'Basculement transparent · 0 interruption', category: 'Infrastructure' },
+    { id: 'INC-004', level: 'high', title: 'Email marketing ralenti', service: 'Email Marketing', status: 'resolved', duration: '1h 12min', started: '2026-06-05 11:15', resolved: '2026-06-05 12:27', impact: '1240 messages en attente', category: 'Performance' },
+    { id: 'INC-003', level: 'medium', title: 'Mémoire cache pleine', service: 'Cache Système', status: 'active', duration: '—', started: '2026-06-05 16:42', resolved: null, impact: 'Extension en cours (+2GB)', category: 'Capacité' },
+    { id: 'INC-002', level: 'low', title: 'Sauvegarde retardée', service: 'Sauvegardes', status: 'resolved', duration: '2h 15min', started: '2026-06-05 03:00', resolved: '2026-06-05 05:15', impact: 'Aucun · Retry automatique', category: 'Maintenance' },
+    { id: 'INC-001', level: 'high', title: 'Indisponibilité temporaire', service: 'Site Web', status: 'resolved', duration: '24 min', started: '2026-06-05 14:23', resolved: '2026-06-05 14:47', impact: '23 requêtes retardées', category: 'Infrastructure' },
   ]
 };
 
-// ✅ CAMPAGNES / FORMATIONS / ÉVÉNEMENTS RÉELS (depuis Facebook DigiLab)
-const DIGILAB_CAMPAIGNS = [
-  {
-    id: 1,
-    title: 'Formation Digital Marketing & AI',
-    type: 'Formation',
-    category: 'Formation Professionnelle',
-    status: 'active',
-    date: '2026-04-30',
-    description: 'Maîtrisez l\'avenir du Marketing Digital avec l\'Intelligence Artificielle ! Formation exclusive alliant stratégies de Marketing Digital incontournables et puissance de l\'IA.',
-    features: ['100% Pratique', 'Formation Certifiante', 'Meta & ChatGPT', 'WordPress'],
-    duration: 'Variable',
-    price: 'Sur demande',
-    instructor: 'DigiLab Solutions',
-    participants: 45,
-    maxParticipants: 50,
-    location: 'Sfax, Tunisie',
-    channel: 'Email + Social Media + SMS',
-    recipients: 12500,
-    engagement: 82.4,
-    image: 'formation-ai'
-  },
-  {
-    id: 2,
-    title: 'Formation Web WordPress',
-    type: 'Formation',
-    category: 'Développement Web',
-    status: 'active',
-    date: '2026-04-08',
-    description: 'Maîtrisez le web en seulement 18 heures ! Créez un site internet performant sans coder. Formation WordPress conçue pour vous donner toutes les clés en main.',
-    features: ['18 heures intensives', 'Site pro sans coder', 'WordPress complet', 'Projet professionnel'],
-    duration: '18h',
-    price: 'Sur demande',
-    instructor: 'DigiLab Solutions',
-    participants: 32,
-    maxParticipants: 40,
-    location: 'Sfax, Tunisie',
-    channel: 'Email + Social Media',
-    recipients: 8900,
-    engagement: 68.7,
-    image: 'formation-web'
-  },
-  {
-    id: 3,
-    title: 'Formation Design Graphique & Marketing Digital',
-    type: 'Formation',
-    category: 'Design & Marketing',
-    status: 'active',
-    date: '2026-04-03',
-    description: 'Boostez votre carrière avec DigiLab Solutions ! Formation intensive de 60H en Design Graphique et Marketing Digital. 100% Pratique, cours week-end.',
-    features: ['60H intensive', 'Cours week-end', 'Design Graphique', 'Marketing Digital'],
-    duration: '60h',
-    price: 'Sur demande',
-    instructor: 'DigiLab Solutions',
-    participants: 38,
-    maxParticipants: 45,
-    location: 'Sfax, Tunisie',
-    channel: 'Email + Social Media + Push',
-    recipients: 11200,
-    engagement: 71.2,
-    image: 'formation-design'
-  },
-  {
-    id: 4,
-    title: 'Formation Marketing Digital 40H',
-    type: 'Formation',
-    category: 'Marketing Digital',
-    status: 'sent',
-    date: '2026-03-27',
-    description: '40H pour devenir un pro du Digital ! Maîtrisez l\'écosystème du web. Meta, Google Ads, SEO, Wordpress et bien plus encore.',
-    features: ['40H complète', 'Meta & Google Ads', 'SEO', 'WordPress'],
-    duration: '40h',
-    price: 'Sur demande',
-    instructor: 'DigiLab Solutions',
-    participants: 28,
-    maxParticipants: 35,
-    location: 'Sfax, Tunisie',
-    channel: 'Email + SMS',
-    recipients: 7800,
-    engagement: 64.3,
-    image: 'formation-marketing'
-  },
-  {
-    id: 5,
-    title: 'Workshop Création Graphique Avancée',
-    type: 'Événement',
-    category: 'Workshop',
-    status: 'scheduled',
-    date: '2026-06-15',
-    description: 'Workshop pratique sur les techniques avancées de création graphique. Photoshop, Illustrator et outils IA pour designers.',
-    features: ['Pratique intensive', 'Outils IA', 'Certificat', 'Support post-formation'],
-    duration: '2 jours',
-    price: '150 TND',
-    instructor: 'DigiLab Solutions',
-    participants: 0,
-    maxParticipants: 25,
-    location: 'Sfax, Tunisie',
-    channel: 'Email + Social Media',
-    recipients: 5600,
-    engagement: 0,
-    image: 'workshop-design'
-  },
-  {
-    id: 6,
-    title: 'Conférence: L\'IA dans le Marketing',
-    type: 'Conférence',
-    category: 'Conférence',
-    status: 'scheduled',
-    date: '2026-06-28',
-    description: 'Conférence gratuite sur l\'impact de l\'Intelligence Artificielle dans le marketing digital. Démonstrations live et études de cas.',
-    features: ['Gratuit', 'Démos live', 'Études de cas', 'Networking'],
-    duration: '3h',
-    price: 'Gratuit',
-    instructor: 'DigiLab Solutions',
-    participants: 0,
-    maxParticipants: 100,
-    location: 'Sfax, Tunisie',
-    channel: 'Social Media + Email',
-    recipients: 15000,
-    engagement: 0,
-    image: 'conference-ai'
-  },
-  {
-    id: 7,
-    title: 'Pack Services Marketing Digital',
-    type: 'Produit',
-    category: 'Service',
-    status: 'active',
-    date: '2026-05-01',
-    description: 'Pack complet de services marketing digital pour entreprises. Community management, création graphique et gestion de campagnes.',
-    features: ['Community Management', 'Création Graphique', 'Campagnes Ads', 'Reporting mensuel'],
-    duration: 'Mensuel',
-    price: '500 TND/mois',
-    instructor: 'DigiLab Solutions',
-    participants: 12,
-    maxParticipants: 20,
-    location: 'Sfax, Tunisie',
-    channel: 'Email + SMS + Push',
-    recipients: 4200,
-    engagement: 75.8,
-    image: 'pack-marketing'
-  },
-  {
-    id: 8,
-    title: 'Formation E-commerce & Dropshipping',
-    type: 'Formation',
-    category: 'E-commerce',
-    status: 'draft',
-    date: '2026-07-10',
-    description: 'Lancez votre boutique en ligne ! Formation complète sur l\'e-commerce et le dropshipping avec Shopify et WooCommerce.',
-    features: ['Shopify', 'WooCommerce', 'Stratégie prix', 'Logistique'],
-    duration: '30h',
-    price: 'Sur demande',
-    instructor: 'DigiLab Solutions',
-    participants: 0,
-    maxParticipants: 30,
-    location: 'Sfax, Tunisie',
-    channel: 'Email',
-    recipients: 3200,
-    engagement: 0,
-    image: 'formation-ecommerce'
-  }
+const TABS = [
+  { id: 'dashboard', label: 'Tableau de Bord', icon: '☁️' },
+  { id: 'clients', label: 'Clients', icon: '👥' },
+  { id: 'services', label: 'Services', icon: '🔧' },
+  { id: 'storage', label: 'Espace Cloud', icon: '💾' },
+  { id: 'costs', label: 'Coûts', icon: '💰' },
+  { id: 'crm', label: 'CRM', icon: '🤝' },
+  { id: 'security', label: 'Sécurité', icon: '🔐' },
+  { id: 'incidents', label: 'Incidents', icon: '📝' },
 ];
 
-// ✅ CLIENTS / APPRENANTS RÉELS (basés sur les interactions Facebook)
-const DIGILAB_CLIENTS = [
-  { name:'Ahmed Ben', type:'Apprenant', formation:'Formation Design Graphique', status:'actif', since:'2026', contacts:1, mrr:0, note:'Intéressé par les détails prix' },
-  { name:'Moez Rekik', type:'Apprenant', formation:'Formation Marketing Digital', status:'actif', since:'2026', contacts:1, mrr:0, note:'Commentaire: التفاصيل (les détails)' },
-  { name:'Ameni Bahri', type:'Apprenant', formation:'Multiple', status:'actif', since:'2025', contacts:3, mrr:0, note:'Active sur la page Facebook' },
-  { name:'Cameron Williamson', type:'Client B2B', formation:'Community Management', status:'actif', since:'2024', contacts:1, mrr:800, note:'Business Owner - Témoignage' },
-  { name:'Mily Jackson', type:'Client B2B', formation:'Email Marketing', status:'actif', since:'2024', contacts:1, mrr:1200, note:'Directrice Marketing - Témoignage' },
-  { name:'Diana Panty', type:'Client B2B', formation:'Stratégie Digitale', status:'actif', since:'2023', contacts:1, mrr:600, note:'Fondatrice - Témoignage' },
-  { name:'Groupe Aurora', type:'Entreprise', formation:'Pack Marketing Digital', status:'actif', since:'2024', contacts:5, mrr:2500, note:'Logo visible sur le site' },
-  { name:'Supreme Corp', type:'Entreprise', formation:'Production Vidéo', status:'actif', since:'2023', contacts:3, mrr:1800, note:'Logo visible sur le site' },
-];
-
-// Métriques marketing basées sur les vraies campagnes
-const MARKETING_METRICS = {
-  totalSent: 156000,
-  channels: [
-    { name:'Email', sent:82000, openRate:68.7, clickRate:12.4, color:C.blue },
-    { name:'SMS', sent:45000, openRate:94.2, clickRate:8.1, color:C.green },
-    { name:'Social Media', sent:24000, openRate:32.1, clickRate:5.2, color:C.orange },
-    { name:'Push', sent:5000, openRate:45.3, clickRate:18.7, color:C.purple },
-  ],
-  formations: {
-    total: 4,
-    actives: 3,
-    participants: 143,
-    tauxRemplissage: 78.5
-  }
+/* ═══════════════════════════════════════════════════════════════
+   COMPOSANTS UTILITAIRES
+   ═══════════════════════════════════════════════════════════════ */
+const Card = ({ children, style = {}, onClick }) => {
+  const [hover, setHover] = useState(false);
+  return (
+    <div 
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)} 
+      onMouseLeave={() => setHover(false)}
+      style={{
+        background: C.surface, borderRadius: 14, border: '1px solid ' + C.border,
+        overflow: 'hidden', transition: 'all .3s cubic-bezier(.4,0,.2,1)',
+        boxShadow: hover ? '0 20px 40px -12px rgba(0,0,0,.12)' : '0 1px 3px rgba(0,0,0,.05)',
+        transform: hover ? 'translateY(-3px)' : 'translateY(0)',
+        cursor: onClick ? 'pointer' : 'default',
+        ...style
+      }}
+    >
+      {children}
+    </div>
+  );
 };
 
-// Cloud metrics
-const CLOUD_METRICS = {
-  regions: [
-    { id:'tn-north', name:'Tunisie Nord', location:'Tunis', provider:'OVHcloud', status:'active', cpu:45, memory:62, latency:18, uptime:'99.99', instances:12 },
-    { id:'tn-south', name:'Tunisie Sud', location:'Sfax', provider:'DigiLab DC', status:'active', cpu:38, memory:55, latency:42, uptime:'99.97', instances:8 },
-    { id:'tn-east', name:'Tunisie Est', location:'Sousse', provider:'AWS Paris', status:'active', cpu:52, memory:48, latency:85, uptime:'99.94', instances:6 },
-    { id:'tn-central', name:'Tunisie Centre', location:'Kairouan', provider:'Azure France', status:'standby', cpu:12, memory:20, latency:22, uptime:'100.0', instances:3 },
-  ],
-  services: [
-    { name:'Site Web DigiLab', status:'up', latency:18, region:'Tunis', url:'digilabsolutions.tn' },
-    { name:'API DigiPip Backend', status:'up', latency:42, region:'Sfax', url:'api.digipip.cloud' },
-    { name:'Base de Données Clients', status:'up', latency:8, region:'Sfax', url:'db.digipip.cloud' },
-    { name:'Cache Redis', status:'up', latency:3, region:'Tunis', url:'cache.digipip.cloud' },
-    { name:'Notifications Push', status:'down', latency:0, region:'—', url:'push.digipip.cloud' },
-    { name:'Email Marketing SMTP', status:'warn', latency:312, region:'Tunis', url:'smtp.digipip.cloud' },
-    { name:'Dashboard Admin', status:'up', latency:24, region:'Sfax', url:'admin.digipip.cloud' },
-    { name:'CI/CD Pipeline', status:'up', latency:56, region:'Tunis', url:'ci.digilabsolutions.tn' },
-  ],
-  storage: [
-    { type:'Base de Données Clients', used:68, total:'10 GB', iops:'1.2k', details:{tables:24, records:'2.4M', backups:'7 jours', growth:'+12%/mois'} },
-    { type:'Fichiers Médias (Logos, Vidéos)', used:23, total:'50 GB', iops:'8.5k', details:{files:'45K', images:'32K', videos:'1.2K', growth:'+8%/mois'} },
-    { type:'Logs Système DigiPip', used:41, total:'20 GB', iops:'450', details:{entries:'12M', retention:'30 jours', compression:'85%', growth:'+15%/mois'} },
-    { type:'Cache Temporaire', used:15, total:'2 GB', iops:'12k', details:{keys:'45K', hitRate:'94%', evictions:'12/jour', growth:'+5%/mois'} },
-  ],
-  costs: {
-    monthly: 1240,
-    perSend: 0.002,
-    forecast: 1480,
-    currency: 'TND',
-    breakdown: [
-      { category:'Serveurs Cloud (OVH + AWS)', cost:520, pct:42, trend:'+5%', optimization:'Auto-scaling activé' },
-      { category:'Base de Données PostgreSQL', cost:310, pct:25, trend:'+12%', optimization:'Index optimization' },
-      { category:'Stockage Fichiers (S3)', cost:240, pct:19, trend:'+8%', optimization:'Compression activée' },
-      { category:'Email Marketing (SendGrid)', cost:170, pct:14, trend:'-3%', optimization:'Envoi par lots' },
-    ],
-    optimizations: [
-      { title:'Auto-scaling Nocturne', description:'Réduction 15% en période creuse (20h-8h)', status:'Actif', savings:78 },
-      { title:'Cache CDN Cloudflare', description:'Cache hit rate 94% - réduction latence', status:'Actif', savings:45 },
-      { title:'Compression Brotli/Gzip', description:'Réduction bande passante 35%', status:'Actif', savings:32 },
-      { title:'Arrêt Environnements Dev', description:'Dev env arrêt 20h-8h - économie nuit', status:'Programmé', savings:120 },
-    ]
-  },
-  incidents: [
-    { id:'INC-2026-001', severity:'critical', title:'Panne API DigiPip', description:'Timeout sur 45% des requêtes entre 14:23 et 14:47. Impact inscriptions formations.', service:'API DigiPip Backend', status:'resolved', duration:'24 min', time:'2026-06-05 14:23', impact:'23 inscriptions retardées', resolution:'Redémarrage automatique des pods Kubernetes' },
-    { id:'INC-2026-002', severity:'high', title:'Dégradation Email Marketing', description:'Latence > 500ms sur le service SMTP. Queue d\'envoi accumulée.', service:'Email Marketing SMTP', status:'resolved', duration:'1h 12min', time:'2026-06-05 11:15', impact:'Queue de 1,240 messages en attente', resolution:'Basculement serveur secondaire (Sfax → Tunis)' },
-    { id:'INC-2026-003', severity:'medium', title:'Alerte Cache Redis', description:'Utilisation mémoire > 85% pendant 15 min. Risque d\'éviction des clés.', service:'Cache Redis', status:'active', duration:'En cours', time:'2026-06-05 16:42', impact:"Risque d'éviction des sessions actives", resolution:'Scale-up en cours (+2GB RAM)' },
-    { id:'INC-2026-004', severity:'low', title:'Backup retardé', description:'Backup quotidien retardé de 2h suite à charge élevée DB.', service:'Base de Données Clients', status:'resolved', duration:'2h 15min', time:'2026-06-05 03:00', impact:'Aucun - backup réalisé avec succès', resolution:'Retry automatique + notification Slack' },
-  ],
-  logs: [
-    { time:'16:42:01', level:'critical', service:'API', message:'POST /api/formations/42/inscrire 504 Gateway Timeout - pod-7f8a2b' },
-    { time:'16:41:58', level:'error', service:'Worker', message:'Inscription #42 (Formation AI) échec - retry 3/3' },
-    { time:'16:41:45', level:'warn', service:'Cache', message:'Redis memory usage > 85% - eviction policy activée' },
-    { time:'16:40:12', level:'error', service:'Email', message:'SMTP timeout connexion SendGrid - fallback SMTP2GO activé' },
-    { time:'16:39:33', level:'info', service:'Web', message:'GET /dashboard/admin 200 OK - 124ms' },
-    { time:'16:38:10', level:'success', service:'Déploiement', message:'DigiPip v2.4.1 déployée avec succès sur cluster Sfax' },
-    { time:'16:37:22', level:'warn', service:'Monitoring', message:'CPU usage > 80% sur node worker-3 (Sfax cluster)' },
-    { time:'16:36:15', level:'info', service:'Backup', message:'Backup DB clients démarré - 2.4GB · ETA 4min' },
-    { time:'16:35:08', level:'error', service:'Push', message:'Service FCM notifications indisponible - code 503' },
-    { time:'16:34:44', level:'success', service:'Auth', message:'2,847 sessions actives · JWT rotation OK' },
-  ],
-  security: {
-    score: 92,
-    grade: 'A',
-    lastAudit: '2026-05-15',
-    tools: [
-      { name:'Authentification JWT', status:'Actif', score:'A+', description:'Tokens JWT avec expiration 7 jours · Rotation automatique', details:{sessions:'2,847 actives', refresh:'Automatique', mfa:'Activé admin', algorithm:'HS256'} },
-      { name:'Chiffrement SSL/TLS', status:'Actif', score:'A+', description:'Chiffrement de bout en bout · Certificats wildcard', details:{protocol:'TLS 1.3', certificate:'DigiLab *.tn', renewal:'Auto (Let\'s Encrypt)', hsts:'Activé 1 an'} },
-      { name:'Rate Limiting', status:'Actif', score:'A', description:'Protection DDoS et brute force · Bucket algorithm', details:{limit:'100 req/min', burst:'150 req/min', blocked:'12 aujourd\'hui', strategy:'Token bucket'} },
-      { name:'Audit Logs RGPD', status:'Partiel', score:'B', description:'Journalisation des actions utilisateurs · Conformité RGPD', details:{coverage:'Console + API', retention:'30 jours', events:'Login, CRUD formations', compliance:'RGPD Tunisie'} },
-      { name:'WAF Firewall', status:'Actif', score:'A', description:'Filtrage des requêtes malveillantes · Règles OWASP', details:{rules:'OWASP Core Rule Set', blocked:'45 aujourd\'hui', mode:'Blocking', update:'Auto quotidien'} },
-      { name:'Chiffrement Données', status:'Actif', score:'A+', description:'Chiffrement au repos (AES-256) et en transit (TLS 1.3)', details:{atRest:'AES-256-GCM', inTransit:'TLS 1.3', rotation:'90 jours', backup:'Chiffré + réplication'} },
-    ],
-    vulnerabilities: [
-      { severity:'low', name:'CSP header strict', status:'corrigé', date:'2026-06-01', cve:'—' },
-      { severity:'medium', name:'CSRF token expiration', status:'corrigé', date:'2026-05-28', cve:'—' },
-      { severity:'low', name:'X-Frame-Options header', status:'ouvert', date:'—', cve:'—' },
-      { severity:'high', name:'Dependency lodash < 4.17.21', status:'corrigé', date:'2026-06-03', cve:'CVE-2021-23337' },
-    ]
-  }
+const Badge = ({ label, color, bg }) => (
+  <span style={{
+    display: 'inline-flex', alignItems: 'center', gap: 4,
+    padding: '4px 12px', borderRadius: 20, fontSize: 11,
+    fontWeight: 700, color, background: bg, whiteSpace: 'nowrap',
+    letterSpacing: '0.02em'
+  }}>
+    {label}
+  </span>
+);
+
+const StatusBadge = ({ status }) => {
+  const cfg = {
+    active: { bg: C.greenL, color: C.greenD, label: 'Actif', dot: C.green },
+    inactive: { bg: C.surface2, color: C.muted, label: 'Inactif', dot: C.muted },
+    pending: { bg: C.orangeL, color: C.goldD, label: 'En attente', dot: C.orange },
+    up: { bg: C.greenL, color: C.greenD, label: 'Opérationnel', dot: C.green },
+    warn: { bg: C.orangeL, color: C.goldD, label: 'Ralenti', dot: C.orange },
+    down: { bg: C.redL, color: C.redD, label: 'Indisponible', dot: C.red },
+    resolved: { bg: C.greenL, color: C.greenD, label: 'Résolu', dot: C.green },
+    active_incident: { bg: C.redL, color: C.redD, label: 'En cours', dot: C.red },
+    completed: { bg: C.greenL, color: C.greenD, label: 'Terminé', dot: C.green },
+    urgent: { bg: C.redL, color: C.redD, label: 'Urgent', dot: C.red },
+    pending_crm: { bg: C.blueL, color: C.blueD, label: 'En attente', dot: C.blue },
+    blocked: { bg: C.greenL, color: C.greenD, label: 'Bloqué', dot: C.green },
+  };
+  const c = cfg[status] || cfg.inactive;
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: c.bg, color: c.color }}>
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: c.dot, boxShadow: '0 0 6px ' + c.dot + '60' }} />
+      {c.label}
+    </span>
+  );
 };
 
-const TABS=[
-  {id:'overview',icon:'☁️',label:"Vue d'ensemble"},
-  {id:'monitoring',icon:'📊',label:'Monitoring Cloud'},
-  {id:'marketing',icon:'📢',label:'Marketing Ops'},
-  {id:'formations',icon:'🎓',label:'Formations & Événements'},
-  {id:'storage',icon:'💾',label:'Stockage'},
-  {id:'costs',icon:'💰',label:'Coûts Cloud'},
-  {id:'logs',icon:'📝',label:'Logs & Incidents'},
-  {id:'security',icon:'🔐',label:'Sécurité'},
-];
-
-/* ═══════════════════════════════════════════════════════════════════
-   SECTIONS
-   ═══════════════════════════════════════════════════════════════════ */
-
-function OverviewSection(){
-  const totalParticipants = DIGILAB_CAMPAIGNS.reduce((a,c)=>a+(c.participants||0),0);
-  const activeFormations = DIGILAB_CAMPAIGNS.filter(c=>c.status==='active').length;
-  const totalClients = DIGILAB_CLIENTS.length;
-
-  return(<div>
-    {/* Stats principales */}
-    <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,marginBottom:20}}>
-      {[
-        {icon:'🎓',label:'Formations Actives',value:activeFormations.toString(),color:C.blue,bg:C.blueLt,sub:`${DIGILAB_CAMPAIGNS.length} total · Formations, Événements, Conférences`},
-        {icon:'👥',label:'Participants',value:totalParticipants.toString(),color:C.green,bg:C.greenLt,sub:'Inscrits aux formations et événements'},
-        {icon:'🏢',label:'Clients & Apprenants',value:totalClients.toString(),color:C.purple,bg:C.purpleLt,sub:'B2B + Apprenants individuels'},
-        {icon:'📞',label:'Contact',value:DIGILAB_PUBLIC.phone,color:C.gold,bg:C.goldLt,sub:DIGILAB_PUBLIC.address}
-      ].map((card,i)=>(<Card key={i} style={{padding:'18px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-          <div style={{width:36,height:36,borderRadius:9,background:card.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>{card.icon}</div>
-          <PulseDot color={card.color} size={7}/>
+const KPICard = ({ title, value, subtitle, trend, icon, color, delay = 0 }) => {
+  const [show, setShow] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setShow(true), delay); return () => clearTimeout(t); }, [delay]);
+  return (
+    <Card style={{ padding: 24, opacity: show ? 1 : 0, transform: show ? 'translateY(0)' : 'translateY(16px)', transition: `all .5s ease ${delay}ms` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
+          {icon}
         </div>
-        <div style={{fontSize:10,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',fontFamily:C.mono,marginBottom:4}}>{card.label}</div>
-        <div style={{fontSize:22,fontWeight:800,color:card.color,fontFamily:C.mono,lineHeight:1}}>{card.value}</div>
-        <div style={{fontSize:10,color:C.muted,marginTop:5}}>{card.sub}</div>
-      </Card>))}
+        {trend && (
+          <span style={{ 
+            padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+            background: trend.startsWith('+') ? C.greenL : C.redL,
+            color: trend.startsWith('+') ? C.greenD : C.redD,
+            fontFamily: C.mono
+          }}>
+            {trend.startsWith('+') ? '↗' : '↘'} {trend.replace('+', '')}
+          </span>
+        )}
+      </div>
+      <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>{title}</div>
+      <div style={{ fontSize: 28, fontWeight: 800, color: C.text, letterSpacing: '-0.02em', marginBottom: 4 }}>{value}</div>
+      {subtitle && <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.5 }}>{subtitle}</div>}
+    </Card>
+  );
+};
+
+const ProgressBar = ({ value, max = 100, color, height = 8 }) => {
+  const pct = Math.min((value / max) * 100, 100);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ flex: 1, height, background: C.surface2, borderRadius: height / 2, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: pct + '%', background: color || C.gold, borderRadius: height / 2, transition: 'width 1.5s cubic-bezier(.4,0,.2,1)' }} />
+      </div>
+      <span style={{ fontSize: 11, fontWeight: 700, color: C.text2, fontFamily: C.mono, minWidth: 36, textAlign: 'right' }}>{pct.toFixed(0)}%</span>
     </div>
+  );
+};
 
-    {/* Données publiques DigiLab */}
-    <Card style={{padding:'20px',marginBottom:14}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <div style={{fontSize:16,fontWeight:700,color:C.text}}>✅ Données publiques DigiLab Solutions</div>
-        <Badge label="digilabsolutions.tn · Facebook officiel" color={C.blue} bg={C.blueLt}/>
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12}}>
-        <div style={{padding:'14px',background:C.surface2,borderRadius:8,border:`1px solid ${C.border}`}}>
-          <div style={{fontSize:11,color:C.muted,marginBottom:4}}>Slogan officiel</div>
-          <div style={{fontSize:14,fontWeight:700,color:C.text}}>"{DIGILAB_PUBLIC.slogan}"</div>
-        </div>
-        <div style={{padding:'14px',background:C.surface2,borderRadius:8,border:`1px solid ${C.border}`}}>
-          <div style={{fontSize:11,color:C.muted,marginBottom:4}}>Adresse</div>
-          <div style={{fontSize:14,fontWeight:700,color:C.text}}>{DIGILAB_PUBLIC.address}</div>
-        </div>
-        <div style={{padding:'14px',background:C.surface2,borderRadius:8,border:`1px solid ${C.border}`}}>
-          <div style={{fontSize:11,color:C.muted,marginBottom:4}}>Téléphone</div>
-          <div style={{fontSize:14,fontWeight:700,color:C.text}}>{DIGILAB_PUBLIC.phone}</div>
-        </div>
-        <div style={{padding:'14px',background:C.surface2,borderRadius:8,border:`1px solid ${C.border}`}}>
-          <div style={{fontSize:11,color:C.muted,marginBottom:4}}>Site web</div>
-          <div style={{fontSize:14,fontWeight:700,color:C.blue}}>{DIGILAB_PUBLIC.website}</div>
-        </div>
-      </div>
-    </Card>
-
-    {/* Stats publiques */}
-    <Card style={{padding:'20px',marginBottom:14}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <div style={{fontSize:16,fontWeight:700,color:C.text}}>✅ Statistiques publiques (visibles sur le site)</div>
-        <Badge label="Source: digilabsolutions.tn" color={C.green} bg={C.greenLt}/>
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12}}>
-        {[
-          {label:'Visiteurs',value:DIGILAB_PUBLIC.stats.visitors,sub:'Worldwide'},
-          {label:'Expérience',value:DIGILAB_PUBLIC.stats.experience,sub:'Années cumulées'},
-          {label:'Satisfaction',value:DIGILAB_PUBLIC.stats.satisfaction,sub:'Taux'},
-          {label:'Pays',value:DIGILAB_PUBLIC.stats.countries,sub:'Desservis'}
-        ].map((stat,i)=>(<div key={i} style={{textAlign:'center',padding:'16px',background:C.surface2,borderRadius:8,border:`1px solid ${C.border}`}}>
-          <div style={{fontSize:28,fontWeight:800,color:C.gold,fontFamily:C.mono}}>{stat.value}</div>
-          <div style={{fontSize:10,color:C.muted,textTransform:'uppercase',letterSpacing:'0.06em',marginTop:4}}>{stat.label}</div>
-          <div style={{fontSize:10,color:C.muted}}>{stat.sub}</div>
-        </div>))}
-      </div>
-    </Card>
-
-    {/* Services publics */}
-    <Card style={{padding:'20px',marginBottom:14}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <div style={{fontSize:16,fontWeight:700,color:C.text}}>✅ Services publics DigiLab</div>
-        <Badge label="4 services principaux" color={C.green} bg={C.greenLt}/>
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:10}}>
-        {DIGILAB_PUBLIC.services.map((svc,i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'14px',background:C.surface2,borderRadius:8,border:`1px solid ${C.border}`}}>
-          <div style={{width:40,height:40,borderRadius:10,background:C.blueLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>{svc.icon}</div>
-          <div style={{flex:1}}>
-            <div style={{fontSize:14,fontWeight:700,color:C.text}}>{svc.name}</div>
-            <div style={{fontSize:11,color:C.muted}}>{svc.description}</div>
-          </div>
-          <Badge label="Public" color={C.green} bg={C.greenLt}/>
-        </div>))}
-      </div>
-    </Card>
-
-    <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12}}>
-      {/* Clients / Apprenants réels */}
-      <Card style={{padding:'20px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-          <div style={{fontSize:16,fontWeight:700,color:C.text}}>Clients & Apprenants</div>
-          <Badge label={`${DIGILAB_CLIENTS.filter(c=>c.status==='actif').length} actifs`} color={C.green} bg={C.greenLt}/>
-        </div>
-        <div style={{display:'flex',flexDirection:'column',gap:10}}>
-          {DIGILAB_CLIENTS.map((client,i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',background:C.surface2,borderRadius:8,border:`1px solid ${C.border}`}}>
-            <div style={{width:36,height:36,borderRadius:'50%',background:client.type==='Apprenant'?C.goldLt:C.blueLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,color:client.type==='Apprenant'?C.goldDk:C.blue,flexShrink:0}}>{client.name.charAt(0)}</div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:600,color:C.text}}>{client.name}</div>
-              <div style={{fontSize:11,color:C.muted}}>{client.type} · {client.formation} · Depuis {client.since}</div>
-            </div>
-            <Badge label={client.status==='actif'?'Actif':'Inactif'} color={C.green} bg={C.greenLt}/>
-            {client.mrr>0&&<span style={{fontSize:12,fontWeight:700,color:C.text,fontFamily:C.mono,minWidth:70,textAlign:'right'}}>{client.mrr} TND</span>}
-          </div>))}
-        </div>
-      </Card>
-
-      {/* Formations récentes */}
-      <Card style={{padding:'20px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-          <div style={{fontSize:16,fontWeight:700,color:C.text}}>Formations & Événements récents</div>
-          <Badge label="Facebook officiel" color={C.blue} bg={C.blueLt}/>
-        </div>
-        <div style={{display:'flex',flexDirection:'column',gap:10}}>
-          {DIGILAB_CAMPAIGNS.slice(0,6).map((camp,i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',background:C.surface2,borderRadius:8,border:`1px solid ${C.border}`}}>
-            <div style={{width:36,height:36,borderRadius:8,background:camp.type==='Formation'?C.goldLt:camp.type==='Conférence'?C.purpleLt:C.greenLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>
-              {camp.type==='Formation'?'🎓':camp.type==='Conférence'?'🎤':camp.type==='Workshop'?'🔧':'📦'}
-            </div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:600,color:C.text}}>{camp.title}</div>
-              <div style={{fontSize:11,color:C.muted}}>{camp.category} · {camp.duration} · {camp.participants}/{camp.maxParticipants} participants · {camp.channel}</div>
-            </div>
-            <Badge label={camp.status==='active'?'Active':camp.status==='sent'?'Envoyée':camp.status==='scheduled'?'Planifiée':'Brouillon'} 
-              color={camp.status==='active'?C.blue:camp.status==='sent'?C.green:camp.status==='scheduled'?C.gold:C.muted}
-              bg={camp.status==='active'?C.blueLt:camp.status==='sent'?C.greenLt:camp.status==='scheduled'?C.goldLt:C.surface2}/>
-            {camp.engagement>0&&<span style={{fontSize:12,fontWeight:700,color:C.green,fontFamily:C.mono,minWidth:50,textAlign:'right'}}>{camp.engagement}%</span>}
-          </div>))}
-        </div>
-      </Card>
+const SectionHeader = ({ title, subtitle, action }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
+    <div>
+      <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.text, letterSpacing: '-0.01em' }}>{title}</h2>
+      {subtitle && <p style={{ margin: '4px 0 0', fontSize: 13, color: C.muted }}>{subtitle}</p>}
     </div>
-  </div>);
-}
+    {action && <div>{action}</div>}
+  </div>
+);
 
-function MonitoringSection(){
-  return(<div>
-    <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,marginBottom:20}}>
-      {[
-        {metric:'CPU Cluster',value:45,max:100,trend:'+2%',status:'normal',color:C.blue},
-        {metric:'Mémoire RAM',value:68,max:100,trend:'+5%',status:'attention',color:C.purple},
-        {metric:'Disque SSD',value:23,max:100,trend:'-3%',status:'normal',color:C.cyan},
-        {metric:'Réseau Entrant',value:45,max:100,trend:'+12%',status:'normal',color:C.green},
-        {metric:'Réseau Sortant',value:38,max:100,trend:'+8%',status:'normal',color:C.orange},
-        {metric:'Temps Réponse API',value:124,max:500,trend:'-15ms',status:'normal',color:C.gold}
-      ].map((m,i)=>(<Card key={i} style={{padding:'18px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-          <span style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',fontFamily:C.mono}}>{m.metric}</span>
-          <Badge label={m.status==='normal'?'Normal':'Attention'} color={m.status==='normal'?C.green:C.gold} bg={m.status==='normal'?C.greenLt:C.goldLt}/>
-        </div>
-        <div style={{display:'flex',alignItems:'baseline',gap:8,marginBottom:10}}>
-          <span style={{fontSize:28,fontWeight:800,color:m.color,fontFamily:C.mono}}>{m.value}</span>
-          <span style={{fontSize:11,color:C.muted}}>{m.max===100?'%':'ms'}</span>
-        </div>
-        <MiniBar value={(m.value/m.max)*100} color={m.color}/>
-        <span style={{fontSize:10,color:m.trend.startsWith('+')?C.red:C.green,fontFamily:C.mono,fontWeight:600,marginTop:6,display:'block'}}>{m.trend} vs hier</span>
-      </Card>))}
-    </div>
-    <Card style={{padding:'20px',marginBottom:14}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <div style={{fontSize:16,fontWeight:700,color:C.text}}>Régions Cloud DigiLab</div>
-        <Badge label={`${CLOUD_METRICS.regions.filter(r=>r.status==='active').length}/4 actives`} color={C.green} bg={C.greenLt}/>
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12}}>
-        {CLOUD_METRICS.regions.map((region,i)=>(<Card key={i}>
-          <div style={{padding:'14px 16px',display:'flex',alignItems:'center',gap:10,borderBottom:`1px solid ${C.border}`}}>
-            <div style={{width:36,height:36,borderRadius:8,background:C.blueLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>🌍</div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,fontWeight:700,color:C.text}}>{region.name}</div>
-              <div style={{fontSize:10,color:C.muted,fontFamily:C.mono}}>{region.location} · {region.provider}</div>
-            </div>
-            <PulseDot color={region.status==='active'?C.green:C.gold} size={6}/>
-          </div>
-          <div style={{padding:'12px 16px'}}>
-            <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
-              <span style={{fontSize:10,color:C.muted,fontFamily:C.mono}}>CPU</span>
-              <span style={{fontSize:12,fontWeight:700,color:C.blue,fontFamily:C.mono}}>{region.cpu}%</span>
-            </div>
-            <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
-              <span style={{fontSize:10,color:C.muted,fontFamily:C.mono}}>Mémoire</span>
-              <span style={{fontSize:12,fontWeight:700,color:C.purple,fontFamily:C.mono}}>{region.memory}%</span>
-            </div>
-            <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
-              <span style={{fontSize:10,color:C.muted,fontFamily:C.mono}}>Instances</span>
-              <span style={{fontSize:12,fontWeight:700,color:C.text,fontFamily:C.mono}}>{region.instances}</span>
-            </div>
-            <div style={{display:'flex',justifyContent:'space-between'}}>
-              <span style={{fontSize:10,color:C.muted,fontFamily:C.mono}}>Uptime</span>
-              <span style={{fontSize:12,fontWeight:700,color:C.green,fontFamily:C.mono}}>{region.uptime}%</span>
-            </div>
-          </div>
-        </Card>))}
-      </div>
-    </Card>
-    <Card style={{padding:'20px'}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <div style={{fontSize:16,fontWeight:700,color:C.text}}>Services DigiPip · État des services</div>
-        <Badge label={`${CLOUD_METRICS.services.filter(s=>s.status==='up').length}/${CLOUD_METRICS.services.length} opérationnels`} color={C.green} bg={C.greenLt}/>
-      </div>
-      <div style={{display:'flex',flexDirection:'column',gap:8}}>
-        {CLOUD_METRICS.services.map((svc,i)=>{const sc={up:{c:C.green,bg:C.greenLt},warn:{c:C.gold,bg:C.goldLt},down:{c:C.red,bg:C.redLt}}[svc.status];return(
-          <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:sc.bg,borderRadius:8,border:`1px solid ${sc.c}20`}}>
-            <PulseDot color={sc.c} size={6}/>
-            <span style={{fontSize:13,fontWeight:600,color:C.text,flex:1}}>{svc.name}</span>
-            <span style={{fontSize:10,color:C.muted,fontFamily:C.mono}}>{svc.url}</span>
-            <span style={{fontSize:10,color:C.muted,fontFamily:C.mono,minWidth:60,textAlign:'right'}}>{svc.region}</span>
-            <span style={{fontSize:12,fontWeight:700,color:sc.c,fontFamily:C.mono,minWidth:50,textAlign:'right'}}>{svc.latency>0?svc.latency+'ms':'—'}</span>
-            <Badge label={svc.status==='up'?'OK':svc.status==='warn'?'WARN':'DOWN'} color={sc.c} bg={sc.bg}/>
-          </div>
-        );})}
-      </div>
-    </Card>
-  </div>);
-}
+const MiniChart = ({ data, color, height = 40, width = 100 }) => {
+  if (!data || data.length < 2) return null;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - ((v - min) / range) * height;
+    return `${x},${y}`;
+  }).join(' ');
+  return (
+    <svg width={width} height={height} style={{ overflow: 'visible' }}>
+      <defs>
+        <linearGradient id={`g-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={`0,${height} ${points} ${width},${height}`} fill={`url(#g-${color.replace('#', '')})`} />
+      <polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+};
 
-function MarketingSection(){
-  return(<div>
-    <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,marginBottom:20}}>
-      {[
-        {icon:'✉️',label:'Emails Envoyés',value:'82K',color:C.blue,bg:C.blueLt,sub:'Taux ouverture: 68.7%'},
-        {icon:'💬',label:'SMS Envoyés',value:'45K',color:C.green,bg:C.greenLt,sub:'Taux ouverture: 94.2%'},
-        {icon:'📱',label:'Social Media',value:'24K',color:C.orange,bg:C.orangeLt,sub:'Engagement: 5.2%'},
-        {icon:'🔔',label:'Push Notifications',value:'5K',color:C.purple,bg:C.purpleLt,sub:'Taux clic: 18.7%'}
-      ].map((card,i)=>(<Card key={i} style={{padding:'18px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-          <div style={{width:36,height:36,borderRadius:9,background:card.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>{card.icon}</div>
-          <PulseDot color={card.color} size={7}/>
-        </div>
-        <div style={{fontSize:10,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',fontFamily:C.mono,marginBottom:4}}>{card.label}</div>
-        <div style={{fontSize:26,fontWeight:800,color:card.color,fontFamily:C.mono,lineHeight:1}}>{card.value}</div>
-        <div style={{fontSize:10,color:C.muted,marginTop:5}}>{card.sub}</div>
-      </Card>))}
-    </div>
-    <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12}}>
-      <Card style={{padding:'20px'}}>
-        <div style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:16}}>Campagnes par Canal</div>
-        {MARKETING_METRICS.channels.map((ch,i)=>(<div key={i} style={{marginBottom:14}}>
-          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-            <span style={{fontSize:13,fontWeight:600,color:C.text}}>{ch.name}</span>
-            <span style={{fontSize:12,fontWeight:700,color:ch.color,fontFamily:C.mono}}>{(ch.sent/1000).toFixed(0)}K messages</span>
+/* ═══════════════════════════════════════════════════════════════
+   DASHBOARD
+   ═══════════════════════════════════════════════════════════════ */
+function DashboardSection() {
+  const servicesUp = DATA.services.filter(s => s.status === 'up').length;
+  const storagePct = (DATA.storage.used / DATA.storage.total * 100).toFixed(1);
+  const totalAlerts = DATA.clients.reduce((a, c) => a + c.alerts, 0);
+
+  return (
+    <div className="anim-fade">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+        <KPICard title="Clients Actifs" value={DATA.overview.clientsActive} subtitle={DATA.overview.clientsTotal + ' total'} trend="+12" icon="👥" color={C.blue} delay={0} />
+        <KPICard title="Formations" value={DATA.overview.formations} subtitle="Inscriptions totales" trend="+12" icon="🎓" color={C.green} delay={100} />
+        <KPICard title="Satisfaction" value={DATA.overview.satisfaction + '%'} subtitle="Score moyen" trend="+2.3" icon="⭐" color={C.gold} delay={200} />
+        <KPICard title="Revenus" value={DATA.overview.revenue.toLocaleString() + ' TND'} subtitle={"MRR: " + DATA.crm.metrics.mrr.toLocaleString() + ' TND'} trend="+8.5" icon="💰" color={C.green} delay={300} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 16, marginBottom: 24 }}>
+        <Card style={{ padding: 24 }}>
+          <SectionHeader title="État des Services" subtitle={servicesUp + ' opérationnels sur ' + DATA.services.length} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {DATA.services.map((svc, i) => {
+              const isUp = svc.status === 'up';
+              const isWarn = svc.status === 'warn';
+              const color = isUp ? C.green : isWarn ? C.orange : C.red;
+              return (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 10, background: isUp ? C.greenL : isWarn ? C.orangeL : C.redL, border: '1px solid ' + color + '20' }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, boxShadow: '0 0 8px ' + color + '60', animation: !isUp ? 'pulse 2s infinite' : 'none' }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{svc.name}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{svc.region} · {svc.users.toLocaleString()} utilisateurs</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: color, fontFamily: C.mono }}>{svc.health}%</div>
+                    <div style={{ fontSize: 10, color: C.muted }}>{svc.speed}</div>
+                  </div>
+                  <MiniChart data={[svc.health - 0.5, svc.health - 0.2, svc.health - 0.1, svc.health]} color={color} height={30} width={80} />
+                </div>
+              );
+            })}
           </div>
-          <div style={{display:'flex',gap:8,alignItems:'center'}}>
-            <div style={{flex:1,height:6,borderRadius:3,background:C.surface3,overflow:'hidden'}}>
-              <div style={{height:'100%',width:`${(ch.sent/MARKETING_METRICS.totalSent)*100}%`,background:ch.color,borderRadius:3,transition:'width 1s'}}/>
-            </div>
-            <span style={{fontSize:10,color:C.muted,fontFamily:C.mono,minWidth:80}}>{((ch.sent/MARKETING_METRICS.totalSent)*100).toFixed(1)}%</span>
-          </div>
-        </div>))}
-      </Card>
-      <Card style={{padding:'20px'}}>
-        <div style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:16}}>Performance par Canal</div>
-        {MARKETING_METRICS.channels.map((ch,i)=>(<div key={i} style={{marginBottom:14}}>
-          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-            <span style={{fontSize:13,fontWeight:600,color:C.text}}>{ch.name}</span>
-          </div>
-          <div style={{display:'flex',gap:12}}>
-            <div style={{flex:1}}>
-              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
-                <span style={{fontSize:10,color:C.muted}}>Ouverture</span>
-                <span style={{fontSize:11,fontWeight:700,color:ch.color,fontFamily:C.mono}}>{ch.openRate}%</span>
+        </Card>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Card style={{ padding: 24, flex: 1 }}>
+            <SectionHeader title="Espace Cloud" subtitle={DATA.storage.used + ' / ' + DATA.storage.total + ' ' + DATA.storage.unit} />
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                <span style={{ fontSize: 32, fontWeight: 800, color: C.text }}>{storagePct}<span style={{ fontSize: 16, color: C.muted }}>%</span></span>
+                <span style={{ fontSize: 12, color: C.muted }}>+12% ce mois</span>
               </div>
-              <MiniBar value={ch.openRate} color={ch.color} height={4}/>
+              <ProgressBar value={DATA.storage.used} max={DATA.storage.total} color={storagePct > 80 ? C.red : storagePct > 60 ? C.orange : C.blue} height={10} />
             </div>
-            <div style={{flex:1}}>
-              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
-                <span style={{fontSize:10,color:C.muted}}>Clics</span>
-                <span style={{fontSize:11,fontWeight:700,color:ch.color,fontFamily:C.mono}}>{ch.clickRate}%</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {DATA.storage.byType.map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 3, background: item.color }} />
+                  <span style={{ flex: 1, fontSize: 12, color: C.text }}>{item.type}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: item.color, fontFamily: C.mono }}>{item.used} {DATA.storage.unit}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+        <Card style={{ padding: 24 }}>
+          <SectionHeader title="Alertes en Temps Réel" subtitle={totalAlerts + ' nécessitent attention'} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {DATA.clients.filter(c => c.alerts > 0).map((client, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: C.redL, borderRadius: 10, border: '1px solid ' + C.red + '20' }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: C.red + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: C.red }}>{client.name.charAt(0)}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{client.name}</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>{client.email}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, background: C.red + '15', color: C.red, fontSize: 11, fontWeight: 700 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.red, animation: 'pulse 2s infinite' }} />
+                  {client.alerts} alerte{client.alerts > 1 ? 's' : ''}
+                </div>
               </div>
-              <MiniBar value={ch.clickRate*4} color={ch.color} height={4}/>
-            </div>
+            ))}
+            {DATA.clients.filter(c => c.alerts > 0).length === 0 && (
+              <div style={{ textAlign: 'center', padding: 32, color: C.muted }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+                <p style={{ fontSize: 13, margin: 0 }}>Système stable · Aucune alerte</p>
+              </div>
+            )}
           </div>
-        </div>))}
-      </Card>
+        </Card>
+
+        <Card style={{ padding: 24 }}>
+          <SectionHeader title="Coûts & Budget" subtitle={DATA.costs.currency + ' · Année 2026'} />
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+              <span style={{ fontSize: 28, fontWeight: 800, color: C.text }}>{DATA.costs.current.toLocaleString()}<span style={{ fontSize: 14, color: C.muted, marginLeft: 4 }}>TND</span></span>
+              <span style={{ fontSize: 12, color: DATA.costs.current > DATA.costs.budget * 0.9 ? C.red : C.muted, fontWeight: 600 }}>{((DATA.costs.current / DATA.costs.budget) * 100).toFixed(0)}% du budget</span>
+            </div>
+            <ProgressBar value={DATA.costs.current} max={DATA.costs.budget} color={DATA.costs.current > DATA.costs.budget * 0.9 ? C.red : DATA.costs.current > DATA.costs.budget * 0.7 ? C.orange : C.green} height={10} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+            {DATA.costs.byCategory.slice(0, 4).map((cat, i) => (
+              <div key={i} style={{ padding: 10, background: C.surface2, borderRadius: 8, border: '1px solid ' + C.border }}>
+                <div style={{ fontSize: 10, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{cat.name}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFamily: C.mono }}>{cat.cost.toLocaleString()} TND</div>
+                <div style={{ fontSize: 10, color: cat.trend > 0 ? C.red : C.green, marginTop: 2 }}>{cat.trend > 0 ? '↗' : '↘'} {Math.abs(cat.trend)}%</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
     </div>
-  </div>);
+  );
 }
 
-function FormationsSection(){
-  return(<div>
-    <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,marginBottom:20}}>
-      {[
-        {icon:'🎓',label:'Formations Actives',value:MARKETING_METRICS.formations.actives.toString(),color:C.blue,bg:C.blueLt,sub:`${MARKETING_METRICS.formations.total} total`},
-        {icon:'👥',label:'Participants',value:MARKETING_METRICS.formations.participants.toString(),color:C.green,bg:C.greenLt,sub:`Taux remplissage: ${MARKETING_METRICS.formations.tauxRemplissage}%`},
-        {icon:'🎤',label:'Conférences',value:'1',color:C.purple,bg:C.purpleLt,sub:'Planifiée'},
-        {icon:'🔧',label:'Workshops',value:'1',color:C.orange,bg:C.orangeLt,sub:'Planifié'}
-      ].map((card,i)=>(<Card key={i} style={{padding:'18px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-          <div style={{width:36,height:36,borderRadius:9,background:card.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>{card.icon}</div>
-          <PulseDot color={card.color} size={7}/>
+/* ═══════════════════════════════════════════════════════════════
+   CLIENTS
+   ═══════════════════════════════════════════════════════════════ */
+function ClientsSection() {
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+
+  const filtered = useMemo(() => {
+    let data = [...DATA.clients];
+    if (filter !== 'all') data = data.filter(c => c.status === filter);
+    if (search) data = data.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase()));
+    return data;
+  }, [filter, search]);
+
+  const roleColors = { ADMIN: C.red, RESPONSABLE_MARKETING: C.orange, CLIENT: C.blue };
+  const roleLabels = { ADMIN: 'Admin', RESPONSABLE_MARKETING: 'Marketing', CLIENT: 'Client' };
+
+  return (
+    <div className="anim-fade">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: C.text }}>Gestion des Clients</h2>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: C.muted }}>{filtered.length} résultat{filtered.length > 1 ? 's' : ''} sur {DATA.clients.length}</p>
         </div>
-        <div style={{fontSize:10,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',fontFamily:C.mono,marginBottom:4}}>{card.label}</div>
-        <div style={{fontSize:26,fontWeight:800,color:card.color,fontFamily:C.mono,lineHeight:1}}>{card.value}</div>
-        <div style={{fontSize:10,color:C.muted,marginTop:5}}>{card.sub}</div>
-      </Card>))}
-    </div>
-    <Card style={{padding:'20px',marginBottom:14}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <div style={{fontSize:16,fontWeight:700,color:C.text}}>Toutes les formations et événements DigiLab</div>
-        <Badge label="Source: Facebook officiel" color={C.blue} bg={C.blueLt}/>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid ' + C.border, background: C.surface, color: C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>📥 Exporter</button>
+          <button style={{ padding: '8px 14px', borderRadius: 10, border: 'none', background: C.gold, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>➕ Nouveau</button>
+        </div>
       </div>
-      <div style={{display:'flex',flexDirection:'column',gap:12}}>
-        {DIGILAB_CAMPAIGNS.map((camp,i)=>(<div key={i} style={{padding:'16px',background:C.surface2,borderRadius:10,border:`1px solid ${C.border}`}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
-            <div style={{display:'flex',alignItems:'center',gap:10}}>
-              <div style={{width:44,height:44,borderRadius:10,background:camp.type==='Formation'?C.goldLt:camp.type==='Conférence'?C.purpleLt:camp.type==='Workshop'?C.cyanLt:C.greenLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22}}>
-                {camp.type==='Formation'?'🎓':camp.type==='Conférence'?'🎤':camp.type==='Workshop'?'🔧':'📦'}
+
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center' }}>
+        <input 
+          type="text" 
+          placeholder="Rechercher par nom ou email..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, maxWidth: 320, padding: '10px 14px', borderRadius: 10, border: '1px solid ' + C.border, fontSize: 13, outline: 'none' }}
+        />
+        <div style={{ display: 'flex', gap: 4, padding: 4, background: C.surface2, borderRadius: 10, border: '1px solid ' + C.border }}>
+          {['all', 'active', 'inactive', 'pending'].map(f => (
+            <button key={f} onClick={() => setFilter(f)} style={{
+              padding: '6px 14px', borderRadius: 8, border: 'none',
+              background: filter === f ? C.surface : 'transparent',
+              color: filter === f ? C.text : C.muted,
+              fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              boxShadow: filter === f ? '0 1px 3px rgba(0,0,0,.08)' : 'none',
+            }}>{f === 'all' ? 'Tous' : f === 'active' ? 'Actifs' : f === 'inactive' ? 'Inactifs' : 'En attente'}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ background: C.surface, borderRadius: 14, border: '1px solid ' + C.border, overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr 1fr 1fr', padding: '12px 20px', background: C.surface2, borderBottom: '1px solid ' + C.border, gap: 16 }}>
+          {['Client', 'Contact', 'Rôle', 'Statut', 'Formations', 'Dépenses', 'Activité', 'Actions'].map((h, i) => (
+            <div key={i} style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</div>
+          ))}
+        </div>
+        {filtered.map(client => (
+          <div key={client.id} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr 1fr 1fr', padding: '14px 20px', borderBottom: '1px solid ' + C.border, gap: 16, alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 38, height: 38, borderRadius: '50%', background: roleColors[client.role] + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: roleColors[client.role], border: '2px solid ' + roleColors[client.role] + '30' }}>
+                {client.name.charAt(0)}
               </div>
               <div>
-                <div style={{fontSize:15,fontWeight:700,color:C.text}}>{camp.title}</div>
-                <div style={{fontSize:11,color:C.muted}}>{camp.category} · {camp.duration} · {camp.date}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{client.name}</div>
+                <div style={{ fontSize: 11, color: C.muted }}>ID: #{String(client.id).padStart(4, '0')}</div>
               </div>
             </div>
-            <div style={{display:'flex',gap:6,alignItems:'center'}}>
-              <Badge label={camp.type} color={camp.type==='Formation'?C.gold:camp.type==='Conférence'?C.purple:camp.type==='Workshop'?C.cyan:C.green} bg={camp.type==='Formation'?C.goldLt:camp.type==='Conférence'?C.purpleLt:camp.type==='Workshop'?C.cyanLt:C.greenLt}/>
-              <Badge label={camp.status==='active'?'Active':camp.status==='sent'?'Terminée':camp.status==='scheduled'?'Planifiée':'Brouillon'} 
-                color={camp.status==='active'?C.blue:camp.status==='sent'?C.green:camp.status==='scheduled'?C.gold:C.muted}
-                bg={camp.status==='active'?C.blueLt:camp.status==='sent'?C.greenLt:camp.status==='scheduled'?C.goldLt:C.surface2}/>
+            <div style={{ fontSize: 12, color: C.text2 }}>{client.email}</div>
+            <Badge label={roleLabels[client.role]} color={roleColors[client.role]} bg={roleColors[client.role] + '15'} />
+            <StatusBadge status={client.status} />
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.blue, fontFamily: C.mono }}>{client.formations}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFamily: C.mono }}>{client.spent > 0 ? client.spent.toLocaleString() + ' TND' : '—'}</div>
+            <div style={{ fontSize: 11, color: C.muted, fontFamily: C.mono }}>{new Date(client.lastActive).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid ' + C.border, background: C.surface, cursor: 'pointer', fontSize: 12 }}>👁</button>
+              <button style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid ' + C.border, background: C.surface, cursor: 'pointer', fontSize: 12 }}>✏️</button>
             </div>
           </div>
-          <div style={{fontSize:13,color:C.textMid,lineHeight:1.6,marginBottom:10}}>{camp.description}</div>
-          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>
-            {camp.features.map((feat,j)=>(<span key={j} style={{padding:'4px 10px',background:C.surface,borderRadius:6,fontSize:11,color:C.textMid,border:`1px solid ${C.border}`}}>{feat}</span>))}
-          </div>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:10,borderTop:`1px solid ${C.border}`}}>
-            <div style={{display:'flex',gap:16}}>
-              <span style={{fontSize:11,color:C.muted}}>👥 {camp.participants}/{camp.maxParticipants} participants</span>
-              <span style={{fontSize:11,color:C.muted}}>📍 {camp.location}</span>
-              <span style={{fontSize:11,color:C.muted}}>💰 {camp.price}</span>
-              {camp.engagement>0&&<span style={{fontSize:11,color:C.green,fontWeight:600}}>📊 {camp.engagement}% engagement</span>}
-            </div>
-            <span style={{fontSize:11,color:C.muted,fontFamily:C.mono}}>{camp.channel}</span>
-          </div>
-        </div>))}
+        ))}
       </div>
-    </Card>
-  </div>);
-}
-
-function StorageSection(){
-  return(<div>
-    <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12}}>
-      {CLOUD_METRICS.storage.map((item,i)=>(<Card key={i} style={{padding:'20px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-          <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <div style={{width:40,height:40,borderRadius:10,background:C.blueLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>
-              {i===0?'🗃️':i===1?'📁':i===2?'📊':'💬'}
-            </div>
-            <div>
-              <div style={{fontSize:14,fontWeight:700,color:C.text}}>{item.type}</div>
-              <div style={{fontSize:10,color:C.muted,fontFamily:C.mono}}>{item.iops} IOPS</div>
-            </div>
-          </div>
-          <span style={{fontSize:12,color:C.muted,fontFamily:C.mono}}>{item.total}</span>
-        </div>
-        <div style={{marginBottom:12}}>
-          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-            <span style={{fontSize:11,color:C.text,fontWeight:600}}>{item.used}% utilisé</span>
-            <span style={{fontSize:11,color:item.used>80?C.red:C.green,fontWeight:600}}>{item.used>80?'⚠ Critique':'✓ Normal'}</span>
-          </div>
-          <div style={{height:8,borderRadius:4,background:C.surface3,overflow:'hidden'}}>
-            <div style={{height:'100%',width:`${item.used}%`,background:item.used>80?C.red:C.blue,borderRadius:4,transition:'width 1s'}}/>
-          </div>
-        </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8,padding:'12px',background:C.surface2,borderRadius:8}}>
-          {Object.entries(item.details).map(([key,value])=>(<div key={key}>
-            <div style={{fontSize:9,color:C.muted,textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:2}}>{key}</div>
-            <div style={{fontSize:12,fontWeight:700,color:C.text,fontFamily:C.mono}}>{value}</div>
-          </div>))}
-        </div>
-      </Card>))}
     </div>
-    <Card style={{padding:'20px',marginTop:14}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <div style={{fontSize:16,fontWeight:700,color:C.text}}>Résumé du stockage DigiLab</div>
-        <Badge label="82 GB total · 3 régions" color={C.blue} bg={C.blueLt}/>
-      </div>
-      <div style={{display:'flex',gap:20}}>
-        <div style={{flex:1}}>
-          <div style={{fontSize:11,color:C.muted,marginBottom:8}}>Répartition par type</div>
-          <div style={{display:'flex',flexDirection:'column',gap:8}}>
-            {CLOUD_METRICS.storage.map((item,i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:8}}>
-              <div style={{width:10,height:10,borderRadius:3,background:[C.blue,C.green,C.orange,C.purple][i]}}/>
-              <span style={{flex:1,fontSize:12,color:C.text}}>{item.type}</span>
-              <span style={{fontSize:12,fontWeight:700,color:[C.blue,C.green,C.orange,C.purple][i],fontFamily:C.mono}}>{item.used}%</span>
-            </div>))}
-          </div>
-        </div>
-        <div style={{width:1,background:C.border}}/>
-        <div style={{flex:1}}>
-          <div style={{fontSize:11,color:C.muted,marginBottom:8}}>Prévisions & Alertes</div>
-          <div style={{fontSize:13,color:C.text,lineHeight:1.6}}>
-            <div>📈 Croissance moyenne: <strong>+10%/mois</strong></div>
-            <div>⚠️ Alertes: <strong style={{color:C.red}}>Base de Données à 68%</strong></div>
-            <div>💡 Recommandation: <strong>Upgrade +20 GB</strong></div>
-            <div>🔄 Réplication: <strong>Active (Sfax ↔ Tunis)</strong></div>
-          </div>
-        </div>
-      </div>
-    </Card>
-  </div>);
+  );
 }
 
-function CostsSection(){
-  return(<div>
-    <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,marginBottom:20}}>
-      {[
-        {label:'Budget mensuel Cloud',value:`${CLOUD_METRICS.costs.monthly} TND`,used:'62%',color:C.blue,bg:C.blueLt,trend:'+8%',trendColor:C.red,alert:false},
-        {label:'Coût par envoi',value:`${CLOUD_METRICS.costs.perSend} TND`,used:'45%',color:C.green,bg:C.greenLt,trend:'-3%',trendColor:C.green,alert:false},
-        {label:'Prévision mensuelle',value:`${CLOUD_METRICS.costs.forecast} TND`,used:'74%',color:C.gold,bg:C.goldLt,trend:'⚠️ Alerte',trendColor:C.red,alert:true}
-      ].map((card,i)=>(<Card key={i} style={{padding:'18px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-          <span style={{fontSize:10,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',fontFamily:C.mono}}>{card.label}</span>
-          <span style={{fontSize:11,fontWeight:600,color:card.trendColor,fontFamily:C.mono}}>{card.trend}</span>
+/* ═══════════════════════════════════════════════════════════════
+   SERVICES
+   ═══════════════════════════════════════════════════════════════ */
+function ServicesSection() {
+  const upCount = DATA.services.filter(s => s.status === 'up').length;
+  const warnCount = DATA.services.filter(s => s.status === 'warn').length;
+  const downCount = DATA.services.filter(s => s.status === 'down').length;
+
+  return (
+    <div className="anim-fade">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+        <KPICard title="Opérationnels" value={upCount} subtitle={DATA.services.length + ' services total'} icon="✅" color={C.green} trend="+2" />
+        <KPICard title="Ralentis" value={warnCount} subtitle="Performance réduite" icon="⚠️" color={C.orange} trend="-1" />
+        <KPICard title="Indisponibles" value={downCount} subtitle="Intervention requise" icon="❌" color={C.red} trend="+1" />
+        <KPICard title="Santé Moyenne" value={(DATA.services.reduce((a, s) => a + s.health, 0) / DATA.services.length).toFixed(2) + '%'} subtitle="Objectif: 99.95%" icon="💚" color={C.blue} />
+      </div>
+
+      <Card style={{ padding: 24 }}>
+        <SectionHeader title="Surveillance des Services" subtitle="Santé · Vitesse · Utilisateurs" />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          {DATA.services.map((svc, i) => {
+            const isUp = svc.status === 'up';
+            const isWarn = svc.status === 'warn';
+            const color = isUp ? C.green : isWarn ? C.orange : C.red;
+            const label = isUp ? 'Opérationnel' : isWarn ? 'Ralenti' : 'Hors service';
+            return (
+              <div key={i} style={{ padding: 20, borderRadius: 12, background: isUp ? C.greenL : isWarn ? C.orangeL : C.redL, border: '1px solid ' + color + '25' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                      {isUp ? '✅' : isWarn ? '⚠️' : '❌'}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{svc.name}</div>
+                      <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{svc.region}</div>
+                    </div>
+                  </div>
+                  <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: color + '20', color }}>{label}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
+                  <div style={{ textAlign: 'center', padding: 10, background: 'rgba(255,255,255,0.5)', borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Santé</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: C.text, fontFamily: C.mono }}>{svc.health}%</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: 10, background: 'rgba(255,255,255,0.5)', borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Vitesse</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: svc.speed === 'Lent' ? C.orange : C.text, fontFamily: C.mono }}>{svc.speed}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: 10, background: 'rgba(255,255,255,0.5)', borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Utilisateurs</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: C.text, fontFamily: C.mono }}>{svc.users > 0 ? (svc.users / 1000).toFixed(1) + 'k' : '—'}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <MiniChart data={[svc.health - 0.8, svc.health - 0.4, svc.health - 0.2, svc.health - 0.1, svc.health]} color={color} height={35} width={200} />
+                  </div>
+                  <div style={{ fontSize: 11, color: C.muted, fontFamily: C.mono }}>24h</div>
+                </div>
+              </div>
+            );
+          })}
         </div>
-        <div style={{fontSize:28,fontWeight:800,color:card.color,fontFamily:C.mono,lineHeight:1,marginBottom:8}}>{card.value}</div>
-        <div style={{fontSize:10,color:C.muted}}>Budget utilisé : {card.used}</div>
-        {card.alert&&(<div style={{marginTop:10,padding:'8px 12px',background:C.redLt,borderRadius:6,border:`1px solid ${C.red}20`}}><span style={{fontSize:11,color:C.red,fontWeight:600}}>⚠️ Dépassement prévu dans 12 jours</span></div>)}
-      </Card>))}
+      </Card>
     </div>
-    <Card style={{padding:'20px',marginBottom:14}}>
-      <div style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:16}}>Répartition des coûts Cloud</div>
-      {CLOUD_METRICS.costs.breakdown.map(item=>(<div key={item.category} style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
-        <span style={{fontSize:12,color:C.textMid,minWidth:220}}>{item.category}</span>
-        <div style={{flex:1,height:6,borderRadius:3,background:C.surface3,overflow:'hidden'}}>
-          <div style={{height:'100%',width:`${item.pct}%`,background:C.blue,borderRadius:3,transition:'width 1s'}}/>
-        </div>
-        <span style={{fontSize:12,fontWeight:700,color:C.blue,fontFamily:C.mono,minWidth:50,textAlign:'right'}}>{item.cost} TND</span>
-        <span style={{fontSize:10,color:C.muted,fontFamily:C.mono}}>({item.pct}%)</span>
-        <span style={{fontSize:10,color:item.trend.startsWith('+')?C.red:C.green,fontFamily:C.mono,minWidth:40}}>{item.trend}</span>
-      </div>))}
-    </Card>
-    <Card style={{padding:'20px'}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <div style={{fontSize:16,fontWeight:700,color:C.text}}>Optimisations Cloud actives</div>
-        <Badge label={`${CLOUD_METRICS.costs.optimizations.reduce((a,o)=>a+o.savings,0)} TND/mois économisés`} color={C.green} bg={C.greenLt}/>
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12}}>
-        {CLOUD_METRICS.costs.optimizations.map((opt,i)=>(<div key={i} style={{padding:'14px',background:C.surface2,borderRadius:8,border:`1px solid ${C.border}`,display:'flex',gap:12}}>
-          <span style={{fontSize:24}}>{['🔄','📦','🗜️','⏰'][i]}</span>
-          <div style={{flex:1}}>
-            <div style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:2}}>{opt.title}</div>
-            <div style={{fontSize:11,color:C.muted,marginBottom:4}}>{opt.description}</div>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <Badge label={opt.status} color={C.green} bg={C.greenLt}/>
-              <span style={{fontSize:12,fontWeight:700,color:C.green,fontFamily:C.mono}}>{opt.savings} TND/mois</span>
-            </div>
-          </div>
-        </div>))}
-      </div>
-    </Card>
-  </div>);
+  );
 }
 
-function LogsSection(){
-  const logMeta={info:{color:C.blue,bg:C.blueLt},success:{color:C.green,bg:C.greenLt},warn:{color:C.gold,bg:C.goldLt},error:{color:C.red,bg:C.redLt},critical:{color:C.red,bg:C.redLt}};
-  const severityConfig={critical:{color:C.red,bg:C.redLt,icon:'🔴'},high:{color:C.orange,bg:C.orangeLt,icon:'🟠'},medium:{color:C.gold,bg:C.goldLt,icon:'🟡'},low:{color:C.blue,bg:C.blueLt,icon:'🔵'}};
-  return(<div>
-    <Card style={{padding:'20px',marginBottom:14}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <div style={{fontSize:16,fontWeight:700,color:C.text}}>Incidents récents · DigiLab Cloud</div>
-        <Badge label={`${CLOUD_METRICS.incidents.filter(i=>i.status==='active').length} actifs`} color={C.red} bg={C.redLt}/>
-      </div>
-      <div style={{display:'flex',flexDirection:'column',gap:10}}>
-        {CLOUD_METRICS.incidents.map((incident,i)=>{const sev=severityConfig[incident.severity];return(
-          <div key={i} style={{padding:'14px 16px',borderRadius:10,background:sev.bg,border:`1px solid ${sev.color}20`,display:'flex',gap:12}}>
-            <span style={{fontSize:20}}>{sev.icon}</span>
-            <div style={{flex:1}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-                <span style={{fontSize:13,fontWeight:700,color:C.text}}>{incident.id} · {incident.title}</span>
-                <Badge label={incident.status==='active'?'Actif':'Résolu'} color={incident.status==='active'?C.red:C.green} bg={incident.status==='active'?C.redLt:C.greenLt}/>
-              </div>
-              <div style={{fontSize:11,color:C.muted,marginBottom:6}}>{incident.description}</div>
-              <div style={{display:'flex',gap:16,fontSize:10,color:C.muted,fontFamily:C.mono}}>
-                <span>🕐 {incident.time}</span><span>⏱️ {incident.duration}</span><span>🔧 {incident.service}</span><span>👥 {incident.impact}</span>
-              </div>
-              {incident.status==='resolved'?(
-                <div style={{marginTop:6,fontSize:11,color:C.green,fontWeight:600}}>✅ Résolution: {incident.resolution}</div>
-              ):(
-                <div style={{marginTop:6,fontSize:11,color:C.red,fontWeight:600}}>🔴 En cours: {incident.resolution}</div>
-              )}
-            </div>
-          </div>
-        );})}
-      </div>
-    </Card>
-    <Card style={{padding:'18px 20px'}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-        <div style={{fontSize:16,fontWeight:700,color:C.text}}>Logs temps réel · DigiPip Platform</div>
-        <div style={{display:'flex',gap:6}}>
-          {Object.entries(logMeta).map(([l,m])=>(<span key={l} style={{fontSize:9,padding:'2px 8px',borderRadius:10,background:m.bg,color:m.color,textTransform:'uppercase',fontWeight:600}}>{l}</span>))}
-        </div>
-      </div>
-      <div style={{background:C.navy,borderRadius:10,padding:'14px 16px',fontFamily:C.mono,fontSize:11,lineHeight:1.9,maxHeight:340,overflowY:'auto'}}>
-        <div style={{display:'flex',gap:8,paddingBottom:8,marginBottom:8,borderBottom:'1px solid #1e293b',color:'#475569',fontSize:9,textTransform:'uppercase',letterSpacing:'0.08em'}}>
-          <span style={{width:68}}>Heure</span><span style={{width:60}}>Niveau</span><span style={{width:100}}>Service</span><span>Message</span>
-        </div>
-        {CLOUD_METRICS.logs.map((log,i)=>{const m=logMeta[log.level]||logMeta.info;return(
-          <div key={i} style={{display:'flex',gap:8,marginBottom:2}}>
-            <span style={{width:68,color:'#475569'}}>{log.time}</span>
-            <span style={{width:60,color:m.color,fontWeight:600,textTransform:'uppercase',fontSize:9}}>{log.level}</span>
-            <span style={{width:100,color:'#64748b'}}>{log.service}</span>
-            <span style={{color:'#94a3b8'}}>{log.message}</span>
-          </div>
-        );})}
-        <div style={{marginTop:10,paddingTop:8,borderTop:'1px solid #1e293b',display:'flex',alignItems:'center',gap:8}}>
-          <span style={{color:'#475569'}}>$ tail -f /var/log/digilab/digipip.log</span>
-          <span style={{display:'inline-block',width:7,height:13,background:C.green,borderRadius:1,animation:'blink 1s step-end infinite'}}/>
-        </div>
-      </div>
-    </Card>
-  </div>);
-}
+/* ═══════════════════════════════════════════════════════════════
+   STOCKAGE CLOUD
+   ═══════════════════════════════════════════════════════════════ */
+function StorageSection() {
+  const [selected, setSelected] = useState(null);
+  const pct = (DATA.storage.used / DATA.storage.total * 100).toFixed(1);
+  const remaining = DATA.storage.total - DATA.storage.used;
 
-function SecuritySection(){
-  return(<div>
-    <Card style={{padding:'20px',marginBottom:14}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <div style={{fontSize:16,fontWeight:700,color:C.text}}>Score de sécurité DigiLab · Dernière audit: {CLOUD_METRICS.security.lastAudit}</div>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <span style={{fontSize:32,fontWeight:800,color:C.green,fontFamily:C.mono}}>{CLOUD_METRICS.security.grade}</span>
-          <Badge label={`${CLOUD_METRICS.security.score}/100`} color={C.green} bg={C.greenLt}/>
+  return (
+    <div className="anim-fade">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+        <KPICard title="Capacité Totale" value={DATA.storage.total + ' ' + DATA.storage.unit} subtitle="Provisionné" icon="💾" color={C.blue} />
+        <KPICard title="Utilisé" value={DATA.storage.used + ' ' + DATA.storage.unit} subtitle={pct + '% · ' + remaining + ' ' + DATA.storage.unit + ' libre'} icon="📦" color={pct > 80 ? C.red : pct > 60 ? C.orange : C.green} trend="+10" />
+        <KPICard title="Croissance" value="+12%" subtitle="Moyenne mensuelle" icon="📈" color={C.gold} trend="+2.3" />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <Card style={{ padding: 24 }}>
+          <SectionHeader title="Répartition par Type" subtitle="Cliquez pour les détails" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {DATA.storage.byType.map((item, i) => {
+              const p = ((item.used / item.total) * 100).toFixed(0);
+              const isSel = selected === i;
+              return (
+                <div key={i} onClick={() => setSelected(isSel ? null : i)} style={{ padding: 16, borderRadius: 10, background: isSel ? item.color + '08' : C.surface2, border: '1px solid ' + (isSel ? item.color + '40' : C.border), cursor: 'pointer', transition: 'all .2s' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: item.color }} />
+                      <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{item.type}</span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: C.text, fontFamily: C.mono }}>{item.used} <span style={{ fontSize: 12, color: C.muted }}>/ {item.total}</span></div>
+                      <div style={{ fontSize: 11, color: item.color, fontWeight: 600 }}>{p}%</div>
+                    </div>
+                  </div>
+                  <ProgressBar value={item.used} max={item.total} color={item.color} height={6} />
+                  {isSel && (
+                    <div style={{ marginTop: 12, padding: 12, background: C.surface, borderRadius: 8, border: '1px solid ' + C.border, fontSize: 12, color: C.text2, lineHeight: 1.6 }}>
+                      <div>📈 Prévision: <strong>{(item.used * 1.12).toFixed(1)} {DATA.storage.unit}</strong> dans 30j</div>
+                      <div>💡 Recommandation: <strong>Extension</strong> si &gt;85%</div>
+                      <div>🔄 Réplication: <strong>Active</strong> (multi-zone)</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Card style={{ padding: 24, flex: 1 }}>
+            <SectionHeader title="Évolution Mensuelle" subtitle="6 derniers mois" />
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 200, padding: '10px 0' }}>
+              {DATA.storage.history.map((h, i) => {
+                const max = Math.max(...DATA.storage.history.map(x => x.used));
+                const height = (h.used / max) * 160;
+                return (
+                  <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.text, fontFamily: C.mono }}>{h.used}</div>
+                    <div style={{ width: '100%', height: height, background: i === DATA.storage.history.length - 1 ? C.gold : C.blue, borderRadius: '4px 4px 0 0', transition: 'height 1s', opacity: i === DATA.storage.history.length - 1 ? 1 : 0.6 }} />
+                    <div style={{ fontSize: 10, color: C.muted }}>{h.month}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          <Card style={{ padding: 24 }}>
+            <SectionHeader title="Alertes de Capacité" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, background: C.orangeL, borderRadius: 10, border: '1px solid ' + C.orange + '25' }}>
+                <span style={{ fontSize: 18 }}>⚠️</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Seuil d'alerte à 80%</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>Base de données: 98/200 GB (49%)</div>
+                </div>
+                <span style={{ fontSize: 11, color: C.orange, fontWeight: 700 }}>7j restants</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, background: C.blueL, borderRadius: 10, border: '1px solid ' + C.blue + '25' }}>
+                <span style={{ fontSize: 18 }}>ℹ️</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Archivage automatique</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>Données &gt;90j archivées le 15 juin</div>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
-      <div style={{display:'flex',gap:20}}>
-        <div style={{flex:1}}>
-          <div style={{fontSize:11,color:C.muted,marginBottom:8}}>Sécurité par couche</div>
-          <div style={{display:'flex',flexDirection:'column',gap:8}}>
-            {CLOUD_METRICS.security.tools.map((tool,i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:8}}>
-              <span style={{fontSize:14}}>{['🔐','🛡️','🚫','🔍','🧱','🔒'][i]}</span>
-              <span style={{flex:1,fontSize:12,color:C.text}}>{tool.name}</span>
-              <span style={{fontSize:12,fontWeight:700,color:tool.score==='A+'?C.green:tool.score==='A'?C.blue:C.gold,fontFamily:C.mono,minWidth:30}}>{tool.score}</span>
-              <div style={{width:60,height:4,background:C.surface3,borderRadius:2,overflow:'hidden'}}>
-                <div style={{height:'100%',width:tool.score==='A+'?'100%':tool.score==='A'?'90%':'75%',background:tool.score==='A+'?C.green:tool.score==='A'?C.blue:C.gold,borderRadius:2}}/>
-              </div>
-            </div>))}
-          </div>
-        </div>
-        <div style={{width:1,background:C.border}}/>
-        <div style={{flex:1}}>
-          <div style={{fontSize:11,color:C.muted,marginBottom:8}}>Vulnérabilités ({CLOUD_METRICS.security.vulnerabilities.length})</div>
-          <div style={{display:'flex',flexDirection:'column',gap:6}}>
-            {CLOUD_METRICS.security.vulnerabilities.map((vuln,i)=>{const vc={low:{color:C.blue,bg:C.blueLt,icon:'🔵'},medium:{color:C.gold,bg:C.goldLt,icon:'🟡'},high:{color:C.orange,bg:C.orangeLt,icon:'🟠'},critical:{color:C.red,bg:C.redLt,icon:'🔴'}}[vuln.severity];return(
-              <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:vc.bg,borderRadius:6,border:`1px solid ${vc.color}20`}}>
-                <span>{vc.icon}</span>
-                <span style={{flex:1,fontSize:11,color:C.text}}>{vuln.name}</span>
-                {vuln.cve!=='—'&&<span style={{fontSize:9,color:C.muted,fontFamily:C.mono}}>{vuln.cve}</span>}
-                <Badge label={vuln.status==='corrigé'?'Corrigé':'Ouvert'} color={vuln.status==='corrigé'?C.green:C.red} bg={vuln.status==='corrigé'?C.greenLt:C.redLt}/>
-              </div>
-            );})}
-          </div>
-        </div>
-      </div>
-    </Card>
-    <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12}}>
-      {CLOUD_METRICS.security.tools.map((tool,i)=>(<Card key={i} style={{padding:'18px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-          <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <span style={{fontSize:22}}>{['🔐','🛡️','🚫','🔍','🧱','🔒'][i]}</span>
-            <div><div style={{fontSize:14,fontWeight:700,color:C.text}}>{tool.name}</div><div style={{fontSize:10,color:C.muted}}>{tool.description}</div></div>
-          </div>
-          <div style={{display:'flex',alignItems:'center',gap:8}}>
-            <span style={{fontSize:16,fontWeight:800,color:tool.score==='A+'?C.green:tool.score==='A'?C.blue:C.gold,fontFamily:C.mono}}>{tool.score}</span>
-            <Badge label={tool.status} color={tool.status==='Actif'?C.green:C.gold} bg={tool.status==='Actif'?C.greenLt:C.goldLt}/>
-          </div>
-        </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8,padding:'12px',background:C.surface2,borderRadius:8}}>
-          {Object.entries(tool.details).map(([key,value])=>(<div key={key}><div style={{fontSize:9,color:C.muted,textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:2}}>{key}</div><div style={{fontSize:12,fontWeight:700,color:C.text,fontFamily:C.mono}}>{value}</div></div>))}
-        </div>
-      </Card>))}
     </div>
-  </div>);
+  );
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   MAIN COMPONENT
-   ═══════════════════════════════════════════════════════════════════ */
-export default function CloudOperations(){
-  const[activeTab,setActiveTab]=useState('overview');
-  const[camps,setCamps]=useState([]);
-  const[loading,setLoading]=useState(true);
+/* ═══════════════════════════════════════════════════════════════
+   COÛTS
+   ═══════════════════════════════════════════════════════════════ */
+function CostsSection() {
+  const [showOpt, setShowOpt] = useState(false);
+  const savings = DATA.costs.optimizations.reduce((a, o) => a + o.savings, 0);
 
-  useEffect(()=>{
-    api.get('/api/campagnes').then(r=>setCamps(Array.isArray(r.data)?r.data:r.data?.data||[])).catch(()=>setCamps([])).finally(()=>setLoading(false));
-  },[]);
+  return (
+    <div className="anim-fade">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+        <KPICard title="Coûts Actuels" value={DATA.costs.current.toLocaleString() + ' TND'} subtitle={"Budget: " + DATA.costs.budget.toLocaleString() + ' TND'} icon="💰" color={C.blue} trend="+5.2" />
+        <KPICard title="Prévision" value={DATA.costs.forecast.toLocaleString() + ' TND'} subtitle={"+" + ((DATA.costs.forecast - DATA.costs.current) / DATA.costs.current * 100).toFixed(0) + "% vs actuel"} icon="📊" color={C.orange} />
+        <KPICard title="Économies Potentielles" value={savings.toLocaleString() + ' TND'} subtitle={"Soit " + ((savings / DATA.costs.current) * 100).toFixed(0) + "% de réduction"} icon="✅" color={C.green} trend="+8" />
+      </div>
 
-  const sections={
-    overview:<OverviewSection/>,
-    monitoring:<MonitoringSection/>,
-    marketing:<MarketingSection/>,
-    formations:<FormationsSection/>,
-    storage:<StorageSection/>,
-    costs:<CostsSection/>,
-    logs:<LogsSection/>,
-    security:<SecuritySection/>,
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 16, marginBottom: 24 }}>
+        <Card style={{ padding: 24 }}>
+          <SectionHeader title="Répartition des Coûts" subtitle="Par catégorie de service" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {DATA.costs.byCategory.map((cat, i) => (
+              <div key={i}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: cat.color }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{cat.name}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 11, color: cat.trend > 0 ? C.red : C.green, fontWeight: 600, fontFamily: C.mono }}>{cat.trend > 0 ? '↗' : '↘'} {Math.abs(cat.trend)}%</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFamily: C.mono, minWidth: 70, textAlign: 'right' }}>{cat.cost.toLocaleString()} TND</span>
+                    <span style={{ fontSize: 11, color: C.muted, minWidth: 40, textAlign: 'right' }}>({cat.pct}%)</span>
+                  </div>
+                </div>
+                <ProgressBar value={cat.pct} max={100} color={cat.color} height={6} />
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card style={{ padding: 24 }}>
+          <SectionHeader title="Évolution" subtitle="Coûts réels vs optimisés" />
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 180, padding: '10px 0', marginBottom: 16 }}>
+            {DATA.costs.monthly.map((h, i) => {
+              const max = Math.max(...DATA.costs.monthly.map(x => x.actual));
+              const h1 = (h.actual / max) * 140;
+              const h2 = (h.optimized / max) * 140;
+              return (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, width: '100%', justifyContent: 'center' }}>
+                    <div style={{ width: '45%', height: h2, background: C.green, borderRadius: '3px 3px 0 0', opacity: 0.7 }} />
+                    <div style={{ width: '45%', height: h1, background: C.blue, borderRadius: '3px 3px 0 0' }} />
+                  </div>
+                  <div style={{ fontSize: 9, color: C.muted, textAlign: 'center' }}>{h.month}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 20, fontSize: 11 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: C.blue }} /><span style={{ color: C.muted }}>Réel</span></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: C.green, opacity: 0.7 }} /><span style={{ color: C.muted }}>Optimisé</span></div>
+          </div>
+        </Card>
+      </div>
+
+      <Card style={{ padding: 24 }}>
+        <SectionHeader title="Optimisations Recommandées" subtitle={savings.toLocaleString() + ' TND/mois d\'économies'} action={<button onClick={() => setShowOpt(!showOpt)} style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid ' + C.border, background: C.surface, color: C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{showOpt ? '▼' : '▶'} {showOpt ? 'Réduire' : 'Développer'}</button>} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          {DATA.costs.optimizations.map((opt, i) => (
+            <div key={i} style={{ padding: 18, background: opt.status === 'active' ? C.greenL : C.surface2, borderRadius: 10, border: '1px solid ' + (opt.status === 'active' ? C.green + '30' : C.border) }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{opt.title}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{opt.desc}</div>
+                </div>
+                <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: opt.status === 'active' ? C.green + '15' : C.orange + '15', color: opt.status === 'active' ? C.greenD : C.goldD }}>{opt.status === 'active' ? '✓ Actif' : '○ Planifié'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: C.surface, borderRadius: 8, border: '1px solid ' + C.border }}>
+                <span style={{ fontSize: 11, color: C.muted }}>Économies mensuelles</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: C.green, fontFamily: C.mono }}>{opt.savings.toLocaleString()} TND</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CRM
+   ═══════════════════════════════════════════════════════════════ */
+function CRMSection() {
+  const [stage, setStage] = useState(null);
+  const totalVal = DATA.crm.pipeline.reduce((a, p) => a + p.value, 0);
+
+  return (
+    <div className="anim-fade">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+        <KPICard title="Clients Total" value={DATA.crm.metrics.total} subtitle={DATA.crm.metrics.active + ' actifs'} icon="👥" color={C.blue} trend="+12" />
+        <KPICard title="Nouveaux (30j)" value={DATA.crm.metrics.new} subtitle="+28% vs mois dernier" icon="🆕" color={C.green} trend="+28" />
+        <KPICard title="Revenus" value={DATA.crm.metrics.revenue.toLocaleString() + ' TND'} subtitle={"MRR: " + DATA.crm.metrics.mrr.toLocaleString() + ' TND'} icon="💰" color={C.gold} trend="+8.5" />
+        <KPICard title="Churn Rate" value={DATA.crm.metrics.churn + '%'} subtitle="Objectif: <3%" icon="📉" color={DATA.crm.metrics.churn > 3 ? C.red : C.green} trend="-0.5" />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 16 }}>
+        <Card style={{ padding: 24 }}>
+          <SectionHeader title="Pipeline Commercial" subtitle={totalVal.toLocaleString() + ' TND en cours'} />
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20, height: 48 }}>
+            {DATA.crm.pipeline.map((s, i) => {
+              const w = (s.count / DATA.crm.metrics.total) * 100;
+              const isA = stage === i;
+              return (
+                <div key={i} onClick={() => setStage(isA ? null : i)} style={{ flex: w, minWidth: 50, cursor: 'pointer' }}>
+                  <div style={{ height: '100%', background: s.color, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 14, boxShadow: isA ? '0 0 0 3px ' + s.color + '40' : 'none' }}>{s.count}</div>
+                  <div style={{ textAlign: 'center', marginTop: 8, fontSize: 11, fontWeight: 600, color: isA ? s.color : C.muted }}>{s.stage}</div>
+                </div>
+              );
+            })}
+          </div>
+          {stage !== null && (
+            <div style={{ padding: 16, background: C.surface2, borderRadius: 10, border: '1px solid ' + C.border, animation: 'fadeInUp .3s ease' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>{DATA.crm.pipeline[stage].stage}</div>
+              <div style={{ fontSize: 13, color: C.text2 }}>{DATA.crm.pipeline[stage].count} opportunités · Valeur: {DATA.crm.pipeline[stage].value.toLocaleString()} TND</div>
+            </div>
+          )}
+        </Card>
+
+        <Card style={{ padding: 24 }}>
+          <SectionHeader title="Interactions Récentes" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {DATA.crm.interactions.map((inter, i) => (
+              <div key={i} style={{ display: 'flex', gap: 12, padding: 14, borderRadius: 10, background: inter.status === 'completed' ? C.greenL : inter.status === 'urgent' ? C.redL : C.blueL, border: '1px solid ' + (inter.status === 'completed' ? C.green : inter.status === 'urgent' ? C.red : C.blue) + '20' }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: inter.status === 'completed' ? C.green + '15' : inter.status === 'urgent' ? C.red + '15' : C.blue + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>
+                  {inter.type === 'Email' ? '📧' : inter.type === 'Appel' ? '📞' : '📅'}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{inter.client}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{inter.action}</div>
+                  <div style={{ fontSize: 10, color: C.muted, marginTop: 4, fontFamily: C.mono }}>{inter.date}</div>
+                </div>
+                {inter.value > 0 && <div style={{ fontSize: 12, fontWeight: 700, color: C.gold, fontFamily: C.mono, flexShrink: 0 }}>{inter.value.toLocaleString()} TND</div>}
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SÉCURITÉ
+   ═══════════════════════════════════════════════════════════════ */
+function SecuritySection() {
+  const [sel, setSel] = useState(null);
+  const sc = DATA.security.score >= 90 ? C.green : DATA.security.score >= 70 ? C.orange : C.red;
+
+  return (
+    <div className="anim-fade">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+        <Card style={{ padding: 24, textAlign: 'center' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Score de Sécurité</div>
+          <div style={{ fontSize: 56, fontWeight: 800, color: sc, lineHeight: 1 }}>{DATA.security.score}<span style={{ fontSize: 24, color: C.muted }}>/100</span></div>
+          <div style={{ marginTop: 8, fontSize: 14, fontWeight: 700, color: sc }}>Grade {DATA.security.grade}</div>
+          <div style={{ marginTop: 4, fontSize: 11, color: C.muted }}>Audit: {DATA.security.lastAudit}</div>
+        </Card>
+        <KPICard title="Protections Actives" value={DATA.security.protections.filter(p => p.status === 'active').length + '/' + DATA.security.protections.length} subtitle="Toutes les couches critiques" icon="🛡️" color={C.green} />
+        <KPICard title="Menaces Bloquées" value={DATA.security.events.filter(e => e.status === 'bloqué').length.toString()} subtitle={DATA.security.events.length + ' total (24h)'} icon="🔒" color={C.blue} trend="+3" />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <Card style={{ padding: 24 }}>
+          <SectionHeader title="Couches de Protection" subtitle="Cliquez pour les détails" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {DATA.security.protections.map((p, i) => {
+              const isA = sel === i;
+              const pc = p.score >= 95 ? C.green : p.score >= 85 ? C.orange : C.red;
+              return (
+                <div key={i} onClick={() => setSel(isA ? null : i)} style={{ padding: 14, borderRadius: 10, background: isA ? pc + '08' : C.surface2, border: '1px solid ' + (isA ? pc + '40' : C.border), cursor: 'pointer', transition: 'all .2s' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 18 }}>{['🔐', '🛡️', '🚫', '🔍', '🔑', '✅'][i]}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{p.name}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: pc, fontFamily: C.mono }}>{p.score}</span>
+                      <span style={{ padding: '3px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: p.status === 'active' ? C.greenL : C.orangeL, color: p.status === 'active' ? C.greenD : C.goldD }}>{p.status === 'active' ? '✓' : '○'}</span>
+                    </div>
+                  </div>
+                  <ProgressBar value={p.score} max={100} color={pc} height={4} />
+                  {isA && (
+                    <div style={{ marginTop: 12, padding: 12, background: C.surface, borderRadius: 8, border: '1px solid ' + C.border, fontSize: 12, color: C.text2, lineHeight: 1.6 }}>
+                      <div>{p.desc}</div>
+                      <div style={{ marginTop: 4 }}>📅 Prochain audit: <strong>{DATA.security.nextAudit}</strong></div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card style={{ padding: 24 }}>
+          <SectionHeader title="Événements Récentes" subtitle="24 dernières heures" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {DATA.security.events.map((evt, i) => {
+              const ec = evt.level === 'high' ? C.red : evt.level === 'medium' ? C.orange : C.blue;
+              return (
+                <div key={i} style={{ padding: 14, borderRadius: 10, background: ec + '08', border: '1px solid ' + ec + '25' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{evt.id} · {evt.type}</div>
+                      <div style={{ fontSize: 11, color: C.muted, marginTop: 2, fontFamily: C.mono }}>{evt.source} · {evt.time}</div>
+                    </div>
+                    <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: ec + '15', color: ec }}>{evt.level}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: C.text2, marginBottom: 8 }}>{evt.detail}</div>
+                  <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: evt.status === 'bloqué' ? C.greenL : C.orangeL, color: evt.status === 'bloqué' ? C.greenD : C.goldD }}>{evt.status === 'bloqué' ? '✓ Bloqué' : '⚠ Détecté'}</span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INCIDENTS
+   ═══════════════════════════════════════════════════════════════ */
+function LogsSection() {
+  const [sevFilter, setSevFilter] = useState('all');
+  const [statFilter, setStatFilter] = useState('all');
+
+  const filtered = useMemo(() => {
+    let d = [...DATA.incidents];
+    if (sevFilter !== 'all') d = d.filter(i => i.level === sevFilter);
+    if (statFilter !== 'all') d = d.filter(i => i.status === statFilter);
+    return d;
+  }, [sevFilter, statFilter]);
+
+  const cats = [
+    { name: 'Infrastructure', count: DATA.incidents.filter(i => i.category === 'Infrastructure').length, color: C.red },
+    { name: 'Performance', count: DATA.incidents.filter(i => i.category === 'Performance').length, color: C.orange },
+    { name: 'Capacité', count: DATA.incidents.filter(i => i.category === 'Capacité').length, color: C.gold },
+    { name: 'Maintenance', count: DATA.incidents.filter(i => i.category === 'Maintenance').length, color: C.blue },
+    { name: 'Service', count: DATA.incidents.filter(i => i.category === 'Service').length, color: C.green },
+  ];
+
+  const sevCfg = {
+    critical: { color: C.red, bg: C.redL, label: 'Critique' },
+    high: { color: C.orange, bg: C.orangeL, label: 'Élevée' },
+    medium: { color: C.gold, bg: C.goldL, label: 'Moyenne' },
+    low: { color: C.blue, bg: C.blueL, label: 'Faible' },
   };
 
-  return(<div style={{padding:'28px 32px',background:C.bg,minHeight:'100vh',color:C.text,fontFamily:C.sans}}>
-    <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@400;500;600;700;800&display=swap');@keyframes ping{75%,100%{transform:scale(2.4);opacity:0}}@keyframes blink{50%{opacity:0}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:${C.surface2}}::-webkit-scrollbar-thumb{background:${C.borderDk};border-radius:3px}`}</style>
+  return (
+    <div className="anim-fade">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 24 }}>
+        {cats.map((c, i) => (
+          <Card key={i} style={{ padding: 20, textAlign: 'center' }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: c.color, marginBottom: 4 }}>{c.count}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.muted }}>{c.name}</div>
+          </Card>
+        ))}
+      </div>
 
-    {/* Header */}
-    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
-      <div style={{display:'flex',alignItems:'center',gap:12}}>
-        <div style={{width:40,height:40,borderRadius:10,background:C.goldLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>☁️</div>
-        <div>
-          <h1 style={{margin:0,fontSize:22,fontWeight:800,color:C.navy}}>Cloud Operations Center</h1>
-          <p style={{margin:0,fontSize:11,color:C.muted,fontFamily:C.mono,marginTop:2}}>DigiLab Solutions · Sfax, Tunisie · digilabsolutions.tn</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+        <KPICard title="Incidents (30j)" value={DATA.incidents.length.toString()} subtitle="-40% vs mois dernier" icon="📝" color={C.orange} trend="-40" />
+        <KPICard title="Temps Résolution" value="52 min" subtitle="Moyenne de résolution" icon="⏱️" color={C.blue} trend="-15" />
+        <KPICard title="Disponibilité" value="99.97%" subtitle="Objectif: 99.95%" icon="✅" color={C.green} trend="+0.02" />
+        <KPICard title="Sauvegardes" value="98%" subtitle="24/24 ce mois" icon="💾" color={C.gold} trend="+2" />
+      </div>
+
+      <Card style={{ padding: 24 }}>
+        <SectionHeader 
+          title="Journal des Incidents" 
+          subtitle={filtered.length + ' résultat' + (filtered.length > 1 ? 's' : '')}
+          action={
+            <div style={{ display: 'flex', gap: 8 }}>
+              <select value={sevFilter} onChange={e => setSevFilter(e.target.value)} style={{ padding: '6px 12px', borderRadius: 10, border: '1px solid ' + C.border, fontSize: 12, color: C.muted, background: C.surface }}>
+                <option value="all">Toutes sévérités</option>
+                <option value="critical">Critique</option>
+                <option value="high">Élevée</option>
+                <option value="medium">Moyenne</option>
+                <option value="low">Faible</option>
+              </select>
+              <select value={statFilter} onChange={e => setStatFilter(e.target.value)} style={{ padding: '6px 12px', borderRadius: 10, border: '1px solid ' + C.border, fontSize: 12, color: C.muted, background: C.surface }}>
+                <option value="all">Tous statuts</option>
+                <option value="resolved">Résolu</option>
+                <option value="active">En cours</option>
+              </select>
+            </div>
+          }
+        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {filtered.map((inc, i) => {
+            const s = sevCfg[inc.level];
+            return (
+              <div key={i} style={{ padding: 18, borderRadius: 10, background: s.bg, border: '1px solid ' + s.color + '25' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: s.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: s.color }}>
+                      {inc.level === 'critical' ? '!' : inc.level === 'high' ? 'H' : inc.level === 'medium' ? 'M' : 'L'}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{inc.id} · {inc.title}</div>
+                      <div style={{ fontSize: 11, color: C.muted, marginTop: 2, fontFamily: C.mono }}>{inc.service} · {inc.category}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <Badge label={s.label} color={s.color} bg={s.color + '15'} />
+                    <Badge label={inc.status === 'resolved' ? 'Résolu' : 'En cours'} color={inc.status === 'resolved' ? C.greenD : C.redD} bg={inc.status === 'resolved' ? C.greenL : C.redL} />
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: C.text2, marginBottom: 10, lineHeight: 1.5 }}>{inc.impact}</div>
+                <div style={{ display: 'flex', gap: 16, fontSize: 11, color: C.muted, fontFamily: C.mono, flexWrap: 'wrap' }}>
+                  <span>🕐 {inc.started}</span>
+                  <span>⏱️ {inc.duration}</span>
+                  {inc.resolved && <span>✅ {inc.resolved}</span>}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
-      <div style={{display:'flex',alignItems:'center',gap:12}}>
-        <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:20,background:C.surface,border:`1px solid ${C.border}`}}>
-          <PulseDot color={C.green} size={6}/>
-          <span style={{fontSize:12,color:C.green,fontWeight:600}}>Cloud Opérationnel</span>
+      </Card>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPOSANT PRINCIPAL
+   ═══════════════════════════════════════════════════════════════ */
+export default function CloudOperations() {
+  const [tab, setTab] = useState('dashboard');
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => { const i = setInterval(() => setTime(new Date()), 30000); return () => clearInterval(i); }, []);
+
+  const sections = {
+    dashboard: <DashboardSection />,
+    clients: <ClientsSection />,
+    services: <ServicesSection />,
+    storage: <StorageSection />,
+    costs: <CostsSection />,
+    crm: <CRMSection />,
+    security: <SecuritySection />,
+    logs: <LogsSection />,
+  };
+
+  const tabs = [
+    { id: 'dashboard', label: 'Tableau de Bord', icon: '☁️', color: C.gold },
+    { id: 'clients', label: 'Clients', icon: '👥', color: C.blue },
+    { id: 'services', label: 'Services', icon: '🔧', color: C.green },
+    { id: 'storage', label: 'Espace Cloud', icon: '💾', color: C.orange },
+    { id: 'costs', label: 'Coûts', icon: '💰', color: C.red },
+    { id: 'crm', label: 'CRM', icon: '🤝', color: C.purple },
+    { id: 'security', label: 'Sécurité', icon: '🔐', color: C.green },
+    { id: 'logs', label: 'Incidents', icon: '📝', color: C.orange },
+  ];
+
+  return (
+    <div className="cloud-ops" style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
+      <GlobalStyles />
+
+      {/* Header */}
+      <header style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(248,250,252,0.9)', backdropFilter: 'blur(12px)', borderBottom: '1px solid ' + C.border, padding: '0 32px' }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 64 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, ' + C.gold + ' 0%, ' + C.goldD + ' 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, boxShadow: '0 4px 12px ' + C.gold + '40' }}>☁️</div>
+            <div>
+              <h1 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: C.text, letterSpacing: '-0.02em' }}>Centre de Contrôle Cloud</h1>
+              <p style={{ margin: 0, fontSize: 11, color: C.muted, marginTop: 1 }}>DigiLab Solutions · Sfax, Tunisie · {time.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 20, background: C.greenL, border: '1px solid ' + C.green + '30' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.green, boxShadow: '0 0 8px ' + C.green + '60', animation: 'pulse 2s infinite' }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.greenD }}>Cloud Opérationnel</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 20, background: C.goldL, border: '1px solid ' + C.gold + '30' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.goldD }}>👤 Admin</span>
+            </div>
+            <button onClick={() => setTime(new Date())} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid ' + C.border, background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14 }}>🔄</button>
+          </div>
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:20,background:C.goldLt,border:`1px solid ${C.gold}40`}}>
-          <span style={{fontSize:12,color:C.goldDk,fontWeight:600}}>👤 Admin</span>
+      </header>
+
+      {/* Navigation */}
+      <nav style={{ background: C.surface, borderBottom: '1px solid ' + C.border, padding: '0 32px', overflowX: 'auto' }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', gap: 4 }}>
+          {tabs.map(t => {
+            const a = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                style={{
+                  position: 'relative', padding: '14px 18px', border: 'none', background: 'transparent',
+                  color: a ? t.color : C.muted, fontSize: 13, fontWeight: a ? 700 : 500,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                  whiteSpace: 'nowrap', transition: 'all .2s',
+                  borderBottom: a ? '2px solid ' + t.color : '2px solid transparent',
+                  marginBottom: -1,
+                }}
+              >
+                <span style={{ fontSize: 16 }}>{t.icon}</span>
+                <span>{t.label}</span>
+                {t.id === 'logs' && DATA.incidents.filter(i => i.status === 'active').length > 0 && (
+                  <span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 10, fontWeight: 700, background: C.red, color: '#fff' }}>{DATA.incidents.filter(i => i.status === 'active').length}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
-      </div>
-    </div>
+      </nav>
 
-    {/* Info banner */}
-    <div style={{padding:'12px 16px',background:C.blueLt,borderRadius:8,border:`1px solid ${C.blue}30`,marginBottom:20,display:'flex',alignItems:'center',gap:10}}>
-      <span style={{fontSize:16}}>ℹ️</span>
-      <div style={{fontSize:12,color:C.blue}}>
-        <strong>Données affichées :</strong> 
-        <span style={{marginLeft:8,padding:'2px 8px',background:C.green,color:'#fff',borderRadius:4,fontSize:10}}>✅ Public</span> = digilabsolutions.tn + Facebook officiel · 
-        <span style={{marginLeft:8,padding:'2px 8px',background:C.gold,color:'#fff',borderRadius:4,fontSize:10}}>📊 Interne</span> = Données DigiPip
-      </div>
+      {/* Content */}
+      <main style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 32px 40px' }}>
+        <div style={{ animation: 'fadeInUp .4s ease-out' }}>{sections[tab]}</div>
+      </main>
     </div>
-
-    {/* Tabs */}
-    <div style={{display:'flex',gap:4,marginBottom:24,overflowX:'auto',paddingBottom:4}}>
-      {TABS.map(tab=>{const active=activeTab===tab.id;return(
-        <button key={tab.id} onClick={()=>setActiveTab(tab.id)} style={{
-          padding:'9px 15px',borderRadius:9,
-          border:active?`1.5px solid ${C.gold}`:`1px solid ${C.border}`,
-          cursor:'pointer',background:active?C.goldLt:C.surface,
-          color:active?C.goldDk:C.muted,fontFamily:C.sans,fontSize:12,fontWeight:active?700:500,
-          display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap',transition:'all 0.15s'
-        }}>
-          <span>{tab.icon}</span><span>{tab.label}</span>
-        </button>
-      );})}
-    </div>
-
-    {/* Content */}
-    <div>{loading&&activeTab==='overview'?(
-      <div style={{textAlign:'center',padding:60,color:C.muted}}>
-        <div style={{width:26,height:26,border:`2px solid ${C.border}`,borderTopColor:C.gold,borderRadius:'50%',animation:'spin 0.8s linear infinite',margin:'0 auto 12px'}}/>
-        <p style={{fontFamily:C.mono,fontSize:12}}>Chargement des données DigiLab...</p>
-      </div>
-    ):sections[activeTab]}</div>
-  </div>);
+  );
 }
