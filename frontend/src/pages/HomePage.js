@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import LoginRequiredModal from '../components/LoginRequiredModal';
+import { useLoginRequiredModal } from '../hooks/useLoginRequiredModal';
 
 const T = {
   gold:   '#f5a623',
@@ -187,6 +189,22 @@ function AIChatbot() {
   const [history, setHistory] = useState([]);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const chatRef = useRef(null);
+  const btnRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutside = (e) => {
+      if (
+        chatRef.current && !chatRef.current.contains(e.target) &&
+        btnRef.current && !btnRef.current.contains(e.target)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [open]);
 
   useEffect(() => {
     if (open && msgs.length === 0) {
@@ -233,8 +251,11 @@ function AIChatbot() {
     "Quels sont les tarifs ?",
     "Comment contacter l'agence ?",
   ];
-  const handleReset = () => { setMsgs([]); setHistory([]); };
-
+const handleReset = (e) => {
+  e.stopPropagation();
+  setMsgs([]);
+  setHistory([]);
+};
   return (
     <>
       <style>{`
@@ -248,7 +269,7 @@ function AIChatbot() {
         .send-btn:hover { background:${T.goldDk} !important; }
         .send-btn:disabled { opacity:0.5; cursor:not-allowed; }
       `}</style>
-      <button onClick={() => setOpen(o => !o)} style={{
+      <button onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}style={{
         position: 'fixed', bottom: 28, right: 28, zIndex: 9000,
         width: 60, height: 60, borderRadius: '50%',
         background: open ? '#333' : T.gold, border: 'none', cursor: 'pointer',
@@ -262,7 +283,8 @@ function AIChatbot() {
         </div>
       )}
       {open && (
-        <div style={{ position: 'fixed', bottom: 100, right: 28, zIndex: 9000, width: 380, maxHeight: 'calc(100vh - 120px)', background: '#fff', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 20, boxShadow: '0 32px 80px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'chatIn 0.3s cubic-bezier(0.34,1.56,0.64,1)', fontFamily: T.font }}>
+             
+              <div onClick={(e) => e.stopPropagation()} style={{ position: 'fixed', bottom: 78, right: 28, zIndex: 9001, width: 380, maxHeight: 'calc(100vh - 120px)', background: '#fff', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 20, boxShadow: '0 32px 80px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'chatIn 0.3s cubic-bezier(0.34,1.56,0.64,1)', fontFamily: T.font }}>
           <div style={{ padding: '16px 20px', background: '#fafafa', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <div style={{ position: 'relative' }}>
               <div style={{ width: 40, height: 40, borderRadius: 12, background: T.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🤖</div>
@@ -277,7 +299,7 @@ function AIChatbot() {
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
               <button onClick={handleReset} style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(0,0,0,0.04)', border: 'none', color: T.textMuted, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>↺</button>
-              <button onClick={() => setOpen(false)} style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(0,0,0,0.04)', border: 'none', color: T.textMuted, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              <button onClick={(e) => { e.stopPropagation(); setOpen(false); }} style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(0,0,0,0.04)', border: 'none', color: T.textMuted, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -367,6 +389,7 @@ function ServiceCard({ icon, title, description, features, color, stat, statLabe
 function Modal({ camp, onClose }) {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
+  const { isOpen, selectedCampagne, openModal, closeModal } = useLoginRequiredModal();
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const tc = TYPE_CFG[camp.type?.toLowerCase()] || TYPE_CFG.formation;
@@ -565,10 +588,11 @@ function ContactForm() {
 export default function HomePage() {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
+  const { isOpen, selectedCampagne, openModal, closeModal } = useLoginRequiredModal();
   const [campagnes, setCampagnes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [scrolled, setScrolled] = useState(false);
-  const [selectedCamp, setSelectedCamp] = useState(null);
+const [loadingCampagnes, setLoadingCampagnes] = useState(true);
+const [scrolled, setScrolled] = useState(false);
+const [selectedCamp, setSelectedCamp] = useState(null);
 
   useEffect(() => {
     const s = () => setScrolled(window.scrollY > 50);
@@ -576,78 +600,27 @@ export default function HomePage() {
     return () => window.removeEventListener('scroll', s);
   }, []);
 
-  // VRAIES CAMPAGNES DIGILAB SOLUTIONS - Événements multi-types (formations, produits, conférences)
-  const REAL_DIGILAB_CAMPAIGNS = [
-    {
-      id: 'formation-digital-marketing-ai',
-      title: 'Formation Digital Marketing & AI',
-      type: 'formation',
-      description: "Maîtrisez l'avenir du Marketing Digital avec l'Intelligence Artificielle ! Formation exclusive alliant les stratégies de Marketing Digital incontournables et la puissance de l'IA. 100% Pratique : Apprenez en manipulant les meilleurs outils (Meta, ChatGPT, WordPress, et plus encore). Formation Certifiante : Valorisez votre profil professionnel avec un certificat reconnu.",
-      duration: 'Variable selon programme',
-      format: '100% Pratique · Certifiante',
-      tools: ['Meta', 'ChatGPT', 'WordPress', 'Google Analytics', 'Canva'],
-      contact: '+216 22 044 105',
-      location: 'Route Bouzayen Km 5, Immeuble El Bachir, 4ème étage App 4-2 – Sfax, Tunisia',
-      image: CAMP_IMGS.formation_digital_ai,
-      date: '30 Avril 2026',
-      tags: ['IA', 'Marketing Digital', 'Certifiant'],
-      status: 'active'
-    },
-    {
-      id: 'formation-web-wordpress',
-      title: 'Formation Web WordPress',
-      type: 'formation',
-      description: "Maîtrisez le web en seulement 18 heures ! Créez votre site internet performant sans coder. Notre formation WordPress est conçue pour vous donner toutes les clés en main afin de lancer votre projet professionnel. Durée : 18 heures de formation intensive.",
-      duration: '18 heures',
-      format: 'Intensive · Pratique',
-      tools: ['WordPress', 'Elementor', 'SEO', 'WooCommerce'],
-      contact: '+216 22 044 105',
-      location: 'Route Bouzayen Km 5, Immeuble El Bachir, 4ème étage App 4-2 – Sfax, Tunisia',
-      image: CAMP_IMGS.formation_web,
-      date: '8 Avril 2026',
-      tags: ['WordPress', 'Web', 'Site Pro'],
-      status: 'active'
-    },
-    {
-      id: 'formation-design-graphique-marketing',
-      title: 'Formation Design Graphique & Marketing Digital',
-      type: 'formation',
-      description: "Boostez votre carrière avec DigiLab Solutions ! Formation intensive de 60H en Design Graphique et Marketing Digital. 100% Pratique : Apprenez en faisant. Flexibilité : Des cours programmés le week-end pour s'adapter à votre emploi du temps.",
-      duration: '60 heures',
-      format: 'Week-end · 100% Pratique',
-      tools: ['Photoshop', 'Illustrator', 'Canva', 'Meta Ads', 'Google Ads'],
-      contact: '+216 22 044 105',
-      location: 'Route Bouzayen Km 5, Immeuble El Bachir, 4ème étage App 4-2 – Sfax, Tunisia',
-      image: CAMP_IMGS.formation_design,
-      date: '3 Avril 2026',
-      tags: ['Design', 'Graphisme', 'Marketing'],
-      status: 'active'
-    },
-    {
-      id: 'formation-marketing-digital-40h',
-      title: 'Formation Marketing Digital 40H',
-      type: 'formation',
-      description: "40H pour devenir un pro du Digital ! Maîtrisez l'écosystème du web. Formation complète et pratique pour dompter les algorithmes et booster votre visibilité. Meta, Google Ads, SEO, WordPress et bien plus encore.",
-      duration: '40 heures',
-      format: 'Intensive · Complet',
-      tools: ['Meta', 'Google Ads', 'SEO', 'WordPress', 'Growth Hacking'],
-      contact: '+216 22 044 105',
-      location: 'Route Bouzayen Km 5, Immeuble El Bachir, 4ème étage App 4-2 – Sfax, Tunisia',
-      image: CAMP_IMGS.formation_marketing,
-      date: '27 Mars 2026',
-      tags: ['SEO', 'Google Ads', 'Growth Hacking'],
-      status: 'active'
+useEffect(() => {
+  const fetchCampagnes = async () => {
+    try {
+      setLoadingCampagnes(true);
+      const response = await api.get('/api/campagnes/public');
+      
+      if (response.data && response.data.length > 0) {
+        setCampagnes(response.data);
+      } else {
+        setCampagnes([]);
+      }
+    } catch (err) {
+      console.error('Erreur chargement campagnes:', err);
+      setCampagnes([]);
+    } finally {
+      setLoadingCampagnes(false);
     }
-  ];
+  };
 
-  useEffect(() => {
-    // Simulation du chargement des vraies campagnes DigiLab via API
-    // En production, remplacez par : api.get('/api/campagnes/public')
-    setTimeout(() => {
-      setCampagnes(REAL_DIGILAB_CAMPAIGNS);
-      setLoading(false);
-    }, 800);
-  }, []);
+  fetchCampagnes();
+}, []);
 
   // DIGILAB SOLUTIONS DATA
   const MARKETING_SERVICES = [
@@ -737,14 +710,13 @@ export default function HomePage() {
           <div style={{ maxWidth: 1280, margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: 80, alignItems: 'center' }}>
             <div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: 30, padding: '8px 20px', marginBottom: 32 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: T.gold }}>🚀 Agence Digitale à Sfax, Tunisie</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: T.gold }}>🚀 Plateforme Cloud & Marketing</span>
               </div>
               <h1 style={{ fontSize: 'clamp(44px,5.5vw,72px)', fontWeight: 900, lineHeight: 1.05, letterSpacing: '-0.03em', marginBottom: 24, color: T.text }}>
-                Votre succès<br /><span style={{ color: T.gold }}>digital commence ici.</span><br />DigiLab Solutions.
+                Gérez vos campagnes<br /><span style={{ color: T.gold }}>marketing</span><br />sur tous les canaux pour vos clients
               </h1>
               <p style={{ fontSize: 18, color: T.textLt, lineHeight: 1.75, maxWidth: 520, marginBottom: 40 }}>
-                Agence de marketing digital et créative basée à Sfax. Nous accompagnons les entreprises tunisiennes et internationales dans leur transformation digitale avec des solutions sur mesure.
-              </p>
+DigiPip est la plateforme de DigiLab Solutions pour créer, planifier et suivre vos campagnes — le tout depuis un seul tableau de bord.              </p>
               <div style={{ display: 'flex', gap: 14, marginBottom: 48, flexWrap: 'wrap' }}>
                 <button className="btn-gold" onClick={() => navigate('/login')} style={{ background: T.gold, color: '#111', border: 'none', padding: '16px 40px', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Espace Client DigiPip →</button>
                 <button className="btn-ghost" onClick={() => document.getElementById('campagnes')?.scrollIntoView({ behavior: 'smooth' })} style={{ background: 'transparent', color: T.text, border: `1px solid rgba(0,0,0,0.12)`, padding: '16px 32px', borderRadius: 12, fontSize: 15, cursor: 'pointer', fontFamily: T.font }}>Nos Campagnes ↓</button>
@@ -1081,138 +1053,182 @@ export default function HomePage() {
         {/* ══════════════════════════════════════════════════════════════
            CAMPAGNES - Événements multi-types gérés par DigiPip (DevOps & Cloud)
         ═══════════════════════════════════════════════════════════════ */}
-        <section id="campagnes" style={{ padding: '100px 5%', background: '#fff', borderTop: `1px solid ${T.border}` }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <Reveal>
-              <div style={{ textAlign: 'center', marginBottom: 56 }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 20, padding: '6px 16px', marginBottom: 20 }}>
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'block', boxShadow: '0 0 6px #10b981' }} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981', letterSpacing: '0.15em', textTransform: 'uppercase' }}>Plateforme DigiPip</span>
-                </div>
-                <h2 style={{ fontSize: 'clamp(32px,4.5vw,52px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 16, lineHeight: 1.1, color: T.text }}>
-                  Nos <span style={{ color: T.gold }}>Campagnes</span>
-                </h2>
-                <p style={{ color: T.textLt, fontSize: 17, maxWidth: 640, margin: '0 auto', lineHeight: 1.7 }}>
-                  Gérez vos campagnes multi-canal depuis DigiPip : <strong>formations</strong>, <strong>produits</strong>, <strong>conférences</strong> — orchestrées avec DevOps & Cloud.
-                </p>
-              </div>
-            </Reveal>
-            
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: 60, color: T.textMuted }}>
-                <div style={{ width: 34, height: 34, border: '3px solid rgba(245,166,35,0.15)', borderTop: `3px solid ${T.gold}`, borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-                Chargement des campagnes...
-              </div>
-            ) : campagnes.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 80 }}>
-                <div style={{ fontSize: 48, opacity: 0.15, marginBottom: 16 }}>📢</div>
-                <p style={{ color: T.textMuted }}>Aucune campagne disponible pour le moment.</p>
-                <button className="btn-gold" onClick={() => navigate('/login')} style={{ marginTop: 20, background: T.gold, color: '#111', border: 'none', padding: '12px 32px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Accéder à DigiPip →</button>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(340px,1fr))', gap: 28 }}>
-                {campagnes.map((c, idx) => {
-                  const tc = TYPE_CFG[c.type?.toLowerCase()] || TYPE_CFG.formation;
-                  return (
-                    <Reveal key={c.id} delay={idx * 100}>
-                      <div className="camp-card" style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: 20, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', height: '100%' }}>
-                        {/* Image */}
-                        <div style={{ height: 200, overflow: 'hidden', position: 'relative' }}>
-                          <img src={c.image} alt={c.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} onMouseEnter={e => e.target.style.transform = 'scale(1.08)'} onMouseLeave={e => e.target.style.transform = 'scale(1)'} />
-                          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.6))' }} />
-                          
-                          {/* Badge type dynamique */}
-                          <div className="camp-type-badge" style={{ position: 'absolute', top: 16, left: 16, background: tc.color, color: '#fff' }}>
-                            {tc.icon} {tc.label}
-                          </div>
-                          
-                          {/* Durée */}
-                          <div style={{ position: 'absolute', bottom: 16, right: 16, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, color: '#fff' }}>
-                            ⏱ {c.duration}
-                          </div>
-                        </div>
-                        
-                        {/* Contenu */}
-                        <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
-                            {c.tags.map((tag, ti) => (
-                              <span key={ti} className="formation-tag" style={{ background: ti === 0 ? 'rgba(245,166,35,0.1)' : 'rgba(16,185,129,0.1)', color: ti === 0 ? T.gold : '#10b981', border: `1px solid ${ti === 0 ? 'rgba(245,166,35,0.2)' : 'rgba(16,185,129,0.2)'}` }}>
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                          
-                          <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 10, lineHeight: 1.35, color: T.text }}>{c.title}</h3>
-                          
-                          <p style={{ fontSize: 13.5, color: T.textLt, lineHeight: 1.7, marginBottom: 16, flex: 1 }}>
-                            {c.description.substring(0, 140)}...
-                          </p>
-                          
-                          {/* Outils */}
-                          <div style={{ marginBottom: 16 }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Outils & Technologies</div>
-                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                              {c.tools.map((tool, ti) => (
-                                <span key={ti} style={{ padding: '4px 10px', background: '#f5f5f5', borderRadius: 6, fontSize: 11, fontWeight: 600, color: T.textLt }}>
-                                  {tool}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                          
-                          {/* Infos pratiques */}
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18, padding: '12px 14px', background: '#fafafa', borderRadius: 12, border: `1px solid ${T.border}` }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: T.textLt }}>
-                              <span>📍</span> {c.location}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: T.textLt }}>
-                              <span>📞</span> {c.contact}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: T.textLt }}>
-                              <span>✨</span> {c.format}
-                            </div>
-                          </div>
-                          
-                          <button 
-                            onClick={() => setSelectedCamp(c)}
-                            style={{ width: '100%', padding: '13px', background: T.gold, color: '#111', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: T.font, transition: 'background .2s' }}
-                            onMouseEnter={e => e.currentTarget.style.background = T.goldDk}
-                            onMouseLeave={e => e.currentTarget.style.background = T.gold}
-                          >
-                            S'inscrire à cette campagne →
-                          </button>
-                        </div>
-                      </div>
-                    </Reveal>
-                  );
-                })}
-              </div>
-            )}
-            
-            {/* DevOps & Cloud Banner */}
-            <Reveal>
-              <div style={{ marginTop: 56, background: 'linear-gradient(135deg, #1a1a2e, #16213e)', borderRadius: 20, padding: '40px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24, position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, background: 'radial-gradient(circle, rgba(245,166,35,0.15), transparent 70%)', pointerEvents: 'none' }} />
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(245,166,35,0.15)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 20, padding: '4px 14px', marginBottom: 12 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: T.gold, letterSpacing: '0.15em', textTransform: 'uppercase' }}>DevOps & Cloud</span>
-                  </div>
-                  <h3 style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 8 }}>Gestion multi-tenant de vos campagnes</h3>
-                  <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', maxWidth: 500, lineHeight: 1.7 }}>
-                    DigiPip orchestre vos campagnes Email, SMS, Push et Réseaux Sociaux via une infrastructure cloud scalable. CI/CD, monitoring en temps réel et multi-tenant.
-                  </p>
-                </div>
-                <div style={{ display: 'flex', gap: 16, position: 'relative', zIndex: 1 }}>
-                  {['☁️ Cloud','⚙️ DevOps','🔒 Sécurisé','📊 Analytics'].map((badge, i) => (
-                    <div key={i} style={{ padding: '10px 18px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, fontSize: 12, fontWeight: 700, color: '#fff', backdropFilter: 'blur(10px)' }}>
-                      {badge}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Reveal>
+         <section id="campagnes" style={{ padding: '100px 5%', background: '#fff', borderTop: `1px solid ${T.border}` }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <Reveal>
+        <div style={{ textAlign: 'center', marginBottom: 56 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 20, padding: '6px 16px', marginBottom: 20 }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'block', boxShadow: '0 0 6px #10b981' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981', letterSpacing: '0.15em', textTransform: 'uppercase' }}>Plateforme DigiPip</span>
           </div>
-        </section>
+          <h2 style={{ fontSize: 'clamp(32px,4.5vw,52px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 16, lineHeight: 1.1, color: T.text }}>
+            Nos <span style={{ color: T.gold }}>Campagnes</span>
+          </h2>
+          <p style={{ color: T.textLt, fontSize: 17, maxWidth: 640, margin: '0 auto', lineHeight: 1.7 }}>
+            Gérez vos campagnes multi-canal depuis DigiPip : <strong>formations</strong>, <strong>produits</strong>, <strong>conférences</strong> — orchestrées avec DevOps & Cloud.
+          </p>
+        </div>
+      </Reveal>
+      
+      {loadingCampagnes ? (
+        <div style={{ textAlign: 'center', padding: 60, color: T.textMuted }}>
+          <div style={{ 
+            width: 40, height: 40, 
+            border: '3px solid rgba(245,166,35,0.15)', 
+            borderTop: '3px solid #f5a623', 
+            borderRadius: '50%', 
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }} />
+          Chargement des campagnes...
+        </div>
+      ) : campagnes.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 80 }}>
+          <div style={{ fontSize: 48, opacity: 0.15, marginBottom: 16 }}>📢</div>
+          <p style={{ color: T.textMuted }}>Aucune campagne disponible pour le moment.</p>
+          <button className="btn-gold" onClick={() => navigate('/login')} style={{ marginTop: 20, background: T.gold, color: '#111', border: 'none', padding: '12px 32px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Accéder à DigiPip →</button>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(340px,1fr))', gap: 28 }}>
+          {campagnes.map((c, idx) => {
+            const tc = TYPE_CFG[c.type?.toLowerCase()] || TYPE_CFG.formation;
+            return (
+              <Reveal key={c.id} delay={idx * 100}>
+                <div className="camp-card" style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: 20, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  {/* Image */}
+                  <div style={{ height: 200, overflow: 'hidden', position: 'relative' }}>
+                    <img 
+                      src={c.image || 'https://via.placeholder.com/400x200?text=Formation'} 
+                      alt={c.title} 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} 
+                      onMouseEnter={e => e.target.style.transform = 'scale(1.08)'} 
+                      onMouseLeave={e => e.target.style.transform = 'scale(1)'} 
+                    />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.6))' }} />
+                    
+                    {/* Badge type dynamique */}
+                    <div className="camp-type-badge" style={{ position: 'absolute', top: 16, left: 16, background: tc.color, color: '#fff' }}>
+                      {tc.icon} {tc.label}
+                    </div>
+                    
+                    {/* Durée */}
+                    <div style={{ position: 'absolute', bottom: 16, right: 16, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, color: '#fff' }}>
+                      ⏱ {c.duration || 'Variable'}
+                    </div>
+                  </div>
+                  
+                  {/* Contenu */}
+                  <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+                      {(c.tags || []).map((tag, ti) => (
+                        <span key={ti} className="formation-tag" style={{ background: ti === 0 ? 'rgba(245,166,35,0.1)' : 'rgba(16,185,129,0.1)', color: ti === 0 ? T.gold : '#10b981', border: `1px solid ${ti === 0 ? 'rgba(245,166,35,0.2)' : 'rgba(16,185,129,0.2)'}` }}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    
+                    <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 10, lineHeight: 1.35, color: T.text }}>{c.title}</h3>
+                    
+                    <p style={{ fontSize: 13.5, color: T.textLt, lineHeight: 1.7, marginBottom: 16, flex: 1 }}>
+                      {(c.description || '').substring(0, 140)}...
+                    </p>
+                    
+                    {/* Outils */}
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Outils & Technologies</div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {(c.tools || []).map((tool, ti) => (
+                          <span key={ti} style={{ padding: '4px 10px', background: '#f5f5f5', borderRadius: 6, fontSize: 11, fontWeight: 600, color: T.textLt }}>
+                            {tool}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Infos pratiques */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18, padding: '12px 14px', background: '#fafafa', borderRadius: 12, border: `1px solid ${T.border}` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: T.textLt }}>
+                        <span>📍</span> {c.location || 'Sfax, Tunisia'}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: T.textLt }}>
+                        <span>📞</span> {c.contact || '+216 22 044 105'}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: T.textLt }}>
+                        <span>✨</span> {c.format || '100% Pratique'}
+                      </div>
+                    </div>
+                    
+                    {/* Prix et bouton */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                      <div>
+                        {c.prixOriginal && c.prixOriginal > c.prix && (
+                          <span style={{ fontSize: 14, color: T.textMuted, textDecoration: 'line-through', marginRight: 8 }}>
+                            {c.prixOriginal} TND
+                          </span>
+                        )}
+                        <span style={{ fontSize: 22, fontWeight: 800, color: T.gold }}>
+                          {c.prix} TND
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          if (!token) {
+                            openModal(c);
+                          } else {
+                            navigate(`/campagnes/${c.slug}`);
+                          }
+                        }}
+                        style={{ 
+                          padding: '10px 20px', 
+                          background: T.gold, 
+                          color: '#111', 
+                          border: 'none', 
+                          borderRadius: 10,
+                          fontWeight: 700,
+                          fontSize: 14,
+                          cursor: 'pointer',
+                          fontFamily: T.font,
+                          transition: 'background .2s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = T.goldDk}
+                        onMouseLeave={e => e.currentTarget.style.background = T.gold}
+                      >
+                        Voir & S'inscrire →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            );
+          })}
+        </div>
+      )}
+      
+      {/* DevOps & Cloud Banner */}
+      <Reveal>
+        <div style={{ marginTop: 56, background: 'linear-gradient(135deg, #1a1a2e, #16213e)', borderRadius: 20, padding: '40px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, background: 'radial-gradient(circle, rgba(245,166,35,0.15), transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(245,166,35,0.15)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 20, padding: '4px 14px', marginBottom: 12 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: T.gold, letterSpacing: '0.15em', textTransform: 'uppercase' }}>DevOps & Cloud</span>
+            </div>
+            <h3 style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 8 }}>Gestion multi-tenant de vos campagnes</h3>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', maxWidth: 500, lineHeight: 1.7 }}>
+              DigiPip orchestre vos campagnes Email, SMS, Push et Réseaux Sociaux via une infrastructure cloud scalable. CI/CD, monitoring en temps réel et multi-tenant.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 16, position: 'relative', zIndex: 1 }}>
+            {['☁️ Cloud','⚙️ DevOps','🔒 Sécurisé','📊 Analytics'].map((badge, i) => (
+              <div key={i} style={{ padding: '10px 18px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, fontSize: 12, fontWeight: 700, color: '#fff', backdropFilter: 'blur(10px)' }}>
+                {badge}
+              </div>
+            ))}
+          </div>
+        </div>
+      </Reveal>
+    </div>
+  </section>
+
 
         {/* CONTACT */}
         <section id="contact" style={{ padding: '100px 5%', background: '#fafafa', borderTop: `1px solid ${T.border}` }}>
@@ -1223,7 +1239,7 @@ export default function HomePage() {
                   <span style={{ fontSize: 11, fontWeight: 700, color: T.gold, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Contact</span>
                 </div>
                 <h2 style={{ fontSize: 'clamp(32px,4.5vw,52px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 16, lineHeight: 1.1, color: T.text }}>
-                  Contactez <span style={{ color: T.gold }}>DigiLab Solutions</span>
+                  Besoin d'aide ? <span style={{ color: T.gold }}>Contactez-nous</span>
                 </h2>
                 <p style={{ color: T.textLt, fontSize: 17, maxWidth: 560, margin: '0 auto', lineHeight: 1.7 }}>
                   Prêt à démarrer votre projet ? Notre équipe vous répond sous 24h.
@@ -1287,13 +1303,13 @@ export default function HomePage() {
         </section>
 
         {/* FOOTER */}
-        <footer style={{ background: '#fafafa', borderTop: `1px solid ${T.border}`, padding: '64px 5% 32px' }}>
+        <footer style={{ background: '#1a1a2e', borderTop: `1px solid ${T.border}`, padding: '64px 5% 32px' }}>
           <div style={{ maxWidth: 1200, margin: '0 auto' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1.2fr', gap: 48, marginBottom: 56 }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
                   <div style={{ width: 44, height: 44, background: 'linear-gradient(135deg, #f5a623, #d97706)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: 'white', boxShadow: '0 4px 15px rgba(245,166,35,0.3)', flexShrink: 0 }}>☁️</div>
-                  <span style={{ fontSize: 20, fontWeight: 800, color: T.text, letterSpacing: '-0.02em' }}>DigiPip</span>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: T.bg, letterSpacing: '-0.02em' }}>DigiPip</span>
                 </div>
                 <p style={{ fontSize: 13, color: T.textLt, lineHeight: 1.75, marginBottom: 22, maxWidth: 280 }}>
                   Plateforme de gestion de campagnes marketing par DigiLab Solutions. Email, SMS, Push et événements depuis un seul dashboard cloud.
@@ -1314,7 +1330,7 @@ export default function HomePage() {
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: T.text, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>Services</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: T.bg, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>Services</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {[
                     ['#services', 'Création Graphique'],
@@ -1333,7 +1349,7 @@ export default function HomePage() {
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: T.text, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>Plateforme</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: T.bg, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>Plateforme</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {[
                     ['#hero', 'Accueil'],
@@ -1352,7 +1368,7 @@ export default function HomePage() {
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: T.text, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>Contact</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: T.bg, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>Contact</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {[
                     { icon: '📍', text: 'Route Bouzayen Km 5, Immeuble El Bachir, 4ème étage App 4-2, Sfax, Tunisie 3000' },
@@ -1394,6 +1410,11 @@ export default function HomePage() {
       </div>
       <AIChatbot />
       {selectedCamp && <Modal camp={selectedCamp} onClose={() => setSelectedCamp(null)} />}
+      <LoginRequiredModal 
+        isOpen={isOpen} 
+        onClose={closeModal} 
+        campagneTitle={selectedCampagne?.title} 
+      />
     </div>
   );
 }

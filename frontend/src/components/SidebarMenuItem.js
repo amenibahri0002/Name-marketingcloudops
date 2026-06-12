@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 function SidebarMenuItem({ item, isActive, collapsed }) {
+  const [hover, setHover] = useState(false);
+
   return (
     <Link to={item.path} style={{ textDecoration: 'none', display: 'block' }}>
       <div
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -13,10 +17,11 @@ function SidebarMenuItem({ item, isActive, collapsed }) {
           padding: collapsed ? '12px 10px' : '12px 14px',
           marginBottom: 6,
           borderRadius: 14,
-          background: isActive ? '#f5f3ff' : 'transparent',
-          border: isActive ? '1px solid #ddd6fe' : '1px solid transparent',
-          color: isActive ? '#6d28d9' : '#475569',
+          background: isActive ? 'rgba(245, 166, 35, 0.15)' : hover ? 'rgba(255,255,255,0.05)' : 'transparent',
+          border: isActive ? '1px solid rgba(245, 166, 35, 0.3)' : '1px solid transparent',
+          color: isActive ? '#f5a623' : hover ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.55)',
           transition: 'all 0.2s ease',
+          cursor: 'pointer',
         }}
       >
         <div
@@ -27,7 +32,12 @@ function SidebarMenuItem({ item, isActive, collapsed }) {
             minWidth: 0,
           }}
         >
-          <span style={{ fontSize: 16, width: 18, textAlign: 'center' }}>
+          <span style={{ 
+            fontSize: 18, 
+            width: 20, 
+            textAlign: 'center',
+            filter: isActive ? 'drop-shadow(0 0 4px rgba(245,166,35,0.5))' : 'none'
+          }}>
             {item.icon}
           </span>
 
@@ -52,8 +62,9 @@ function SidebarMenuItem({ item, isActive, collapsed }) {
               width: 8,
               height: 8,
               borderRadius: '50%',
-              background: '#7c3aed',
+              background: '#f5a623',
               flexShrink: 0,
+              boxShadow: '0 0 6px rgba(245, 166, 35, 0.6)',
             }}
           />
         )}

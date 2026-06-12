@@ -1,9 +1,9 @@
 import React from 'react';
 
-export default function Logo({ size = 42, showText = true }) {
+export default function Logo({ size = 42, showText = true, collapsed = false }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      {/* Cercle Orange avec Nuage - Exactement comme tes screenshots */}
+      {/* Cercle Orange avec Nuage */}
       <div style={{
         width: size,
         height: size,
@@ -16,7 +16,8 @@ export default function Logo({ size = 42, showText = true }) {
         color: '#ffffff',
         boxShadow: '0 4px 20px rgba(245, 158, 11, 0.55)',
         position: 'relative',
-        flexShrink: 0
+        flexShrink: 0,
+        transition: 'all 0.3s ease'
       }}>
         ☁️
         <div style={{
@@ -31,7 +32,7 @@ export default function Logo({ size = 42, showText = true }) {
         }} />
       </div>
 
-      {showText && (
+      {showText && !collapsed && (
         <div>
           <div style={{
             fontFamily: "'Montserrat', sans-serif",

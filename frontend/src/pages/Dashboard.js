@@ -1,414 +1,1078 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import Layout from '../Layout';
 
-/* ── Design system unifié DigiPip ── */
-const T = {
-  bg:       '#f0f2f8',
-  card:     '#ffffff',
-  navy:     '#16120d',
-  navyMid:  '#1e2a3a',
-  gold:     '#f5a623',
-  goldDark: '#c8831a',
-  goldDim:  'rgba(245,166,35,0.10)',
-  goldGlow: 'rgba(245,166,35,0.20)',
-  border:   '#e4e9f2',
-  borderHi: '#f5a623',
-  text:     '#1a1f3c',
-  muted:    '#7a8599',
-  green:    '#22c55e',
-  greenDim: 'rgba(34,197,94,0.10)',
-  blue:     '#3b82f6',
-  blueDim:  'rgba(59,130,246,0.10)',
-  purple:   '#8b5cf6',
-  purpleDim:'rgba(139,92,246,0.10)',
-  red:      '#ef4444',
-  sans:     "'Plus Jakarta Sans','Segoe UI',sans-serif",
+const THEME = {
+  bg: '#f8fafc',
+  bgCard: '#ffffff',
+  bgHover: '#f1f5f9',
+  border: '#e2e8f0',
+  borderLight: '#f1f5f9',
+  primary: '#f59e0b',
+  primaryLight: '#fbbf24',
+  primaryDark: '#d97706',
+  primaryBg: '#fffbeb',
+  text: '#1e293b',
+  textSecondary: '#475569',
+  textMuted: '#64748b',
+  textLight: '#94a3b8',
+  success: '#10b981',
+  successBg: '#ecfdf5',
+  danger: '#ef4444',
+  dangerBg: '#fef2f2',
+  warning: '#f59e0b',
+  warningBg: '#fffbeb',
+  info: '#3b82f6',
+  infoBg: '#eff6ff',
+  chartColors: ['#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'],
+  shadow: '0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)',
+  shadowMd: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+  shadowLg: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
 };
 
-/* ── Sparkline SVG ── */
-function Sparkline({ data, color }) {
-  const w = 90, h = 36;
-  const max = Math.max(...data), min = Math.min(...data);
-  const range = max - min || 1;
-  const pts = data.map((v,i) => `${(i/(data.length-1))*w},${h-((v-min)/range)*(h-6)}`).join(' ');
-  const fillPts = `0,${h} ${pts} ${w},${h}`;
+const KPICard = ({ title, value, change, changeType, icon, color, subtitle, loading, onClick }) => {
+  const [hovered, setHovered] = useState(false);
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
-      <defs>
-        <linearGradient id={`sg-${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.18"/>
-          <stop offset="100%" stopColor={color} stopOpacity="0"/>
-        </linearGradient>
-      </defs>
-      <polygon points={fillPts} fill={`url(#sg-${color.replace('#','')})`}/>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-}
-
-/* ── Mini bar chart (7 jours) ── */
-function BarChart({ data, labels, colors }) {
-  const max = Math.max(...data.flatMap(s => s.values));
-  const barW = 10, gap = 3, groupGap = 14;
-  const groupW = data.length * (barW + gap) - gap + groupGap;
-  const W = labels.length * groupW;
-  const H = 160;
-
-  return (
-    <svg width="100%" height={H + 30} viewBox={`0 0 ${W} ${H + 30}`} preserveAspectRatio="none">
-      {labels.map((label, gi) => (
-        <g key={gi} transform={`translate(${gi * groupW}, 0)`}>
-          {data.map((series, si) => {
-            const val = series.values[gi];
-            const barH = (val / max) * (H - 10);
-            const x = si * (barW + gap);
-            const y = H - barH;
-            return (
-              <g key={si}>
-                <rect x={x} y={y} width={barW} height={barH}
-                  rx="3" fill={colors[si]} opacity="0.85"/>
-                <rect x={x} y={y} width={barW} height="3"
-                  rx="2" fill={colors[si]}/>
-              </g>
-            );
-          })}
-          <text x={(data.length * (barW + gap)) / 2 - gap} y={H + 18}
-            textAnchor="middle" fontSize="9" fill={T.muted} fontFamily={T.sans}>
-            {label}
-          </text>
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-/* ── Donut chart ── */
-function Donut({ segments, size = 110 }) {
-  const r = 38, cx = size/2, cy = size/2;
-  const circ = 2 * Math.PI * r;
-  const total = segments.reduce((a,s) => a + s.value, 0);
-  let offset = 0;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke={T.border} strokeWidth="14"/>
-      {segments.map((s, i) => {
-        const dash = (s.value / total) * circ;
-        const gap  = circ - dash;
-        const el = (
-          <circle key={i} cx={cx} cy={cy} r={r}
-            fill="none" stroke={s.color} strokeWidth="14"
-            strokeDasharray={`${dash} ${gap}`}
-            strokeDashoffset={-offset}
-            strokeLinecap="round"
-            style={{ transition: 'stroke-dasharray 1.2s ease', transform: 'rotate(-90deg)', transformOrigin: `${cx}px ${cy}px` }}
-          />
-        );
-        offset += dash;
-        return el;
-      })}
-      <text x={cx} y={cy-4} textAnchor="middle" fontSize="18" fontWeight="800" fill={T.text} fontFamily={T.sans}>
-        {total}
-      </text>
-      <text x={cx} y={cy+14} textAnchor="middle" fontSize="9" fill={T.muted} fontFamily={T.sans}>
-        TOTAL
-      </text>
-    </svg>
-  );
-}
-
-/* ── Activity item ── */
-function ActivityItem({ icon, title, sub, time, color, delay }) {
-  return (
-    <div style={{
-      display:'flex', alignItems:'center', gap:12, padding:'11px 0',
-      borderBottom:`1px solid ${T.border}`,
-      animation:`fadeUp 0.4s ease ${delay}ms both`,
-    }}>
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: THEME.bgCard,
+        border: `1px solid ${hovered ? color : THEME.border}`,
+        borderRadius: '16px',
+        padding: '24px',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        cursor: onClick ? 'pointer' : 'default',
+        boxShadow: hovered ? THEME.shadowLg : THEME.shadow,
+        transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
       <div style={{
-        width:36, height:36, borderRadius:10, flexShrink:0,
-        background:`${color}15`, border:`1px solid ${color}25`,
-        display:'flex', alignItems:'center', justifyContent:'center', fontSize:15,
-      }}>{icon}</div>
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:13, fontWeight:600, color:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{title}</div>
-        <div style={{ fontSize:11, color:T.muted }}>{sub}</div>
+        position: 'absolute', top: 0, left: 0, right: 0,
+        height: '4px', background: color, borderRadius: '16px 16px 0 0',
+      }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+        <div style={{
+          width: '52px', height: '52px', borderRadius: '14px',
+          background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '26px', border: `2px solid ${color}25`,
+        }}>
+          {icon}
+        </div>
+        {change !== undefined && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '4px',
+            padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700',
+            background: changeType === 'up' ? THEME.successBg : THEME.dangerBg,
+            color: changeType === 'up' ? THEME.success : THEME.danger,
+            border: `1px solid ${changeType === 'up' ? '#a7f3d0' : '#fecaca'}`,
+          }}>
+            {changeType === 'up' ? '↗' : '↘'} {Math.abs(change)}%
+          </div>
+        )}
       </div>
-      <div style={{ fontSize:10, color:T.muted, flexShrink:0 }}>{time}</div>
+      <div style={{ fontSize: '32px', fontWeight: '800', color: THEME.text, marginBottom: '6px', letterSpacing: '-0.5px' }}>
+        {loading ? (
+          <div style={{
+            width: '80px', height: '36px',
+            background: `linear-gradient(90deg, ${THEME.border} 25%, ${THEME.borderLight} 50%, ${THEME.border} 75%)`,
+            backgroundSize: '200% 100%', borderRadius: '8px',
+            animation: 'shimmer 1.5s infinite',
+          }} />
+        ) : value}
+      </div>
+      <div style={{ fontSize: '14px', color: THEME.textSecondary, fontWeight: '600' }}>{title}</div>
+      {subtitle && (
+        <div style={{ fontSize: '12px', color: THEME.textMuted, marginTop: '6px', fontWeight: '500' }}>
+          {subtitle}
+        </div>
+      )}
     </div>
   );
-}
+};
 
-/* ══════════════════════════════════════════
-   DASHBOARD
-══════════════════════════════════════════ */
-export default function Dashboard() {
+const SectionHeader = ({ title, subtitle, action }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+    <div>
+      <h3 style={{ fontSize: '20px', fontWeight: '700', color: THEME.text, margin: 0, letterSpacing: '-0.3px' }}>{title}</h3>
+      {subtitle && <p style={{ fontSize: '14px', color: THEME.textMuted, margin: '6px 0 0 0', fontWeight: '500' }}>{subtitle}</p>}
+    </div>
+    {action}
+  </div>
+);
+
+const StatusBadge = ({ status }) => {
+  const configs = {
+    published: { bg: THEME.successBg, color: THEME.success, border: '#a7f3d0', label: 'Publiée' },
+    draft: { bg: THEME.bgHover, color: THEME.textMuted, border: THEME.border, label: 'Brouillon' },
+    active: { bg: THEME.infoBg, color: THEME.info, border: '#bfdbfe', label: 'Active' },
+  };
+  const config = configs[status] || configs.draft;
+  return (
+    <span style={{
+      padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700',
+      background: config.bg, color: config.color, border: `1px solid ${config.border}`,
+      display: 'inline-flex', alignItems: 'center', gap: '6px',
+    }}>
+      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: config.color }} />
+      {config.label}
+    </span>
+  );
+};
+
+const ProgressBar = ({ current, total }) => {
+  const pct = total ? Math.round((current / total) * 100) : 0;
+  const color = pct >= 80 ? THEME.success : pct >= 50 ? THEME.warning : THEME.primary;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ flex: 1, height: '8px', background: THEME.borderLight, borderRadius: '100px', overflow: 'hidden', border: `1px solid ${THEME.border}` }}>
+        <div style={{
+          width: `${pct}%`, height: '100%', background: color,
+          borderRadius: '100px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+        }} />
+      </div>
+      <span style={{ fontSize: '12px', fontWeight: '700', color: THEME.textSecondary, minWidth: '36px', textAlign: 'right' }}>
+        {pct}%
+      </span>
+    </div>
+  );
+};
+
+export default function ResponsableDashboard() {
   const navigate = useNavigate();
-  const [stats,     setStats]     = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [user, setUser] = useState(null);
+
+  const [kpis, setKpis] = useState({});
   const [campagnes, setCampagnes] = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [user,      setUser]      = useState({});
+  const [notifications, setNotifications] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [inscriptions, setInscriptions] = useState([]);
+  const [canauxStats, setCanauxStats] = useState([]);
+  const [evolution, setEvolution] = useState([]);
+  const [recentActivities, setRecentActivities] = useState([]);
 
+  const [notifForm, setNotifForm] = useState({
+    title: '', message: '', type: 'promotion', canal: 'email', campagneId: ''
+  });
+  const [sendingNotif, setSendingNotif] = useState(false);
+
+  // Auth check
   useEffect(() => {
-    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) { navigate('/login'); return; }
+    const u = JSON.parse(storedUser);
+    if (u.role !== 'ADMIN' && u.role !== 'RESPONSABLE_MARKETING') {
+      navigate('/'); return;
+    }
     setUser(u);
-    Promise.all([
-      api.get('/api/stats').catch(() => ({ data: {} })),
-      api.get('/api/campagnes').catch(() => ({ data: [] })),
-    ]).then(([s, c]) => {
-      setStats(s.data);
-      const arr = Array.isArray(c.data) ? c.data : c.data?.data || [];
-      setCampagnes(arr.slice(0, 4));
-    }).finally(() => setLoading(false));
-  }, []);
+  }, [navigate]);
 
-  const isAdmin  = user.role === 'ADMIN' || user.role === 'RESPONSABLE_MARKETING';
-  const isClient = user.role === 'CLIENT';
-  const firstName = user.name?.split(' ')[0] || 'vous';
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
+  // Fetch all data
+  useEffect(() => {
+    if (!user) return;
+    fetchAllData();
+  }, [user]);
 
-  /* KPI cards */
-  const kpis = isClient ? [
-    { label:'Mes Campagnes', value: campagnes.length || stats?.campagnes || 0, icon:'📢', color:T.gold,   spark:[2,3,2.5,4,3.8,5,4.5], route:'/mes-campagnes' },
-    { label:'Contacts',      value: stats?.contacts  || 0,                     icon:'📋', color:T.green,  spark:[1,2,1.5,3,2.8,4,3.5], route:'/contacts' },
-    { label:'Segments',      value: stats?.segments  || 0,                     icon:'🎯', color:T.blue,   spark:[3,2,4,3,5,4,6],       route:'/segments' },
-    { label:'Taux moyen',    value: '72%',                                     icon:'📈', color:T.purple, spark:[60,65,70,68,72,75,72], route:'/reporting' },
-  ] : [
-    { label:'Clients',    value: stats?.clients   ?? 12,   icon:'🏢', color:T.gold,   spark:[2,3,2.5,4,3.8,5,4.5], route:'/clients' },
-    { label:'Campagnes',  value: stats?.campagnes ?? 7,    icon:'📢', color:T.blue,   spark:[1,3,2,4,3,5,4],       route:'/campagnes' },
-    { label:'Contacts',   value: stats?.contacts  ?? 1240, icon:'📋', color:T.green,  spark:[100,200,180,300,280,380,350], route:'/contacts' },
-    { label:'Segments',   value: stats?.segments  ?? 9,    icon:'🎯', color:T.purple, spark:[3,2,4,3,5,4,6],       route:'/segments' },
-  ];
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      const campagnesRes = await api.get('/api/campagnes').catch(() => null);
+      await new Promise(r => setTimeout(r, 100));
+      const notifsRes = await api.get('/api/notifications?limit=50').catch(() => null);
+      await new Promise(r => setTimeout(r, 100));
+      const clientsRes = await api.get('/api/clients').catch(() => null);
+      await new Promise(r => setTimeout(r, 100));
+      const inscRes = await api.get('/api/inscriptions').catch(() => null);
 
-  /* Chart data */
-  const barSeries = [
-    { label:'Email', values:[8200,12500,9800,15200,13100,17800,14200] },
-    { label:'SMS',   values:[3100,4200,3800,5100,4600,5800,4900]     },
-    { label:'Push',  values:[1800,2900,3200,4100,3700,4500,3900]     },
-  ];
-  const barColors  = [T.blue, T.green, T.gold];
-  const barLabels  = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+      if (campagnesRes) {
+        const data = Array.isArray(campagnesRes.data) ? campagnesRes.data : [];
+        setCampagnes(data);
+        const publiees = data.filter(c => c.published).length;
+        const inscritsTotal = data.reduce((sum, c) => sum + (c.inscriptions?.length || 0), 0);
+        const placesTotal = data.reduce((sum, c) => sum + (c.placesTotal || 0), 0);
+        const revenusTotal = data.reduce((sum, c) => sum + ((c.inscriptions?.length || 0) * (c.prix || 0)), 0);
 
-  /* Donut */
-  const donutSegs = [
-    { label:'Email', value:68, color:T.blue   },
-    { label:'SMS',   value:52, color:T.green  },
-    { label:'Push',  value:81, color:T.gold   },
-  ];
+        setKpis({
+          campagnesActives: data.length,
+          campagnesPubliees: publiees,
+          inscriptionsTotal: inscritsTotal,
+          tauxRemplissage: placesTotal ? Math.round((inscritsTotal / placesTotal) * 100) : 0,
+          notificationsSent: notifsRes?.data?.length || 0,
+          totalClients: clientsRes?.data?.length || 0,
+          revenus: revenusTotal,
+          tauxConversion: inscritsTotal && clientsRes?.data?.length ? Math.round((inscritsTotal / clientsRes.data.length) * 100) : 0,
+        });
+      }
 
-  /* Recent activity */
-  const activities = [
-    { icon:'📢', title:'Campagne "Conférence IA 2026" déployée',  sub:'TechEventCo · Email',  time:'Il y a 2 min',  color:T.gold  },
-    { icon:'👥', title:'3 nouveaux contacts importés',           sub:'Segment B2B Tech',      time:'Il y a 18 min', color:T.blue  },
-    { icon:'✅', title:'Campagne "Promo Été" livrée à 97%',      sub:'12 500 destinataires',  time:'Il y a 1h',     color:T.green },
-    { icon:'🎯', title:'Segment "VIP Tunisie" mis à jour',       sub:'847 contacts actifs',   time:'Il y a 3h',     color:T.purple},
-  ];
+      if (notifsRes) setNotifications(Array.isArray(notifsRes.data) ? notifsRes.data : []);
+      if (clientsRes) setClients(Array.isArray(clientsRes.data) ? clientsRes.data : []);
+      if (inscRes) setInscriptions(Array.isArray(inscRes.data) ? inscRes.data : []);
 
-  /* Status campagnes */
-  const statusCfg = {
-    sent:      { label:'Deployed', color:T.green,  bg:T.greenDim  },
-    active:    { label:'Live',     color:T.green,  bg:T.greenDim  },
-    draft:     { label:'Draft',    color:T.gold,   bg:T.goldDim   },
-    scheduled: { label:'Queued',   color:T.blue,   bg:T.blueDim   },
-    failed:    { label:'Failed',   color:T.red,    bg:'rgba(239,68,68,0.10)' },
+      const notifArray = notifsRes?.data || [];
+      const canauxCount = {};
+      notifArray.forEach(n => {
+        const type = n.type || 'Email';
+        canauxCount[type] = (canauxCount[type] || 0) + 1;
+      });
+      setCanauxStats(Object.keys(canauxCount).map(name => ({
+        name, value: canauxCount[name],
+        color: THEME.chartColors[Object.keys(canauxCount).indexOf(name) % THEME.chartColors.length]
+      })));
+
+      const evoData = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        evoData.push({
+          date: date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }),
+          inscriptions: Math.floor(Math.random() * 15) + 2,
+          campagnes: Math.floor(Math.random() * 3),
+          notifications: Math.floor(Math.random() * 20) + 5,
+          revenus: Math.floor(Math.random() * 2000) + 500,
+        });
+      }
+      setEvolution(evoData);
+
+      const activities = [
+        ...data.slice(0, 3).map(c => ({
+          type: 'campagne',
+          title: `Campagne "${c.title}" ${c.published ? 'publiée' : 'créée'}`,
+          time: 'Il y a 2h', icon: '🚀', color: THEME.primary,
+        })),
+        ...(notifsRes?.data?.slice(0, 2).map(n => ({
+          type: 'notification',
+          title: `Notification envoyée via ${n.type}`,
+          time: 'Il y a 4h', icon: '🔔', color: THEME.info,
+        })) || []),
+        ...(clientsRes?.data?.slice(0, 2).map(c => ({
+          type: 'client',
+          title: `Nouveau client : ${c.nom || c.name || 'Client'}`,
+          time: 'Il y a 6h', icon: '👤', color: THEME.success,
+        })) || []),
+      ];
+      setRecentActivities(activities);
+    } catch (err) {
+      console.error('Erreur chargement dashboard:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (loading) return (
-    <div style={{ height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:T.bg, fontFamily:T.sans }}>
-      <div style={{ textAlign:'center' }}>
-        <div style={{ width:40, height:40, borderRadius:'50%', border:`3px solid ${T.border}`, borderTopColor:T.gold, animation:'spin 0.8s linear infinite', margin:'0 auto 16px' }}/>
-        <span style={{ color:T.muted, fontSize:14 }}>Chargement...</span>
-      </div>
-    </div>
-  );
+  const envoyerNotification = async () => {
+    if (!notifForm.title || !notifForm.message) {
+      alert('Veuillez remplir le titre et le message');
+      return;
+    }
+    setSendingNotif(true);
+    try {
+      await api.post('/api/notifications', notifForm);
+      alert('✅ Notification envoyée avec succès !');
+      setNotifForm({ title: '', message: '', type: 'promotion', canal: 'email', campagneId: '' });
+      fetchAllData();
+    } catch (err) {
+      alert('❌ Erreur: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSendingNotif(false);
+    }
+  };
+
+  const togglePublish = async (id, current) => {
+    try {
+      await api.put(`/api/campagnes/${id}/publish`, { published: !current });
+      fetchAllData();
+    } catch (err) {
+      alert('Erreur: ' + err.message);
+    }
+  };
+
+  const canauxConfig = [
+    { id: 'email', label: 'Email', icon: '✉️', color: THEME.danger },
+    { id: 'sms', label: 'SMS', icon: '💬', color: THEME.success },
+    { id: 'push', label: 'Push', icon: '🔔', color: THEME.info },
+    { id: 'whatsapp', label: 'WhatsApp', icon: '📱', color: '#25d366' },
+    { id: 'social', label: 'Social', icon: '🌐', color: THEME.warning },
+  ];
+
+  const tabs = [
+    { id: 'overview', label: 'Vue d\'ensemble', icon: '📊' },
+    { id: 'campagnes', label: 'Campagnes', icon: '🚀' },
+    { id: 'notifications', label: 'Notifications', icon: '🔔' },
+    { id: 'clients', label: 'Clients', icon: '👥' },
+    { id: 'envoyer', label: 'Envoyer Notif', icon: '📢' },
+  ];
+
+  if (!user) return null;
+
+  const safeCampagnes = Array.isArray(campagnes) ? campagnes : [];
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
+  const safeClients = Array.isArray(clients) ? clients : [];
+  const safeInscriptions = Array.isArray(inscriptions) ? inscriptions : [];
+  const safeCanaux = Array.isArray(canauxStats) ? canauxStats : [];
+  const safeEvolution = Array.isArray(evolution) ? evolution : [];
+  const safeActivities = Array.isArray(recentActivities) ? recentActivities : [];
 
   return (
-    <div style={{ background:T.bg, minHeight:'100vh', fontFamily:T.sans, padding:'28px 32px' }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
-        @keyframes spin   { to{transform:rotate(360deg)} }
-        @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.5} }
-        .kpi-card { transition:all 0.25s cubic-bezier(0.4,0,0.2,1); cursor:pointer; }
-        .kpi-card:hover { transform:translateY(-5px); box-shadow:0 16px 40px rgba(245,166,35,0.14) !important; border-color:#f5a623 !important; }
-        .camp-row { transition:all 0.2s; cursor:pointer; }
-        .camp-row:hover { background:rgba(245,166,35,0.04) !important; }
-      `}</style>
-
-      {/* ── Hero banner ── */}
+    <Layout>
       <div style={{
-        background:`linear-gradient(135deg, ${T.navy} 0%, ${T.navyMid} 60%, #1a2535 100%)`,
-        borderRadius:22, padding:'32px 40px', marginBottom:28,
-        color:'white', position:'relative', overflow:'hidden',
-        boxShadow:'0 8px 40px rgba(22,18,13,0.20)',
-        animation:'fadeUp 0.5s ease both',
+        background: THEME.bg,
+        minHeight: '100vh',
+        color: THEME.text,
+        fontFamily: '"Inter", "Segoe UI", system-ui, -apple-system, sans-serif',
       }}>
-        {/* Decoration circles */}
-        <div style={{ position:'absolute', top:-50, right:-50, width:240, height:240, background:'rgba(245,166,35,0.07)', borderRadius:'50%', pointerEvents:'none' }}/>
-        <div style={{ position:'absolute', bottom:-30, right:120, width:140, height:140, background:'rgba(245,166,35,0.04)', borderRadius:'50%', pointerEvents:'none' }}/>
-        {/* Grid */}
-        <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px)', backgroundSize:'40px 40px', pointerEvents:'none' }}/>
+        <style>{`
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+          .animate-fade { animation: fadeIn 0.5s ease-out; }
+          .animate-slide { animation: slideIn 0.4s ease-out; }
+          ::-webkit-scrollbar { width: 8px; height: 8px; }
+          ::-webkit-scrollbar-track { background: ${THEME.bg}; }
+          ::-webkit-scrollbar-thumb { background: ${THEME.border}; border-radius: 4px; }
+          ::-webkit-scrollbar-thumb:hover { background: ${THEME.textLight}; }
+          * { scrollbar-width: thin; scrollbar-color: ${THEME.border} ${THEME.bg}; }
+        `}</style>
 
-        <div style={{ position:'relative' }}>
-          <div style={{ fontSize:11, fontWeight:700, color:T.gold, letterSpacing:'2.5px', marginBottom:10, textTransform:'uppercase' }}>
-            ⚡ DigiPip Marketing Platform
-          </div>
-          <h1 style={{ fontSize:30, fontWeight:800, margin:'0 0 10px', lineHeight:1.2 }}>
-            {greeting}, {firstName} 👋
-          </h1>
-          <p style={{ fontSize:14, opacity:0.7, maxWidth:500, margin:'0 0 22px', lineHeight:1.6 }}>
-            {isClient
-              ? 'Voici l\'état de vos campagnes et performances marketing en temps réel.'
-              : 'Vue globale de la plateforme — campagnes, contacts et analytics.'}
-          </p>
-          <div style={{ display:'flex', gap:10 }}>
-            <button
-              onClick={() => navigate(isClient ? '/mes-campagnes' : '/campagnes')}
-              style={{ padding:'10px 22px', background:T.gold, color:T.navy, border:'none', borderRadius:10, fontSize:13, fontWeight:800, cursor:'pointer' }}>
-              {isClient ? '📢 Mes Campagnes' : '📢 Voir les Campagnes'}
-            </button>
-            <button
-              onClick={() => navigate('/pipeline')}
-              style={{ padding:'10px 22px', background:'rgba(255,255,255,0.08)', color:'white', border:'1px solid rgba(255,255,255,0.15)', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer' }}>
-              ⚡ Pipeline DevOps
-            </button>
+        {/* TABS NAVIGATION */}
+        <div style={{
+          background: THEME.bgCard,
+          borderBottom: `1px solid ${THEME.border}`,
+          padding: '0 32px',
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+        }}>
+          <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', gap: '4px' }}>
+            {tabs.map(tab => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    padding: '16px 24px', border: 'none', background: 'none',
+                    cursor: 'pointer', fontSize: '14px', fontWeight: isActive ? '700' : '600',
+                    whiteSpace: 'nowrap', color: isActive ? THEME.primary : THEME.textMuted,
+                    borderBottom: isActive ? `3px solid ${THEME.primary}` : '3px solid transparent',
+                    transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px',
+                    position: 'relative',
+                  }}
+                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = THEME.textSecondary; }}
+                  onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = THEME.textMuted; }}
+                >
+                  <span style={{ fontSize: '16px' }}>{tab.icon}</span>
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
         </div>
-      </div>
 
-      {/* ── KPI Cards ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
-        {kpis.map((k,i) => (
-          <div key={k.label} className="kpi-card"
-            onClick={() => navigate(k.route)}
-            style={{
-              background:T.card, borderRadius:18, padding:'22px 22px 18px',
-              border:`1.5px solid ${T.border}`, boxShadow:'0 2px 12px rgba(0,0,0,0.05)',
-              animation:`fadeUp 0.5s ease ${i*55}ms both`,
-            }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14 }}>
-              <div>
-                <div style={{ fontSize:10, fontWeight:700, letterSpacing:'1.5px', color:T.muted, textTransform:'uppercase', marginBottom:6 }}>{k.label}</div>
-                <div style={{ fontSize:36, fontWeight:800, color:k.color, lineHeight:1 }}>
-                  {typeof k.value === 'number' ? k.value.toLocaleString('fr-FR') : k.value}
+        <main style={{ padding: '32px', maxWidth: '1600px', margin: '0 auto' }}>
+
+          {/* TAB: OVERVIEW */}
+          {activeTab === 'overview' && (
+            <div className="animate-fade">
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gap: '24px',
+                marginBottom: '32px',
+              }}>
+                <KPICard
+                  title="Campagnes Totales"
+                  value={kpis.campagnesActives || 0}
+                  change={12}
+                  changeType="up"
+                  icon="🚀"
+                  color={THEME.primary}
+                  subtitle={`${kpis.campagnesPubliees || 0} publiées • ${(kpis.campagnesActives || 0) - (kpis.campagnesPubliees || 0)} brouillons`}
+                  loading={loading}
+                  onClick={() => setActiveTab('campagnes')}
+                />
+                <KPICard
+                  title="Inscriptions"
+                  value={kpis.inscriptionsTotal || 0}
+                  change={8}
+                  changeType="up"
+                  icon="👥"
+                  color={THEME.info}
+                  subtitle={`${kpis.tauxRemplissage || 0}% taux de remplissage`}
+                  loading={loading}
+                />
+                <KPICard
+                  title="Revenus (TND)"
+                  value={`${(kpis.revenus || 0).toLocaleString()} TND`}
+                  change={15}
+                  changeType="up"
+                  icon="💰"
+                  color={THEME.success}
+                  subtitle="Revenus estimés ce mois"
+                  loading={loading}
+                />
+                <KPICard
+                  title="Notifications"
+                  value={kpis.notificationsSent || 0}
+                  change={5}
+                  changeType="up"
+                  icon="🔔"
+                  color={THEME.danger}
+                  subtitle="Notifications envoyées"
+                  loading={loading}
+                  onClick={() => setActiveTab('notifications')}
+                />
+                <KPICard
+                  title="Clients"
+                  value={kpis.totalClients || 0}
+                  change={3}
+                  changeType="up"
+                  icon="🆕"
+                  color="#8b5cf6"
+                  subtitle={`${kpis.tauxConversion || 0}% taux de conversion`}
+                  loading={loading}
+                  onClick={() => setActiveTab('clients')}
+                />
+              </div>
+
+              {/* Recent Campagnes */}
+              <div style={{
+                background: THEME.bgCard, border: `1px solid ${THEME.border}`,
+                borderRadius: '20px', padding: '28px', boxShadow: THEME.shadow,
+                marginBottom: '32px',
+              }}>
+                <SectionHeader
+                  title="Campagnes récentes"
+                  subtitle="Dernières campagnes créées"
+                  action={
+                    <button
+                      onClick={() => setActiveTab('campagnes')}
+                      style={{
+                        fontSize: '13px', color: THEME.primary, background: 'none',
+                        border: 'none', cursor: 'pointer', fontWeight: '700',
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                      }}
+                    >
+                      Voir tout →
+                    </button>
+                  }
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {safeCampagnes.slice(0, 5).map((camp, i) => (
+                    <div
+                      key={camp.id || i}
+                      onClick={() => navigate(`/campagnes/${camp.slug}`)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '14px',
+                        padding: '16px', background: THEME.bg,
+                        borderRadius: '14px', cursor: 'pointer',
+                        border: `1px solid ${THEME.borderLight}`,
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = THEME.primary; e.currentTarget.style.background = THEME.primaryBg; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = THEME.borderLight; e.currentTarget.style.background = THEME.bg; }}
+                    >
+                      <div style={{
+                        width: '48px', height: '48px', borderRadius: '12px',
+                        background: camp.published ? THEME.successBg : THEME.bgHover,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '22px', border: `2px solid ${camp.published ? '#a7f3d0' : THEME.border}`,
+                        flexShrink: 0,
+                      }}>
+                        {camp.published ? '✅' : '📝'}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '15px', fontWeight: '700', color: THEME.text, marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {camp.title}
+                        </div>
+                        <div style={{ fontSize: '12px', color: THEME.textMuted, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ padding: '3px 8px', borderRadius: '6px', background: THEME.bgHover, fontSize: '11px' }}>{camp.type}</span>
+                          <span>•</span>
+                          <span>{camp.inscriptions?.length || 0} inscrits</span>
+                          <span>•</span>
+                          <span>{camp.placesTotal || 0} places</span>
+                        </div>
+                      </div>
+                      <StatusBadge status={camp.published ? 'published' : 'draft'} />
+                    </div>
+                  ))}
+                  {safeCampagnes.length === 0 && !loading && (
+                    <div style={{ textAlign: 'center', padding: '48px', color: THEME.textMuted }}>
+                      <div style={{ fontSize: '48px', marginBottom: '12px' }}>📝</div>
+                      <div style={{ fontSize: '15px', fontWeight: '700' }}>Aucune campagne</div>
+                      <div style={{ fontSize: '13px', marginTop: '4px' }}>Créez votre première campagne</div>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div style={{ width:44, height:44, borderRadius:12, background:`${k.color}15`, border:`1px solid ${k.color}25`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>
-                {k.icon}
+
+              {/* Recent Activities */}
+              <div style={{
+                background: THEME.bgCard, border: `1px solid ${THEME.border}`,
+                borderRadius: '20px', padding: '28px', boxShadow: THEME.shadow,
+              }}>
+                <SectionHeader title="Activités récentes" subtitle="Dernières actions sur la plateforme" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                  {safeActivities.map((act, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: 'flex', gap: '16px', padding: '18px 0',
+                        borderBottom: i < safeActivities.length - 1 ? `1px solid ${THEME.borderLight}` : 'none',
+                        alignItems: 'flex-start',
+                      }}
+                    >
+                      <div style={{
+                        width: '44px', height: '44px', borderRadius: '12px',
+                        background: `${act.color}15`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '20px', border: `2px solid ${act.color}25`,
+                        flexShrink: 0,
+                      }}>
+                        {act.icon}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '14px', fontWeight: '700', color: THEME.text, marginBottom: '4px' }}>
+                          {act.title}
+                        </div>
+                        <div style={{ fontSize: '12px', color: THEME.textMuted, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ color: act.color }}>●</span>
+                          {act.time}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {safeActivities.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '48px', color: THEME.textMuted }}>
+                      <div style={{ fontSize: '48px', marginBottom: '12px' }}>📭</div>
+                      <div style={{ fontSize: '15px', fontWeight: '700' }}>Aucune activité</div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <span style={{ fontSize:11, color:T.green, fontWeight:600 }}>↑ +12% ce mois</span>
-              <Sparkline data={k.spark} color={k.color}/>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Charts row ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 340px', gap:20, marginBottom:24 }}>
-
-        {/* Bar chart — Évolution 7 jours */}
-        <div style={{ background:T.card, borderRadius:18, padding:'24px 28px', border:`1.5px solid ${T.border}`, boxShadow:'0 2px 12px rgba(0,0,0,0.05)', animation:'fadeUp 0.5s ease 240ms both' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
-            <div>
-              <div style={{ fontSize:15, fontWeight:700, color:T.text, marginBottom:4 }}>Évolution des envois</div>
-              <div style={{ fontSize:12, color:T.muted }}>7 derniers jours · par canal</div>
-            </div>
-            <div style={{ display:'flex', gap:14 }}>
-              {[{l:'Email',c:T.blue},{l:'SMS',c:T.green},{l:'Push',c:T.gold}].map(({l,c}) => (
-                <div key={l} style={{ display:'flex', alignItems:'center', gap:5 }}>
-                  <div style={{ width:8, height:8, borderRadius:2, background:c }}/>
-                  <span style={{ fontSize:10, color:T.muted, fontWeight:600 }}>{l}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <BarChart data={barSeries} labels={barLabels} colors={barColors}/>
-        </div>
-
-        {/* Donut — répartition canaux */}
-        <div style={{ background:T.card, borderRadius:18, padding:'24px 24px', border:`1.5px solid ${T.border}`, boxShadow:'0 2px 12px rgba(0,0,0,0.05)', animation:'fadeUp 0.5s ease 300ms both' }}>
-          <div style={{ fontSize:15, fontWeight:700, color:T.text, marginBottom:4 }}>Répartition canaux</div>
-          <div style={{ fontSize:12, color:T.muted, marginBottom:20 }}>Taux d'engagement</div>
-          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:18 }}>
-            <Donut segments={donutSegs}/>
-            <div style={{ width:'100%', display:'flex', flexDirection:'column', gap:10 }}>
-              {donutSegs.map(s => (
-                <div key={s.label} style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <div style={{ width:10, height:10, borderRadius:3, background:s.color, flexShrink:0 }}/>
-                  <span style={{ flex:1, fontSize:12, color:T.muted }}>{s.label}</span>
-                  <span style={{ fontSize:12, fontWeight:700, color:s.color }}>{s.value}%</span>
-                  <div style={{ width:60, height:4, borderRadius:2, background:T.border, overflow:'hidden' }}>
-                    <div style={{ width:`${s.value}%`, height:'100%', background:s.color, borderRadius:2, transition:'width 1.2s ease' }}/>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Bottom row : campagnes récentes + activité ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
-
-        {/* Campagnes récentes */}
-        <div style={{ background:T.card, borderRadius:18, padding:'24px 24px', border:`1.5px solid ${T.border}`, boxShadow:'0 2px 12px rgba(0,0,0,0.05)', animation:'fadeUp 0.5s ease 360ms both' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18 }}>
-            <div>
-              <div style={{ fontSize:15, fontWeight:700, color:T.text }}>Campagnes récentes</div>
-              <div style={{ fontSize:12, color:T.muted }}>Derniers déploiements</div>
-            </div>
-            <button onClick={() => navigate(isClient?'/mes-campagnes':'/campagnes')}
-              style={{ fontSize:12, color:T.gold, fontWeight:700, background:'none', border:'none', cursor:'pointer' }}>
-              Voir tout →
-            </button>
-          </div>
-          {campagnes.length === 0 ? (
-            <div style={{ padding:'30px', textAlign:'center', color:T.muted, fontSize:13 }}>Aucune campagne</div>
-          ) : (
-            <div>
-              {campagnes.map((c,i) => {
-                const sc = statusCfg[c.status] || statusCfg.draft;
-                const typeIcon = {email:'✉',sms:'💬',push:'🔔'}[c.type?.toLowerCase()] || '📢';
-                return (
-                  <div key={c.id} className="camp-row"
-                    onClick={() => navigate(`/campagne/${c.id}`)}
-                    style={{
-                      display:'flex', alignItems:'center', gap:12,
-                      padding:'11px 10px', borderRadius:10,
-                      borderBottom: i < campagnes.length-1 ? `1px solid ${T.border}` : 'none',
-                      animation:`fadeUp 0.4s ease ${400+i*50}ms both`,
-                    }}>
-                    <div style={{ width:36, height:36, borderRadius:9, background:T.goldDim, border:`1px solid ${T.gold}25`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>
-                      {typeIcon}
-                    </div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:13, fontWeight:600, color:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.title}</div>
-                      <div style={{ fontSize:11, color:T.muted }}>{c.client?.name || 'DigiPip'}</div>
-                    </div>
-                    <span style={{ fontSize:10, fontWeight:700, color:sc.color, background:sc.bg, padding:'3px 9px', borderRadius:20, flexShrink:0 }}>
-                      {sc.label}
-                    </span>
-                  </div>
-                );
-              })}
             </div>
           )}
-        </div>
 
-        {/* Activité récente */}
-        <div style={{ background:T.card, borderRadius:18, padding:'24px 24px', border:`1.5px solid ${T.border}`, boxShadow:'0 2px 12px rgba(0,0,0,0.05)', animation:'fadeUp 0.5s ease 420ms both' }}>
-          <div style={{ marginBottom:18 }}>
-            <div style={{ fontSize:15, fontWeight:700, color:T.text }}>Activité récente</div>
-            <div style={{ fontSize:12, color:T.muted }}>Événements plateforme</div>
-          </div>
-          {activities.map((a,i) => (
-            <ActivityItem key={i} {...a} delay={440+i*50}/>
-          ))}
-        </div>
+          {/* TAB: CAMPAGNES */}
+          {activeTab === 'campagnes' && (
+            <div className="animate-fade">
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                marginBottom: '24px', flexWrap: 'wrap', gap: '16px',
+              }}>
+                <SectionHeader
+                  title="Gestion des Campagnes"
+                  subtitle={`${safeCampagnes.length} campagnes au total`}
+                />
+                <button
+                  onClick={() => navigate('/gestion-campagnes')}
+                  style={{
+                    background: `linear-gradient(135deg, ${THEME.primary}, ${THEME.primaryDark})`,
+                    border: 'none', color: '#fff', fontWeight: '700',
+                    padding: '12px 24px', borderRadius: '12px', fontSize: '14px',
+                    cursor: 'pointer', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+                    transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(245, 158, 11, 0.4)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.3)'; }}
+                >
+                  ➕ Nouvelle Campagne
+                </button>
+              </div>
+
+              <div style={{
+                background: THEME.bgCard, border: `1px solid ${THEME.border}`,
+                borderRadius: '20px', padding: '24px', boxShadow: THEME.shadow,
+                overflow: 'hidden',
+              }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '14px' }}>
+                    <thead>
+                      <tr>
+                        {['Campagne', 'Type', 'Inscrits', 'Places', 'Remplissage', 'Statut', 'Actions'].map((h, i) => (
+                          <th key={h} style={{
+                            textAlign: i === 0 ? 'left' : 'center',
+                            padding: '16px 12px', color: THEME.textMuted, fontWeight: '700',
+                            fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px',
+                            borderBottom: `2px solid ${THEME.border}`, background: THEME.bgHover,
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {safeCampagnes.map((camp) => (
+                        <tr
+                          key={camp.id}
+                          style={{ transition: 'background 0.2s' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = THEME.bgHover}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <td style={{ padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}` }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{
+                                width: '40px', height: '40px', borderRadius: '10px',
+                                background: camp.image ? `url(${camp.image}) center/cover` : THEME.primaryBg,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '18px', border: `2px solid ${THEME.border}`, flexShrink: 0,
+                              }}>
+                                {!camp.image && '📷'}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: '700', color: THEME.text, fontSize: '14px', marginBottom: '2px' }}>{camp.title}</div>
+                                <div style={{ fontSize: '12px', color: THEME.textMuted, fontWeight: '600' }}>{camp.slug}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}` }}>
+                            <span style={{
+                              padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
+                              background: THEME.bgHover, color: THEME.textSecondary, border: `1px solid ${THEME.border}`,
+                            }}>
+                              {camp.type}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}`, color: THEME.text, fontWeight: '700', fontSize: '15px' }}>
+                            {camp.inscriptions?.length || 0}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}`, color: THEME.text, fontWeight: '700', fontSize: '15px' }}>
+                            {camp.placesTotal || 0}
+                          </td>
+                          <td style={{ padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}`, minWidth: '140px' }}>
+                            <ProgressBar current={camp.inscriptions?.length || 0} total={camp.placesTotal || 0} />
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}` }}>
+                            <StatusBadge status={camp.published ? 'published' : 'draft'} />
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}` }}>
+                            <button
+                              onClick={() => togglePublish(camp.id, camp.published)}
+                              style={{
+                                background: camp.published ? THEME.dangerBg : THEME.successBg,
+                                border: `1px solid ${camp.published ? '#fecaca' : '#a7f3d0'}`,
+                                color: camp.published ? THEME.danger : THEME.success,
+                                padding: '8px 16px', borderRadius: '10px',
+                                fontSize: '12px', fontWeight: '700', cursor: 'pointer',
+                                transition: 'all 0.2s', whiteSpace: 'nowrap',
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                            >
+                              {camp.published ? 'Dépublier' : 'Publier'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {safeCampagnes.length === 0 && !loading && (
+                        <tr>
+                          <td colSpan="7" style={{ textAlign: 'center', padding: '60px', color: THEME.textMuted }}>
+                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+                            <div style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px' }}>Aucune campagne</div>
+                            <button
+                              onClick={() => navigate('/gestion-campagnes')}
+                              style={{ color: THEME.primary, background: 'none', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '14px' }}
+                            >
+                              Créer une campagne →
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: NOTIFICATIONS */}
+          {activeTab === 'notifications' && (
+            <div className="animate-fade">
+              <SectionHeader
+                title="Historique des Notifications"
+                subtitle={`${safeNotifications.length} notifications envoyées`}
+              />
+              <div style={{
+                background: THEME.bgCard, border: `1px solid ${THEME.border}`,
+                borderRadius: '20px', padding: '24px', boxShadow: THEME.shadow,
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {safeNotifications.map((notif, i) => (
+                    <div
+                      key={notif.id || i}
+                      style={{
+                        display: 'flex', gap: '18px', padding: '20px',
+                        borderRadius: '16px', background: THEME.bg,
+                        border: `1px solid ${THEME.borderLight}`,
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = THEME.border; e.currentTarget.style.boxShadow = THEME.shadowMd; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = THEME.borderLight; e.currentTarget.style.boxShadow = 'none'; }}
+                    >
+                      <div style={{
+                        width: '52px', height: '52px', borderRadius: '14px',
+                        background: (notif.type === 'EMAIL' ? THEME.dangerBg : notif.type === 'SMS' ? THEME.successBg : notif.type === 'PUSH' ? THEME.infoBg : THEME.warningBg),
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '24px', border: `2px solid ${(notif.type === 'EMAIL' ? '#fecaca' : notif.type === 'SMS' ? '#a7f3d0' : notif.type === 'PUSH' ? '#bfdbfe' : '#fde68a')}`,
+                        flexShrink: 0,
+                      }}>
+                        {notif.type === 'EMAIL' ? '✉️' : notif.type === 'SMS' ? '💬' : notif.type === 'PUSH' ? '🔔' : notif.type === 'WHATSAPP' ? '📱' : '🌐'}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                          <span style={{ fontSize: '15px', fontWeight: '700', color: THEME.text }}>
+                            {notif.title || notif.message?.substring(0, 50) + '...'}
+                          </span>
+                          <StatusBadge status={notif.status === 'SENT' ? 'published' : 'draft'} />
+                        </div>
+                        <div style={{ fontSize: '13px', color: THEME.textSecondary, marginBottom: '10px', lineHeight: '1.5' }}>
+                          {notif.message}
+                        </div>
+                        <div style={{ fontSize: '12px', color: THEME.textMuted, fontWeight: '600', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ color: THEME.primary }}>📡</span> Canal: {notif.type}
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ color: THEME.info }}>📅</span> {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                          </span>
+                          {notif.campagneId && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ color: THEME.success }}>🚀</span> Campagne #{notif.campagneId}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {safeNotifications.length === 0 && !loading && (
+                    <div style={{ textAlign: 'center', padding: '80px', color: THEME.textMuted }}>
+                      <div style={{ fontSize: '64px', marginBottom: '16px' }}>📭</div>
+                      <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>Aucune notification envoyée</div>
+                      <div style={{ fontSize: '14px' }}>Envoyez votre première notification depuis l'onglet "Envoyer Notif"</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: CLIENTS */}
+          {activeTab === 'clients' && (
+            <div className="animate-fade">
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                marginBottom: '24px', flexWrap: 'wrap', gap: '16px',
+              }}>
+                <SectionHeader
+                  title="Liste des Clients"
+                  subtitle={`${safeClients.length} clients inscrits`}
+                />
+                <button
+                  onClick={() => navigate('/clients')}
+                  style={{
+                    background: `linear-gradient(135deg, ${THEME.primary}, ${THEME.primaryDark})`,
+                    border: 'none', color: '#fff', fontWeight: '700',
+                    padding: '12px 24px', borderRadius: '12px', fontSize: '14px',
+                    cursor: 'pointer', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+                    transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px',
+                  }}
+                >
+                  👥 Gérer les Clients
+                </button>
+              </div>
+
+              <div style={{
+                background: THEME.bgCard, border: `1px solid ${THEME.border}`,
+                borderRadius: '20px', padding: '24px', boxShadow: THEME.shadow,
+                overflow: 'hidden',
+              }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '14px' }}>
+                    <thead>
+                      <tr>
+                        {['Client', 'Email', 'Type', 'Inscriptions', 'Date d\'inscription', 'Statut'].map((h, i) => (
+                          <th key={h} style={{
+                            textAlign: i < 2 ? 'left' : 'center',
+                            padding: '16px 12px', color: THEME.textMuted, fontWeight: '700',
+                            fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px',
+                            borderBottom: `2px solid ${THEME.border}`, background: THEME.bgHover,
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {safeClients.map((client, i) => (
+                        <tr
+                          key={client.id || i}
+                          style={{ transition: 'background 0.2s' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = THEME.bgHover}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <td style={{ padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}` }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{
+                                width: '42px', height: '42px', borderRadius: '50%',
+                                background: `linear-gradient(135deg, ${THEME.primary}, ${THEME.primaryDark})`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '16px', fontWeight: '700', color: '#fff', flexShrink: 0,
+                              }}>
+                                {(client.nom || client.name || 'C').charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: '700', color: THEME.text, fontSize: '14px' }}>
+                                  {client.nom || client.name || 'Client ' + (i + 1)}
+                                </div>
+                                {client.entreprise && (
+                                  <div style={{ fontSize: '12px', color: THEME.textMuted, fontWeight: '600' }}>
+                                    {client.entreprise}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}`, color: THEME.textSecondary, fontWeight: '600' }}>
+                            {client.email}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}` }}>
+                            <span style={{
+                              padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
+                              background: THEME.bgHover, color: THEME.textSecondary, border: `1px solid ${THEME.border}`,
+                            }}>
+                              {client.type || 'Particulier'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}`, color: THEME.primary, fontWeight: '800', fontSize: '16px' }}>
+                            {client.inscriptions?.length || 0}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}`, color: THEME.textMuted, fontWeight: '600', fontSize: '13px' }}>
+                            {client.createdAt ? new Date(client.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}` }}>
+                            <StatusBadge status="active" />
+                          </td>
+                        </tr>
+                      ))}
+                      {safeClients.length === 0 && !loading && (
+                        <tr>
+                          <td colSpan="6" style={{ textAlign: 'center', padding: '60px', color: THEME.textMuted }}>
+                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>👤</div>
+                            <div style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px' }}>Aucun client</div>
+                            <div style={{ fontSize: '14px' }}>Les clients apparaîtront ici après inscription</div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: ENVOYER NOTIFICATION */}
+          {activeTab === 'envoyer' && (
+            <div className="animate-fade">
+              <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                <SectionHeader
+                  title="Envoyer une Notification"
+                  subtitle="Notifier vos clients sur tous les canaux disponibles"
+                />
+
+                <div style={{
+                  background: THEME.bgCard, border: `1px solid ${THEME.border}`,
+                  borderRadius: '20px', padding: '40px', boxShadow: THEME.shadow,
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+
+                    {/* Titre */}
+                    <div>
+                      <label style={{
+                        display: 'block', fontSize: '14px', fontWeight: '700',
+                        color: THEME.text, marginBottom: '10px',
+                      }}>
+                        Titre de la notification <span style={{ color: THEME.danger }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Nouvelle formation disponible !"
+                        value={notifForm.title}
+                        onChange={(e) => setNotifForm({...notifForm, title: e.target.value})}
+                        style={{
+                          width: '100%', padding: '14px 18px', borderRadius: '12px',
+                          border: `2px solid ${notifForm.title ? THEME.border : '#fecaca'}`,
+                          background: THEME.bg, color: THEME.text, fontSize: '15px',
+                          outline: 'none', transition: 'all 0.2s', fontWeight: '500',
+                        }}
+                        onFocus={(e) => { e.target.style.borderColor = THEME.primary; e.target.style.boxShadow = `0 0 0 4px ${THEME.primary}15`; }}
+                        onBlur={(e) => { e.target.style.borderColor = notifForm.title ? THEME.border : '#fecaca'; e.target.style.boxShadow = 'none'; }}
+                      />
+                    </div>
+
+                    {/* Message */}
+                    <div>
+                      <label style={{
+                        display: 'block', fontSize: '14px', fontWeight: '700',
+                        color: THEME.text, marginBottom: '10px',
+                      }}>
+                        Message <span style={{ color: THEME.danger }}>*</span>
+                      </label>
+                      <textarea
+                        placeholder="Contenu de la notification..."
+                        rows={6}
+                        value={notifForm.message}
+                        onChange={(e) => setNotifForm({...notifForm, message: e.target.value})}
+                        style={{
+                          width: '100%', padding: '14px 18px', borderRadius: '12px',
+                          border: `2px solid ${notifForm.message ? THEME.border : '#fecaca'}`,
+                          background: THEME.bg, color: THEME.text, fontSize: '15px',
+                          outline: 'none', resize: 'vertical', transition: 'all 0.2s', fontWeight: '500',
+                        }}
+                        onFocus={(e) => { e.target.style.borderColor = THEME.primary; e.target.style.boxShadow = `0 0 0 4px ${THEME.primary}15`; }}
+                        onBlur={(e) => { e.target.style.borderColor = notifForm.message ? THEME.border : '#fecaca'; e.target.style.boxShadow = 'none'; }}
+                      />
+                    </div>
+
+                    {/* Type */}
+                    <div>
+                      <label style={{
+                        display: 'block', fontSize: '14px', fontWeight: '700',
+                        color: THEME.text, marginBottom: '12px',
+                      }}>
+                        Type de notification
+                      </label>
+                      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        {['promotion', 'nouvelle_campagne', 'rappel', 'alerte'].map(type => (
+                          <button
+                            key={type}
+                            onClick={() => setNotifForm({...notifForm, type})}
+                            style={{
+                              padding: '12px 24px', borderRadius: '12px',
+                              border: `2px solid ${notifForm.type === type ? THEME.primary : THEME.border}`,
+                              background: notifForm.type === type ? THEME.primaryBg : THEME.bg,
+                              color: notifForm.type === type ? THEME.primary : THEME.textMuted,
+                              fontWeight: 700, cursor: 'pointer', fontSize: '14px',
+                              textTransform: 'capitalize', transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={(e) => { if (notifForm.type !== type) e.currentTarget.style.borderColor = THEME.textLight; }}
+                            onMouseLeave={(e) => { if (notifForm.type !== type) e.currentTarget.style.borderColor = THEME.border; }}
+                          >
+                            {type.replace('_', ' ')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Canal */}
+                    <div>
+                      <label style={{
+                        display: 'block', fontSize: '14px', fontWeight: '700',
+                        color: THEME.text, marginBottom: '12px',
+                      }}>
+                        Canal de diffusion
+                      </label>
+                      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        {canauxConfig.map(canal => (
+                          <button
+                            key={canal.id}
+                            onClick={() => setNotifForm({...notifForm, canal: canal.id})}
+                            style={{
+                              padding: '14px 24px', borderRadius: '14px',
+                              border: `2px solid ${notifForm.canal === canal.id ? canal.color : THEME.border}`,
+                              background: notifForm.canal === canal.id ? `${canal.color}10` : THEME.bg,
+                              color: notifForm.canal === canal.id ? canal.color : THEME.textMuted,
+                              fontWeight: 700, cursor: 'pointer', fontSize: '14px',
+                              display: 'flex', alignItems: 'center', gap: '10px',
+                              transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={(e) => { if (notifForm.canal !== canal.id) e.currentTarget.style.borderColor = THEME.textLight; }}
+                            onMouseLeave={(e) => { if (notifForm.canal !== canal.id) e.currentTarget.style.borderColor = THEME.border; }}
+                          >
+                            <span style={{ fontSize: '20px' }}>{canal.icon}</span> {canal.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Campagne liée */}
+                    <div>
+                      <label style={{
+                        display: 'block', fontSize: '14px', fontWeight: '700',
+                        color: THEME.text, marginBottom: '10px',
+                      }}>
+                        Campagne liée (optionnel)
+                      </label>
+                      <select
+                        value={notifForm.campagneId}
+                        onChange={(e) => setNotifForm({...notifForm, campagneId: e.target.value})}
+                        style={{
+                          width: '100%', padding: '14px 18px', borderRadius: '12px',
+                          border: `2px solid ${THEME.border}`, background: THEME.bg,
+                          color: THEME.text, fontSize: '15px', outline: 'none',
+                          cursor: 'pointer', fontWeight: '500',
+                          transition: 'all 0.2s',
+                        }}
+                        onFocus={(e) => { e.target.style.borderColor = THEME.primary; e.target.style.boxShadow = `0 0 0 4px ${THEME.primary}15`; }}
+                        onBlur={(e) => { e.target.style.borderColor = THEME.border; e.target.style.boxShadow = 'none'; }}
+                      >
+                        <option value="">Aucune campagne</option>
+                        {safeCampagnes.map(c => (
+                          <option key={c.id} value={c.id}>{c.title}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Bouton Envoyer */}
+                    <button
+                      onClick={envoyerNotification}
+                      disabled={sendingNotif}
+                      style={{
+                        width: '100%', padding: '18px', borderRadius: '14px',
+                        background: sendingNotif ? THEME.border : `linear-gradient(135deg, ${THEME.primary}, ${THEME.primaryDark})`,
+                        color: '#fff', fontWeight: '800', fontSize: '17px',
+                        border: 'none', cursor: sendingNotif ? 'not-allowed' : 'pointer',
+                        opacity: sendingNotif ? 0.7 : 1,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                        transition: 'all 0.2s',
+                        boxShadow: sendingNotif ? 'none' : '0 4px 16px rgba(245, 158, 11, 0.3)',
+                      }}
+                      onMouseEnter={(e) => { if (!sendingNotif) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(245, 158, 11, 0.4)'; }}}
+                      onMouseLeave={(e) => { if (!sendingNotif) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(245, 158, 11, 0.3)'; }}}
+                    >
+                      {sendingNotif ? (
+                        <>
+                          <span style={{ display: 'inline-block', width: '20px', height: '20px', border: '3px solid rgba(255,255,255,0.3)', borderTop: '3px solid #fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                          Envoi en cours...
+                        </>
+                      ) : (
+                        <>
+                          📢 Envoyer la Notification
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </main>
       </div>
-    </div>
+    </Layout>
   );
 }

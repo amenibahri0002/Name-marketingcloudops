@@ -6,14 +6,24 @@ const client = require('prom-client')
 const { authMiddleware: authenticate } = require('./middleware/auth')
 const { helmetMiddleware, globalLimiter } = require('./middleware/security')
 const compression = require('compression')
-
+require('dotenv').config();
+const { verifierAlertesAutomatiques } = require('./services/notificationService');
+// ============================================================
+// 1. CRÉER APP D'ABORD
+// ============================================================
 const app = express()
+const path = require('path');
 app.set('trust proxy', 1)
-
+const dbUrl = process.env.DATABASE_URL;
+const jwtSecret = process.env.JWT_SECRET;
+const twilioSid = process.env.TWILIO_SID;
 const prisma = new PrismaClient()
 
 console.log('SERVER STARTING...')
 
+// ============================================================
+// 2. MIDDLEWARES (avant les routes)
+// ============================================================
 app.use(cors({
   origin: [
     'http://localhost:3000',
@@ -23,16 +33,24 @@ app.use(cors({
   ],
   credentials: true
 }));
+
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(helmetMiddleware)
 app.use(globalLimiter)
 app.use(compression())
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// ============================================================
+// 3. ROUTES (après app et middlewares)
+// ============================================================
 app.use('/api/chat', require('./routes/chat'));
-
+app.use('/api/formations', require('./routes/formations'));
+const cloudRoutes = require('./routes/cloud');
+app.use('/api/cloud', require('./routes/cloud'));
 const authRoutes = require('./routes/auth')
 app.use('/api/auth', authRoutes)
-
+const notificationRoutes = require('./routes/notifications');
+app.use('/api/notifications', authenticate, notificationRoutes);
 const clientRoutes = require('./routes/clients')
 app.use('/api/clients', authenticate, clientRoutes)
 
@@ -67,7 +85,7 @@ const analyticsRoutes = require('./routes/analytics')
 app.use('/api/analytics', authenticate, analyticsRoutes)
 
 const chatRoutes = require('./routes/chat');
-app.use('/api/chat', chatRoutes); // sans authenticate — route publique
+app.use('/api/chat', chatRoutes);
 
 const devopsRouter = require('./routes/devops')
 app.use('/api/devops', devopsRouter)
@@ -75,6 +93,15 @@ app.use('/api/devops', devopsRouter)
 const exportRoutes = require('./routes/export')
 app.use('/api/export', authenticate, exportRoutes)
 
+// ============================================================
+// 4. ROUTES INSCRIPTIONS (NOUVEAU)
+// ============================================================
+const inscriptionRoutes = require('./routes/inscriptions')
+app.use('/api/inscriptions', inscriptionRoutes)
+
+// ============================================================
+// 5. MÉTRIQUES & HEALTH CHECK
+// ============================================================
 client.collectDefaultMetrics({ timeout: 5000 })
 
 app.get('/api/health', (req, res) => res.json({ 
@@ -90,7 +117,16 @@ app.get('/metrics', async (req, res) => {
 
 app.get('/', (req, res) => res.send('MarketingCloudOps API OK'))
 
+// ============================================================
+// 6. DÉMARRAGE
+// ============================================================
+app.use('/api/paiements', require('./routes/paiements'));
 const PORT = process.env.PORT || 5000
 app.listen(PORT, '0.0.0.0', () => {
-  console.log('Backend sur http://localhost:' + PORT)
+  console.log('✅ Backend sur http://localhost:' + PORT)
 })
+const fs = require('fs');
+const uploadDir = path.join(__dirname, 'uploads', 'campagnes');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}

@@ -16,28 +16,27 @@ export default function Login() {
     setLoading(true); setError('');
     try {
       const res = await axios.post(
-        `${process.env.REACT_APP_API_URL || 'https://marketingcloudops-backend.onrender.com'}/api/auth/login`,
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/login`,
         { email, password }
       );
+
+      // Stocker les données utilisateur
       localStorage.setItem('token',     res.data.token);
       localStorage.setItem('user',      JSON.stringify(res.data.user));
       localStorage.setItem('userName',  res.data.user?.name  || '');
       localStorage.setItem('userEmail', res.data.user?.email || '');
+      localStorage.setItem('userRole',  res.data.user?.role  || '');
 
-      const redirect = sessionStorage.getItem('redirect_after_login');
-      if (redirect) {
-        sessionStorage.removeItem('redirect_after_login');
-        navigate(redirect);
+      // Redirection selon le rôle
+      const role = res.data.user?.role;
+      if (role === 'ADMIN' || role === 'RESPONSABLE_MARKETING') {
+        navigate('/dashboard');
       } else {
-        const role = res.data.user?.role;
-        if (role === 'ADMIN' || role === 'RESPONSABLE_MARKETING') {
-          navigate('/dashboard');
-        } else {
-          navigate('/campagnes');
-        }
+        navigate('/campagnes');
       }
-    } catch {
-      setError('Email ou mot de passe incorrect.');
+    } catch (err) {
+      console.error('Erreur login:', err);
+      setError(err.response?.data?.error || 'Email ou mot de passe incorrect.');
     }
     setLoading(false);
   };
@@ -71,7 +70,7 @@ export default function Login() {
         {/* ── HEADER LOGO ── */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-            {/* Logo nuage — même que footer */}
+            {/* Logo nuage */}
             <div style={{
               width: 42, height: 42,
               background: 'linear-gradient(135deg, #f5a623, #d97706)',

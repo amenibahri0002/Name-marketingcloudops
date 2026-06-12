@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../api';
 
 /* ═══════════════════════════════════════════════════════════════
    DESIGN SYSTEM DIGILAB
@@ -43,166 +44,6 @@ const SEGMENTS = {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   DONNÉES UNIFIÉES
-   ═══════════════════════════════════════════════════════════════ */
-const DIGILAB_CLIENTS = [
-  {
-    id: 1,
-    type: 'entreprise',
-    name: 'Tunisie Telecom',
-    email: 'marketing@tunisietelecom.tn',
-    phone: '+216 71 000 000',
-    createdAt: '2026-01-15',
-    sector: 'Télécommunications',
-    status: 'active',
-    participants: [
-      { id: 101, name: 'Ahmed Ben Salah', email: 'ahmed.bensalah@tt.tn', phone: '+216 20 111 222', segment: 'professionnel', status: 'active', campagneId: 4, dateInscription: '2026-03-15' },
-      { id: 102, name: 'Fatima Trabelsi', email: 'fatima.trabelsi@tt.tn', phone: '+216 21 333 444', segment: 'professionnel', status: 'active', campagneId: 4, dateInscription: '2026-03-15' },
-      { id: 103, name: 'Karim Mansour', email: 'karim.mansour@tt.tn', phone: '+216 22 555 666', segment: 'etudiant', status: 'inactive', campagneId: null, dateInscription: null },
-    ],
-    campagnesInscrites: [4],
-  },
-  {
-    id: 2,
-    type: 'entreprise',
-    name: 'DigiLab Solutions',
-    email: 'contact@digilab.tn',
-    phone: '+216 74 600 500',
-    createdAt: '2026-01-10',
-    sector: 'Marketing Digital',
-    status: 'active',
-    participants: [
-      { id: 104, name: 'Ameni Bahri', email: 'ameni@digilab.tn', phone: '+216 20 777 888', segment: 'professionnel', status: 'active', campagneId: 1, dateInscription: '2026-03-20' },
-      { id: 105, name: 'Yasmine Khemiri', email: 'yasmine@digilab.tn', phone: '+216 21 999 000', segment: 'professionnel', status: 'active', campagneId: 2, dateInscription: '2026-03-22' },
-    ],
-    campagnesInscrites: [1, 2],
-  },
-  {
-    id: 3,
-    type: 'entreprise',
-    name: 'Banque Zitouna',
-    email: 'digital@zitouna.tn',
-    phone: '+216 71 111 222',
-    createdAt: '2026-02-01',
-    sector: 'Finance Islamique',
-    status: 'active',
-    participants: [
-      { id: 106, name: 'Hassan Belhadj', email: 'hassan@zitouna.tn', phone: '+216 23 111 222', segment: 'professionnel', status: 'active', campagneId: 3, dateInscription: '2026-03-25' },
-    ],
-    campagnesInscrites: [3],
-  },
-  {
-    id: 4,
-    type: 'entreprise',
-    name: 'Ooredoo Tunisie',
-    email: 'marketing@ooredoo.tn',
-    phone: '+216 71 333 444',
-    createdAt: '2026-01-20',
-    sector: 'Télécommunications',
-    status: 'active',
-    participants: [
-      { id: 107, name: 'Ahmed Ben Salah', email: 'ahmed@ooredoo.tn', phone: '+216 24 444 555', segment: 'professionnel', status: 'active', campagneId: 1, dateInscription: '2026-03-18' },
-      { id: 108, name: 'Mohamed Ali', email: 'mohamed@ooredoo.tn', phone: '+216 25 666 777', segment: 'etudiant', status: 'active', campagneId: 2, dateInscription: '2026-03-19' },
-    ],
-    campagnesInscrites: [1, 2],
-  },
-  {
-    id: 5,
-    type: 'etablissement',
-    name: 'Medina Tech',
-    email: 'contact@medinatech.tn',
-    phone: '+216 71 555 666',
-    createdAt: '2026-03-01',
-    sector: 'Technologie',
-    status: 'active',
-    participants: [
-      { id: 109, name: 'Sami Dridi', email: 'sami@medinatech.tn', phone: '+216 26 888 999', segment: 'etudiant', status: 'active', campagneId: 3, dateInscription: '2026-03-28' },
-      { id: 110, name: 'Yasmine Khemiri', email: 'yasmine@medinatech.tn', phone: '+216 27 111 222', segment: 'etudiant', status: 'active', campagneId: 3, dateInscription: '2026-03-28' },
-      { id: 111, name: 'Karim Mansour', email: 'karim@medinatech.tn', phone: '+216 28 333 444', segment: 'debutant', status: 'active', campagneId: 2, dateInscription: '2026-03-30' },
-    ],
-    campagnesInscrites: [2, 3],
-  },
-  {
-    id: 6,
-    type: 'etablissement',
-    name: 'StartUp Sfax',
-    email: 'hello@startupsfax.tn',
-    phone: '+216 74 111 222',
-    createdAt: '2026-04-01',
-    sector: 'Startup',
-    status: 'active',
-    participants: [
-      { id: 112, name: 'Yasmine Khemiri', email: 'yasmine@startupsfax.tn', phone: '+216 29 444 555', segment: 'etudiant', status: 'active', campagneId: 1, dateInscription: '2026-04-05' },
-    ],
-    campagnesInscrites: [1],
-  },
-  {
-    id: 7,
-    type: 'agence',
-    name: 'Sahara Travel',
-    email: 'booking@saharatravel.tn',
-    phone: '+216 71 999 000',
-    createdAt: '2026-03-10',
-    sector: 'Tourisme',
-    status: 'active',
-    participants: [
-      { id: 113, name: 'Lina Gharbi', email: 'lina@saharatravel.tn', phone: '+216 28 222 333', segment: 'debutant', status: 'active', campagneId: 2, dateInscription: '2026-04-01' },
-      { id: 114, name: 'Hassan Belhadj', email: 'hassan@saharatravel.tn', phone: '+216 30 444 555', segment: 'debutant', status: 'active', campagneId: 2, dateInscription: '2026-04-01' },
-    ],
-    campagnesInscrites: [2],
-  },
-  {
-    id: 8,
-    type: 'particulier',
-    name: 'Ahmed Ben Salah',
-    email: 'ahmed.bensalah@gmail.com',
-    phone: '+216 20 111 222',
-    createdAt: '2026-02-15',
-    sector: 'Indépendant',
-    status: 'active',
-    participants: [
-      { id: 115, name: 'Ahmed Ben Salah', email: 'ahmed.bensalah@gmail.com', phone: '+216 20 111 222', segment: 'professionnel', status: 'active', campagneId: 4, dateInscription: '2026-03-15' },
-    ],
-    campagnesInscrites: [4],
-  },
-  {
-    id: 9,
-    type: 'particulier',
-    name: 'Fatima Trabelsi',
-    email: 'fatima.trabelsi@yahoo.fr',
-    phone: '+216 21 333 444',
-    createdAt: '2026-02-20',
-    sector: 'Consultante',
-    status: 'active',
-    participants: [
-      { id: 116, name: 'Fatima Trabelsi', email: 'fatima.trabelsi@yahoo.fr', phone: '+216 21 333 444', segment: 'professionnel', status: 'active', campagneId: 1, dateInscription: '2026-03-20' },
-    ],
-    campagnesInscrites: [1],
-  },
-  {
-    id: 10,
-    type: 'particulier',
-    name: 'Karim Mansour',
-    email: 'karim.mansour@outlook.com',
-    phone: '+216 22 555 666',
-    createdAt: '2026-03-05',
-    sector: 'Étudiant',
-    status: 'inactive',
-    participants: [
-      { id: 117, name: 'Karim Mansour', email: 'karim.mansour@outlook.com', phone: '+216 22 555 666', segment: 'etudiant', status: 'inactive', campagneId: null, dateInscription: null },
-    ],
-    campagnesInscrites: [],
-  },
-];
-
-const CAMPAGNES_REF = {
-  1: 'Formation Digital Marketing & AI',
-  2: 'Formation Web WordPress',
-  3: 'Formation Design Graphique & Marketing Digital',
-  4: 'Formation Marketing Digital 40H',
-};
-
-/* ═══════════════════════════════════════════════════════════════
    HELPERS
    ═══════════════════════════════════════════════════════════════ */
 const AVATAR_COLORS = [T.gold, T.blue, T.green, T.purple, '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
@@ -229,13 +70,13 @@ function Pill({ label, color, bg, border }) {
 /* ═══════════════════════════════════════════════════════════════
    MODAL: DÉTAIL CLIENT (avec onglet Participants = Contacts)
    ═══════════════════════════════════════════════════════════════ */
-function ClientDetailModal({ client, onClose }) {
+function ClientDetailModal({ client, onClose, campagnes }) {
   const [activeTab, setActiveTab] = useState('participants');
   const typeInfo = USER_TYPES[client.type];
 
   const tabs = [
-    ['participants', '👥 Participants', client.participants.length],
-    ['campagnes', '📢 Campagnes', client.campagnesInscrites.length],
+    ['participants', '👥 Participants', client.participants?.length || 0],
+    ['campagnes', '📢 Campagnes', client.campagnesInscrites?.length || 0],
   ];
 
   return (
@@ -288,8 +129,8 @@ function ClientDetailModal({ client, onClose }) {
           gap: 1, background: T.border,
         }}>
           {[
-            { label: 'Participants', value: client.participants.length, color: T.blue },
-            { label: 'Campagnes', value: client.campagnesInscrites.length, color: T.gold },
+            { label: 'Participants', value: client.participants?.length || 0, color: T.blue },
+            { label: 'Campagnes', value: client.campagnesInscrites?.length || 0, color: T.gold },
             { label: 'Inscrit le', value: fmtDate(client.createdAt), color: T.green },
           ].map((s, i) => (
             <div key={i} style={{ background: '#fafbfd', padding: '16px 20px', textAlign: 'center' }}>
@@ -325,8 +166,8 @@ function ClientDetailModal({ client, onClose }) {
 
         {/* Content */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
-          
-          {/* TAB: PARTICIPANTS (anciennement Contacts) */}
+
+          {/* TAB: PARTICIPANTS */}
           {activeTab === 'participants' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -343,7 +184,7 @@ function ClientDetailModal({ client, onClose }) {
                 <Pill label="🔒 Données isolées" color={T.green} bg={T.greenDim} border="rgba(34,197,94,0.25)" />
               </div>
 
-              {client.participants.length === 0 ? (
+              {(!client.participants || client.participants.length === 0) ? (
                 <div style={{ textAlign: 'center', padding: '40px 0', color: T.muted }}>
                   <div style={{ fontSize: 36, marginBottom: 12 }}>👥</div>
                   <div>Aucun participant</div>
@@ -352,7 +193,7 @@ function ClientDetailModal({ client, onClose }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {client.participants.map(p => {
                     const seg = SEGMENTS[p.segment];
-                    const campagne = CAMPAGNES_REF[p.campagneId];
+                    const campagne = campagnes.find(c => c.id === p.campagneId);
                     return (
                       <div key={p.id} style={{
                         background: '#fafbfd', borderRadius: 12,
@@ -374,7 +215,7 @@ function ClientDetailModal({ client, onClose }) {
                           </div>
                           {campagne && (
                             <div style={{ fontSize: 11, color: T.goldDark, marginTop: 4, fontWeight: 600 }}>
-                              📢 {campagne}
+                              📢 {campagne.title}
                             </div>
                           )}
                         </div>
@@ -403,36 +244,39 @@ function ClientDetailModal({ client, onClose }) {
                 </h3>
                 <Pill label="🔒 Données isolées" color={T.green} bg={T.greenDim} border="rgba(34,197,94,0.25)" />
               </div>
-              {client.campagnesInscrites.length === 0 ? (
+              {(!client.campagnesInscrites || client.campagnesInscrites.length === 0) ? (
                 <div style={{ textAlign: 'center', padding: '40px 0', color: T.muted }}>
                   <div style={{ fontSize: 36, marginBottom: 12 }}>📢</div>
                   <div>Aucune inscription</div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {client.campagnesInscrites.map(campId => (
-                    <div key={campId} style={{
-                      background: '#fafbfd', borderRadius: 12,
-                      border: `1px solid ${T.border}`, padding: '14px 18px',
-                      display: 'flex', alignItems: 'center', gap: 14,
-                    }}>
-                      <div style={{
-                        width: 40, height: 40, borderRadius: 10,
-                        background: T.goldDim, border: `1.5px solid ${T.goldBorder}`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 18, flexShrink: 0,
-                      }}>📢</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>
-                          {CAMPAGNES_REF[campId] || `Campagne #${campId}`}
+                  {client.campagnesInscrites.map(campId => {
+                    const campagne = campagnes.find(c => c.id === campId);
+                    return (
+                      <div key={campId} style={{
+                        background: '#fafbfd', borderRadius: 12,
+                        border: `1px solid ${T.border}`, padding: '14px 18px',
+                        display: 'flex', alignItems: 'center', gap: 14,
+                      }}>
+                        <div style={{
+                          width: 40, height: 40, borderRadius: 10,
+                          background: T.goldDim, border: `1.5px solid ${T.goldBorder}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 18, flexShrink: 0,
+                        }}>📢</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>
+                            {campagne?.title || `Campagne #${campId}`}
+                          </div>
+                          <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>
+                            {client.participants.filter(p => p.campagneId === campId).length} participant(s)
+                          </div>
                         </div>
-                        <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>
-                          {client.participants.filter(p => p.campagneId === campId).length} participant(s)
-                        </div>
+                        <Pill label="✓ Inscrit" color={T.green} bg={T.greenDim} border="rgba(34,197,94,0.25)" />
                       </div>
-                      <Pill label="✓ Inscrit" color={T.green} bg={T.greenDim} border="rgba(34,197,94,0.25)" />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -467,23 +311,25 @@ function ClientModal({ client, onClose, onSave }) {
     return !Object.keys(e).length;
   };
 
-  const handle = () => {
+  const handle = async () => {
     if (!validate()) return;
     setSaving(true);
-
-    const newClient = {
-      id: isEdit ? client.id : Date.now(),
-      ...form,
-      createdAt: isEdit ? client.createdAt : new Date().toISOString(),
-      participants: isEdit ? client.participants : [],
-      campagnesInscrites: isEdit ? client.campagnesInscrites : [],
-    };
-
-    setTimeout(() => {
+    try {
+      let newClient;
+      if (isEdit) {
+        const res = await api.put(`/api/clients/${client.id}`, form);
+        newClient = res.data;
+      } else {
+        const res = await api.post('/api/clients', form);
+        newClient = res.data;
+      }
       onSave(newClient, isEdit);
-      setSaving(false);
       onClose();
-    }, 500);
+    } catch (err) {
+      alert('Erreur : ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const Field = ({ fkey, label, placeholder, type = 'text' }) => (
@@ -654,10 +500,10 @@ function ClientCard({ client, onEdit, onDelete, onView, idx }) {
         <span style={{ fontSize: 11, color: T.muted }}>📅 {fmtDate(client.createdAt)}</span>
         <div style={{ display: 'flex', gap: 6 }}>
           <span style={{ background: T.blueDim, color: T.blue, border: `1px solid rgba(59,130,246,0.25)`, padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
-            👥 {client.participants.length}
+            👥 {client.participants?.length || 0}
           </span>
           <span style={{ background: T.goldDim, color: T.goldDark, border: `1px solid ${T.goldBorder}`, padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
-            📢 {client.campagnesInscrites.length}
+            📢 {client.campagnesInscrites?.length || 0}
           </span>
         </div>
       </div>
@@ -666,10 +512,11 @@ function ClientCard({ client, onEdit, onDelete, onView, idx }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   PAGE CLIENTS (unique - remplace Clients + Contacts)
+   PAGE CLIENTS (connectée à l'API)
    ═══════════════════════════════════════════════════════════════ */
 export default function Clients() {
   const [clients, setClients] = useState([]);
+  const [campagnes, setCampagnes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
   const [detailClient, setDetailClient] = useState(null);
@@ -678,25 +525,56 @@ export default function Clients() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [segmentFilter, setSegmentFilter] = useState('all');
 
+  // Charger les données depuis l'API
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setClients(DIGILAB_CLIENTS);
-      setLoading(false);
-    }, 600);
-    return () => clearTimeout(timer);
+    fetchData();
   }, []);
 
-  const handleSave = (newClient, isEdit) => {
-    if (isEdit) {
-      setClients(prev => prev.map(c => c.id === newClient.id ? newClient : c));
-    } else {
-      setClients(prev => [...prev, newClient]);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+
+      // Charger les clients et les campagnes en parallèle
+      const [clientsRes, campagnesRes] = await Promise.all([
+        api.get('/api/clients').catch(() => ({ data: [] })),
+        api.get('/api/campagnes/public').catch(() => ({ data: [] }))
+      ]);
+
+      // Transformer les données clients pour le format attendu
+      const clientsFormates = clientsRes.data.map(c => ({
+        id: c.id,
+        type: c.type || 'entreprise',
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        createdAt: c.createdAt,
+        sector: c.sector || 'Non spécifié',
+        status: c.status || 'active',
+        participants: c.participants || [],
+        campagnesInscrites: c.campagnesInscrites || [],
+      }));
+
+      setClients(clientsFormates);
+      setCampagnes(campagnesRes.data);
+    } catch (err) {
+      console.error('Erreur chargement données:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = (id) => {
+  const handleSave = async (newClient, isEdit) => {
+    await fetchData(); // Recharger depuis l'API
+  };
+
+  const handleDelete = async (id) => {
     if (!window.confirm('Supprimer cet utilisateur ? Tous ses participants seront supprimés.')) return;
-    setClients(prev => prev.filter(c => c.id !== id));
+    try {
+      await api.delete(`/api/clients/${id}`);
+      await fetchData();
+    } catch (err) {
+      alert('Erreur : ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const filtered = clients.filter(c => {
@@ -704,12 +582,12 @@ export default function Clients() {
       c.email?.toLowerCase().includes(search.toLowerCase()) ||
       c.sector?.toLowerCase().includes(search.toLowerCase());
     const mType = typeFilter === 'all' || c.type === typeFilter;
-    const mSeg = segmentFilter === 'all' || c.participants.some(p => p.segment === segmentFilter);
+    const mSeg = segmentFilter === 'all' || c.participants?.some(p => p.segment === segmentFilter);
     return mSearch && mType && mSeg;
   });
 
-  const totalParticipants = clients.reduce((a, c) => a + c.participants.length, 0);
-  const totalCampagnes = clients.reduce((a, c) => a + c.campagnesInscrites.length, 0);
+  const totalParticipants = clients.reduce((a, c) => a + (c.participants?.length || 0), 0);
+  const totalCampagnes = clients.reduce((a, c) => a + (c.campagnesInscrites?.length || 0), 0);
 
   const stats = [
     { label: 'Utilisateurs', value: clients.length, color: T.gold, dim: T.goldDim, icon: '👤' },
@@ -731,7 +609,7 @@ export default function Clients() {
 
       {/* Modals */}
       {modal && <ClientModal client={modal === 'add' ? null : modal} onClose={() => setModal(null)} onSave={handleSave} />}
-      {detailClient && <ClientDetailModal client={detailClient} onClose={() => setDetailClient(null)} />}
+      {detailClient && <ClientDetailModal client={detailClient} onClose={() => setDetailClient(null)} campagnes={campagnes} />}
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, animation: 'fadeUp 0.35s ease both' }}>
@@ -796,7 +674,7 @@ export default function Clients() {
             onBlur={e => e.target.style.borderColor = T.border}
           />
         </div>
-        
+
         {/* Filtre type */}
         <div style={{ display: 'flex', gap: 5 }}>
           {[
@@ -933,10 +811,10 @@ export default function Clients() {
                       </td>
                       <td style={{ padding: '13px 18px', fontSize: 13, color: T.muted }}>{c.phone || '—'}</td>
                       <td style={{ padding: '13px 18px' }}>
-                        <span style={{ background: T.blueDim, color: T.blue, border: `1px solid rgba(59,130,246,0.25)`, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>👥 {c.participants.length}</span>
+                        <span style={{ background: T.blueDim, color: T.blue, border: `1px solid rgba(59,130,246,0.25)`, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>👥 {c.participants?.length || 0}</span>
                       </td>
                       <td style={{ padding: '13px 18px' }}>
-                        <span style={{ background: T.goldDim, color: T.goldDark, border: `1px solid ${T.goldBorder}`, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>📢 {c.campagnesInscrites.length}</span>
+                        <span style={{ background: T.goldDim, color: T.goldDark, border: `1px solid ${T.goldBorder}`, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>📢 {c.campagnesInscrites?.length || 0}</span>
                       </td>
                       <td style={{ padding: '13px 18px' }}>
                         <Pill label={c.status === 'active' ? '🟢' : '🔴'} color={c.status === 'active' ? T.green : T.red} bg={c.status === 'active' ? T.greenDim : T.redDim} border={c.status === 'active' ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'} />

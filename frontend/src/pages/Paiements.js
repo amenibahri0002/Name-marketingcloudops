@@ -1,264 +1,232 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  CreditCard, Download, CheckCircle, Clock, AlertCircle,
-  Calendar, ArrowLeft, FileText, Filter
-} from 'lucide-react';
+import { CreditCard, Download, CheckCircle, Clock, ArrowLeft, FileText, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Layout from '../Layout';
+import api from '../api';
 
-const COLORS = {
-  primary: '#F5A623',
-  primaryLight: '#FFF8E7',
-  dark: '#0A0A0A',
-  gray: '#666666',
-  grayLight: '#F5F5F5',
-  grayBorder: '#E5E5E5',
-  white: '#FFFFFF',
-  green: '#10B981',
-  red: '#EF4444',
-  blue: '#3B82F6',
+const THEME = {
+  bg: '#f8fafc',
+  card: '#ffffff',
+  text: '#1e293b',
+  textLight: '#64748b',
+  border: '#e2e8f0',
+  gold: '#d4a574',
+  goldLight: '#f5efe6',
+  goldDark: '#b8956a',
+  success: '#10b981',
+  successLight: '#d1fae5',
+  blue: '#3b82f6',
+  blueLight: '#dbeafe',
+  dark: '#1a1a2e',
 };
-
-// Données de démo (à remplacer par API)
-const PAIEMENTS_DATA = [
-  {
-    id: 'INV-1234567890',
-    formation: 'Formation Digital Marketing & AI',
-    date: '30 Avril 2026',
-    montant: 850,
-    tva: 161.50,
-    total: 1011.50,
-    status: 'paye',
-    mode: 'Carte Bancaire',
-    facture: true
-  },
-  {
-    id: 'INV-1234567891',
-    formation: 'Formation Web WordPress',
-    date: '8 Avril 2026',
-    montant: 450,
-    tva: 85.50,
-    total: 535.50,
-    status: 'paye',
-    mode: 'Virement Bancaire',
-    facture: true
-  },
-  {
-    id: 'INV-1234567892',
-    formation: 'Formation Design Graphique & Marketing Digital',
-    date: '3 Avril 2026',
-    montant: 1200,
-    tva: 228,
-    total: 1428,
-    status: 'en_attente',
-    mode: 'D17 - Paiement differe',
-    facture: true
-  }
-];
 
 export default function Paiements() {
   const navigate = useNavigate();
+  const [paiements, setPaiements] = useState([]);
   const [filtre, setFiltre] = useState('tous');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const paiementsFiltres = filtre === 'tous' 
-    ? PAIEMENTS_DATA 
-    : PAIEMENTS_DATA.filter(p => p.status === filtre);
+  useEffect(() => {
+    fetchPaiements();
+  }, []);
 
-  const totalPaye = PAIEMENTS_DATA
-    .filter(p => p.status === 'paye')
-    .reduce((sum, p) => sum + p.total, 0);
+  const fetchPaiements = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/api/paiements/mes-paiements');
+      setPaiements(res.data || []);
+    } catch (err) {
+      console.error('Erreur paiements:', err);
+      setError('Impossible de charger vos paiements');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const totalEnAttente = PAIEMENTS_DATA
-    .filter(p => p.status === 'en_attente')
-    .reduce((sum, p) => sum + p.total, 0);
+  const paiementsFiltres = filtre === 'tous' ? paiements : paiements.filter(p => p.status === filtre);
 
-  const telechargerFacture = (paiement) => {
-    const factureHTML = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>Facture ${paiement.id}</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
-  .header { border-bottom: 3px solid ${COLORS.primary}; padding-bottom: 20px; margin-bottom: 30px; }
-  .header h1 { color: ${COLORS.primary}; margin: 0; font-size: 28px; }
-  table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-  th { background: ${COLORS.primary}; color: white; padding: 12px; text-align: left; }
-  td { padding: 12px; border-bottom: 1px solid ${COLORS.grayBorder}; }
-  .total { font-weight: bold; font-size: 18px; color: ${COLORS.primary}; }
-  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; color: white; }
-  .badge.paye { background: ${COLORS.green}; }
-  .badge.attente { background: ${COLORS.blue}; }
-</style>
-</head>
-<body>
-  <div class="header">
-    <h1>FACTURE</h1>
-    <p><strong>N° ${paiement.id}</strong></p>
-    <p>Date : ${paiement.date}</p>
-    <span class="badge ${paiement.status === 'paye' ? 'paye' : 'attente'}">${paiement.status === 'paye' ? 'PAYÉE' : 'EN ATTENTE'}</span>
-  </div>
-  <table>
-    <tr><th>Description</th><th>Montant HT</th><th>TVA 19%</th><th>Total TTC</th></tr>
-    <tr><td><strong>${paiement.formation}</strong></td><td>${paiement.montant.toFixed(2)} TND</td><td>${paiement.tva.toFixed(2)} TND</td><td><strong>${paiement.total.toFixed(2)} TND</strong></td></tr>
-  </table>
-  <p><strong>Mode de paiement :</strong> ${paiement.mode}</p>
-  <p style="margin-top:40px; text-align:center; color: #666;">DigiLab Solutions - +216 22 044 105</p>
-</body>
-</html>`;
+  const totalPaye = paiements.filter(p => p.status === 'paye').reduce((sum, p) => sum + (p.total || 0), 0);
+  const totalEnAttente = paiements.filter(p => p.status === 'en_attente').reduce((sum, p) => sum + (p.total || 0), 0);
 
-    const blob = new Blob([factureHTML], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'Facture_' + paiement.id + '.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const telechargerFacture = async (paiementId) => {
+    try {
+      const res = await api.get(`/api/paiements/${paiementId}/facture`);
+      // Si le backend retourne un blob PDF
+      if (res.headers['content-type']?.includes('pdf')) {
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Facture_${paiementId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        // Placeholder: afficher un message
+        alert('Facture #' + paiementId + ' - Montant: ' + res.data.montant + ' TND');
+      }
+    } catch (err) {
+      alert('Erreur lors du téléchargement de la facture');
+    }
   };
 
   return (
-    <div className="paiements-page">
-      <style>{`
-        .paiements-page { min-height: 100vh; background: ${COLORS.grayLight}; padding: 30px; }
-        .paiements-container { max-width: 1000px; margin: 0 auto; }
+    <Layout>
+      <div style={{ background: THEME.bg, minHeight: '100vh', color: THEME.text, fontFamily: 'Inter, system-ui, sans-serif', padding: '30px' }}>
+        <style>{"::-webkit-scrollbar { width: 6px; height: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #d1c7b7; border-radius: 3px; } * { scrollbar-width: thin; scrollbar-color: #d1c7b7 transparent; }"}</style>
 
-        .page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 30px; }
-        .back-btn { display: flex; align-items: center; gap: 8px; color: ${COLORS.gray}; background: none; border: none; cursor: pointer; font-size: 0.95rem; }
-        .back-btn:hover { color: ${COLORS.dark}; }
-        .page-title { font-size: 1.8rem; font-weight: 800; color: ${COLORS.dark}; }
-
-        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: ${COLORS.white}; padding: 24px; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid ${COLORS.grayBorder}; }
-        .stat-value { font-size: 1.8rem; font-weight: 800; color: ${COLORS.primary}; }
-        .stat-label { font-size: 0.9rem; color: ${COLORS.gray}; margin-top: 4px; }
-        .stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
-
-        .filtres { display: flex; gap: 10px; margin-bottom: 20px; }
-        .filtre-btn { padding: 8px 16px; border-radius: 20px; border: 2px solid ${COLORS.grayBorder}; background: ${COLORS.white}; color: ${COLORS.gray}; font-weight: 600; cursor: pointer; transition: all 0.3s; }
-        .filtre-btn:hover, .filtre-btn.actif { background: ${COLORS.primary}; color: ${COLORS.white}; border-color: ${COLORS.primary}; }
-
-        .paiement-card { background: ${COLORS.white}; padding: 24px; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid ${COLORS.grayBorder}; margin-bottom: 16px; transition: all 0.3s; }
-        .paiement-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-
-        .paiement-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-        .paiement-id { font-size: 0.85rem; color: ${COLORS.gray}; font-family: monospace; }
-        .paiement-status { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
-        .status-paye { background: ${COLORS.green}15; color: ${COLORS.green}; }
-        .status-attente { background: ${COLORS.blue}15; color: ${COLORS.blue}; }
-
-        .paiement-formation { font-size: 1.1rem; font-weight: 700; color: ${COLORS.dark}; margin-bottom: 12px; }
-
-        .paiement-details { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
-        .detail-item { display: flex; flex-direction: column; }
-        .detail-label { font-size: 0.75rem; color: ${COLORS.gray}; text-transform: uppercase; }
-        .detail-value { font-size: 1rem; font-weight: 600; color: ${COLORS.dark}; margin-top: 4px; }
-
-        .paiement-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px solid ${COLORS.grayBorder}; }
-        .paiement-total { font-size: 1.3rem; font-weight: 800; color: ${COLORS.primary}; }
-        .btn-facture { display: flex; align-items: center; gap: 8px; padding: 10px 18px; background: ${COLORS.primary}; color: ${COLORS.white}; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.3s; }
-        .btn-facture:hover { background: ${COLORS.primaryDark}; }
-
-        .empty-state { text-align: center; padding: 60px 20px; }
-        .empty-state svg { color: ${COLORS.grayBorder}; margin-bottom: 16px; }
-        .empty-state h3 { color: ${COLORS.dark}; margin-bottom: 8px; }
-        .empty-state p { color: ${COLORS.gray}; }
-
-        @media (max-width: 768px) {
-          .stats-row { grid-template-columns: 1fr; }
-          .paiement-details { grid-template-columns: 1fr; }
-          .paiements-page { padding: 20px; }
-        }
-      `}</style>
-
-      <div className="paiements-container">
-        <div className="page-header">
-          <button className="back-btn" onClick={() => navigate('/campagnes')}>
-            <ArrowLeft size={18} /> Retour
-          </button>
-          <h1 className="page-title">Mes Paiements</h1>
-        </div>
-
-        <div className="stats-row">
-          <div className="stat-card">
-            <div className="stat-icon" style={{ background: COLORS.primaryLight, color: COLORS.primary }}>
-              <CreditCard size={20} />
-            </div>
-            <div className="stat-value">{PAIEMENTS_DATA.length}</div>
-            <div className="stat-label">Paiements total</div>
+        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 30 }}>
+            <button onClick={() => navigate('/campagnes')} style={{
+              display: 'flex', alignItems: 'center', gap: 8, color: THEME.textLight,
+              background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.95rem',
+              transition: 'color 0.3s',
+            }} onMouseEnter={e => e.currentTarget.style.color = THEME.text}
+            onMouseLeave={e => e.currentTarget.style.color = THEME.textLight}>
+              <ArrowLeft size={18} /> Retour
+            </button>
+            <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: THEME.text }}>Mes Paiements</h1>
           </div>
-          <div className="stat-card">
-            <div className="stat-icon" style={{ background: COLORS.green + '15', color: COLORS.green }}>
-              <CheckCircle size={20} />
-            </div>
-            <div className="stat-value">{totalPaye.toFixed(2)} TND</div>
-            <div className="stat-label">Payé</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon" style={{ background: COLORS.blue + '15', color: COLORS.blue }}>
-              <Clock size={20} />
-            </div>
-            <div className="stat-value">{totalEnAttente.toFixed(2)} TND</div>
-            <div className="stat-label">En attente</div>
-          </div>
-        </div>
 
-        <div className="filtres">
-          <button className={"filtre-btn " + (filtre === 'tous' ? 'actif' : '')} onClick={() => setFiltre('tous')}>Tous</button>
-          <button className={"filtre-btn " + (filtre === 'paye' ? 'actif' : '')} onClick={() => setFiltre('paye')}>Payés</button>
-          <button className={"filtre-btn " + (filtre === 'en_attente' ? 'actif' : '')} onClick={() => setFiltre('en_attente')}>En attente</button>
-        </div>
-
-        {paiementsFiltres.length === 0 ? (
-          <div className="empty-state">
-            <FileText size={48} />
-            <h3>Aucun paiement</h3>
-            <p>Vous n'avez pas encore de paiement enregistré.</p>
-          </div>
-        ) : (
-          paiementsFiltres.map((paiement, index) => (
-            <motion.div 
-              key={paiement.id}
-              className="paiement-card"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <div className="paiement-header">
-                <span className="paiement-id">{paiement.id}</span>
-                <span className={"paiement-status " + (paiement.status === 'paye' ? 'status-paye' : 'status-attente')}>
-                  {paiement.status === 'paye' ? <CheckCircle size={14} /> : <Clock size={14} />}
-                  {paiement.status === 'paye' ? 'Payé' : 'En attente'}
-                </span>
-              </div>
-
-              <div className="paiement-formation">{paiement.formation}</div>
-
-              <div className="paiement-details">
-                <div className="detail-item">
-                  <span className="detail-label">Date</span>
-                  <span className="detail-value"><Calendar size={14} style={{ display: 'inline', marginRight: 4 }} />{paiement.date}</span>
+          {/* Stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 30 }}>
+            {[
+              { icon: CreditCard, label: 'Paiements total', value: paiements.length, color: THEME.gold, bg: THEME.goldLight },
+              { icon: CheckCircle, label: 'Payé', value: `${totalPaye.toFixed(2)} TND`, color: THEME.success, bg: '#d1fae5' },
+              { icon: Clock, label: 'En attente', value: `${totalEnAttente.toFixed(2)} TND`, color: THEME.blue, bg: THEME.blueLight },
+            ].map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <div key={i} style={{
+                  background: THEME.card, padding: 24, borderRadius: 16,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: `1px solid ${THEME.border}`,
+                  transition: 'all 0.3s',
+                }} onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.1)';
+                }} onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 10, background: stat.bg,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    marginBottom: 12, color: stat.color,
+                  }}>
+                    <Icon size={20} />
+                  </div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: stat.color }}>{stat.value}</div>
+                  <div style={{ fontSize: '0.9rem', color: THEME.textLight, marginTop: 4 }}>{stat.label}</div>
                 </div>
-                <div className="detail-item">
-                  <span className="detail-label">Mode</span>
-                  <span className="detail-value">{paiement.mode}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-label">Montant HT</span>
-                  <span className="detail-value">{paiement.montant.toFixed(2)} TND</span>
-                </div>
-              </div>
+              );
+            })}
+          </div>
 
-              <div className="paiement-footer">
-                <div className="paiement-total">{paiement.total.toFixed(2)} TND <span style={{ fontSize: '0.8rem', color: COLORS.gray, fontWeight: 400 }}>TTC</span></div>
-                <button className="btn-facture" onClick={() => telechargerFacture(paiement)}>
-                  <Download size={16} /> Facture
-                </button>
-              </div>
-            </motion.div>
-          ))
-        )}
+          {/* Filtres */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+            {['tous', 'paye', 'en_attente'].map(f => (
+              <button key={f} onClick={() => setFiltre(f)} style={{
+                padding: '8px 16px', borderRadius: 20, border: '2px solid',
+                borderColor: filtre === f ? THEME.gold : THEME.border,
+                background: filtre === f ? THEME.gold : THEME.card,
+                color: filtre === f ? '#fff' : THEME.textLight,
+                fontWeight: 600, cursor: 'pointer', transition: 'all 0.3s',
+                textTransform: f === 'tous' ? 'none' : 'capitalize',
+              }}>
+                {f === 'tous' ? 'Tous' : f === 'paye' ? 'Payés' : 'En attente'}
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 60 }}>
+              <Loader2 size={40} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 16px', color: THEME.gold }} />
+              <style>{"@keyframes spin { to { transform: rotate(360deg); } }"}</style>
+              <p style={{ color: THEME.textLight }}>Chargement de vos paiements...</p>
+            </div>
+          ) : error ? (
+            <div style={{
+              textAlign: 'center', padding: 40, background: '#fef2f2', borderRadius: 16,
+              border: '1px solid #fecaca', color: '#dc2626',
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>{error}</div>
+              <button onClick={fetchPaiements} style={{
+                padding: '10px 24px', borderRadius: 8, background: '#dc2626', color: '#fff',
+                border: 'none', fontWeight: 600, cursor: 'pointer',
+              }}>Réessayer</button>
+            </div>
+          ) : paiementsFiltres.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 60 }}>
+              <FileText size={48} style={{ color: THEME.border, marginBottom: 16 }} />
+              <h3 style={{ color: THEME.text, marginBottom: 8 }}>Aucun paiement</h3>
+              <p style={{ color: THEME.textLight }}>Vous n'avez pas encore de paiement enregistré.</p>
+            </div>
+          ) : (
+            paiementsFiltres.map((paiement, index) => (
+              <motion.div key={paiement.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}
+                style={{
+                  background: THEME.card, padding: 24, borderRadius: 16,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: `1px solid ${THEME.border}`,
+                  marginBottom: 16, transition: 'all 0.3s',
+                }} onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.1)';
+                }} onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                  <span style={{ fontSize: '0.85rem', color: THEME.textLight, fontFamily: 'monospace' }}>{paiement.id}</span>
+                  <span style={{
+                    display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
+                    borderRadius: 20, fontSize: '0.8rem', fontWeight: 600,
+                    background: paiement.status === 'paye' ? '#d1fae5' : THEME.blueLight,
+                    color: paiement.status === 'paye' ? '#059669' : THEME.blue,
+                  }}>
+                    {paiement.status === 'paye' ? <CheckCircle size={14} /> : <Clock size={14} />}
+                    {paiement.status === 'paye' ? 'Payé' : 'En attente'}
+                  </span>
+                </div>
+
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: THEME.text, marginBottom: 12 }}>{paiement.formation}</div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: THEME.textLight, textTransform: 'uppercase' }}>Date</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 600, color: THEME.text, marginTop: 4 }}>{paiement.date}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: THEME.textLight, textTransform: 'uppercase' }}>Mode</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 600, color: THEME.text, marginTop: 4 }}>{paiement.mode}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: THEME.textLight, textTransform: 'uppercase' }}>Montant HT</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 600, color: THEME.text, marginTop: 4 }}>{paiement.montant?.toFixed(2)} TND</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, borderTop: `1px solid ${THEME.border}` }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: THEME.gold }}>
+                    {paiement.total?.toFixed(2)} TND <span style={{ fontSize: '0.8rem', color: THEME.textLight, fontWeight: 400 }}>TTC</span>
+                  </div>
+                  <button onClick={() => telechargerFacture(paiement.id)} style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px',
+                    background: THEME.gold, color: '#fff', border: 'none', borderRadius: 10,
+                    fontWeight: 600, cursor: 'pointer', transition: 'all 0.3s',
+                  }} onMouseEnter={e => e.currentTarget.style.background = THEME.goldDark}
+                  onMouseLeave={e => e.currentTarget.style.background = THEME.gold}>
+                    <Download size={16} /> Facture
+                  </button>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }

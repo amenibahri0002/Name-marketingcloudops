@@ -1,7 +1,8 @@
+// frontend/src/api.js
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://marketingcloudops-backend.onrender.com',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
 });
 
 api.interceptors.request.use(function(config) {
@@ -15,7 +16,7 @@ api.interceptors.request.use(function(config) {
 api.interceptors.response.use(
   function(response) { return response; },
   function(error) {
-if (error.response && error.response.status === 401) {
+    if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';

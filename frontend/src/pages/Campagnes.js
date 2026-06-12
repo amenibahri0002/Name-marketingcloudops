@@ -1,210 +1,220 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, Clock, MapPin, Users, Tag, ArrowRight, 
-  Sparkles, Zap, Palette, TrendingUp, BookOpen, Award
+  Sparkles, Zap, Palette, TrendingUp, BookOpen, Award,
+  Search, Grid, List, CheckCircle, AlertTriangle,
+  RefreshCw,Globe
 } from 'lucide-react';
+import api from '../api';
 
-// ============================================================
-// COULEURS OFFICIELLES DIGILAB SOLUTIONS
-// ============================================================
+const ICON_MAP = { Sparkles, Zap, Palette, TrendingUp, BookOpen, Award };
+
 const COLORS = {
-  primary: '#F5A623',      // Orange/Or DigiLab (boutons, accents)
-  primaryLight: '#FFF8E7', // Orange très clair (fonds)
-  primaryDark: '#D48A1A',  // Orange foncé (hover)
-  dark: '#0A0A0A',         // Noir profond (textes)
-  darkLight: '#1A1A2E',    // Noir bleuté (header/footer)
-  gray: '#666666',         // Gris moyen (textes secondaires)
-  grayLight: '#F5F5F5',    // Gris très clair (fonds sections)
-  grayBorder: '#E5E5E5',   // Gris bordures
-  white: '#FFFFFF',        // Blanc
-  green: '#10B981',        // Vert (succès, disponible)
-  red: '#EF4444',          // Rouge (urgence, remise)
-  blue: '#3B82F6',         // Bleu (info)
+  primary: '#F5A623', primaryLight: '#FFF8E7', primaryDark: '#D48A1A',
+  dark: '#0A0A0A', gray: '#666666', grayLight: '#F5F5F5',
+  grayBorder: '#E5E5E5', white: '#FFFFFF', green: '#10B981',
+  red: '#EF4444', blue: '#3B82F6', purple: '#8B5CF6',
 };
 
 // ============================================================
-// IMAGES DES FORMATIONS
+// COMPOSANT CARTE FORMATION
 // ============================================================
-const CAMP_IMGS = {
-  formation_digital_ai: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800',
-  formation_web: 'https://images.unsplash.com/photo-1461749280684-dccae630cd35?w=800',
-  formation_design: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800',
-  formation_marketing: 'https://images.unsplash.com/photo-1533750349088-cd871a92f312?w=800',
-};
-
-// ============================================================
-// DONNÉES DES 4 FORMATIONS
-// ============================================================
-const CAMPAGNES_DATA = [
-  {
-    id: 'formation-digital-marketing-ai',
-    title: 'Formation Digital Marketing & AI',
-    type: 'formation',
-    description: "Maitrisez l'avenir du Marketing Digital avec l'Intelligence Artificielle ! Formation exclusive alliant les strategies de Marketing Digital incontournables et la puissance de l'IA. 100% Pratique : Apprenez en manipulant les meilleurs outils (Meta, ChatGPT, WordPress, et plus encore). Formation Certifiante : Valorisez votre profil professionnel avec un certificat reconnu.",
-    duration: 'Variable selon programme',
-    format: '100% Pratique · Certifiante',
-    tools: ['Meta', 'ChatGPT', 'WordPress', 'Google Analytics', 'Canva'],
-    contact: '+216 22 044 105',
-    location: 'Route Bouzayen Km 5, Immeuble El Bachir, 4eme etage App 4-2 – Sfax, Tunisia',
-    image: CAMP_IMGS.formation_digital_ai,
-    date: '30 Avril 2026',
-    tags: ['IA', 'Marketing Digital', 'Certifiant'],
-    status: 'active',
-    prix: 850,
-    prixOriginal: 1200,
-    placesTotal: 25,
-    placesRestantes: 12,
-    dureeHeures: 40,
-    icon: Sparkles,
-    couleur: COLORS.primary,
-    prerequis: 'Aucun prerequis',
-    inclus: ['Certificat reconnu', 'Support de cours', 'Acces aux outils', 'Coaching post-formation']
-  },
-  {
-    id: 'formation-web-wordpress',
-    title: 'Formation Web WordPress',
-    type: 'formation',
-    description: "Maitrisez le web en seulement 18 heures ! Creez votre site internet performant sans coder. Notre formation WordPress est concue pour vous donner toutes les cles en main afin de lancer votre projet professionnel. Duree : 18 heures de formation intensive.",
-    duration: '18 heures',
-    format: 'Intensive · Pratique',
-    tools: ['WordPress', 'Elementor', 'SEO', 'WooCommerce'],
-    contact: '+216 22 044 105',
-    location: 'Route Bouzayen Km 5, Immeuble El Bachir, 4eme etage App 4-2 – Sfax, Tunisia',
-    image: CAMP_IMGS.formation_web,
-    date: '8 Avril 2026',
-    tags: ['WordPress', 'Web', 'Site Pro'],
-    status: 'active',
-    prix: 450,
-    prixOriginal: 650,
-    placesTotal: 20,
-    placesRestantes: 8,
-    dureeHeures: 18,
-    icon: Zap,
-    couleur: COLORS.primary,
-    prerequis: 'Ordinateur portable',
-    inclus: ['Certificat', 'Theme premium', 'Hebergement 1 an', 'Support technique']
-  },
-  {
-    id: 'formation-design-graphique-marketing',
-    title: 'Formation Design Graphique & Marketing Digital',
-    type: 'formation',
-    description: "Boostez votre carriere avec DigiLab Solutions ! Formation intensive de 60H en Design Graphique et Marketing Digital. 100% Pratique : Apprenez en faisant. Flexibilite : Des cours programmes le week-end pour s'adapter a votre emploi du temps.",
-    duration: '60 heures',
-    format: 'Week-end · 100% Pratique',
-    tools: ['Photoshop', 'Illustrator', 'Canva', 'Meta Ads', 'Google Ads'],
-    contact: '+216 22 044 105',
-    location: 'Route Bouzayen Km 5, Immeuble El Bachir, 4eme etage App 4-2 – Sfax, Tunisia',
-    image: CAMP_IMGS.formation_design,
-    date: '3 Avril 2026',
-    tags: ['Design', 'Graphisme', 'Marketing'],
-    status: 'active',
-    prix: 1200,
-    prixOriginal: 1500,
-    placesTotal: 15,
-    placesRestantes: 5,
-    dureeHeures: 60,
-    icon: Palette,
-    couleur: COLORS.primary,
-    prerequis: 'Ordinateur avec 8GB RAM',
-    inclus: ['Certificat', 'Pack Adobe', 'Portfolio guide', 'Stage pratique']
-  },
-  {
-    id: 'formation-marketing-digital-40h',
-    title: 'Formation Marketing Digital 40H',
-    type: 'formation',
-    description: "40H pour devenir un pro du Digital ! Maitrisez l'ecosysteme du web. Formation complete et pratique pour dompter les algorithmes et booster votre visibilite. Meta, Google Ads, SEO, WordPress et bien plus encore.",
-    duration: '40 heures',
-    format: 'Intensive · Complet',
-    tools: ['Meta', 'Google Ads', 'SEO', 'WordPress', 'Growth Hacking'],
-    contact: '+216 22 044 105',
-    location: 'Route Bouzayen Km 5, Immeuble El Bachir, 4eme etage App 4-2 – Sfax, Tunisia',
-    image: CAMP_IMGS.formation_marketing,
-    date: '27 Mars 2026',
-    tags: ['SEO', 'Google Ads', 'Growth Hacking'],
-    status: 'active',
-    prix: 950,
-    prixOriginal: 1200,
-    placesTotal: 30,
-    placesRestantes: 18,
-    dureeHeures: 40,
-    icon: TrendingUp,
-    couleur: COLORS.primary,
-    prerequis: 'Connaissances de base en informatique',
-    inclus: ['Certificat', 'Outils premium', 'Communaute privee', 'Mentorat 3 mois']
-  }
-];
-
-// ============================================================
-// COMPOSANT CARTE DE FORMATION
-// ============================================================
-const FormationCard = ({ campagne, index }) => {
+const FormationCard = ({ campagne, index, viewMode }) => {
   const navigate = useNavigate();
-  const IconComponent = campagne.icon;
-  const remise = Math.round(((campagne.prixOriginal - campagne.prix) / campagne.prixOriginal) * 100);
-  const placesPourcentage = (campagne.placesRestantes / campagne.placesTotal) * 100;
+  const IconComponent = ICON_MAP[campagne.iconName] || Sparkles;
+  const remise = campagne.prixOriginal ? 
+    Math.round(((campagne.prixOriginal - campagne.prix) / campagne.prixOriginal) * 100) : 0;
+  const placesPourcentage = campagne.placesTotal ? 
+    (campagne.placesRestantes / campagne.placesTotal) * 100 : 0;
 
+  if (viewMode === 'list') {
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: index * 0.1, duration: 0.5 }}
+        onClick={() => navigate('/campagnes/' + campagne.slug)}
+        style={{
+          background: COLORS.white,
+          borderRadius: '16px',
+          padding: '20px',
+          marginBottom: '16px',
+          display: 'flex',
+          gap: '20px',
+          alignItems: 'center',
+          cursor: 'pointer',
+          border: '1px solid ' + COLORS.grayBorder,
+          transition: 'all 0.3s',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = COLORS.primary;
+          e.currentTarget.style.transform = 'translateX(8px)';
+          e.currentTarget.style.boxShadow = '0 8px 24px rgba(245,166,35,0.12)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = COLORS.grayBorder;
+          e.currentTarget.style.transform = 'translateX(0)';
+          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+        }}
+      >
+        <div style={{ width: '80px', height: '80px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0 }}>
+          <img src={campagne.image} alt={campagne.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: COLORS.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <IconComponent size={16} color={COLORS.primary} />
+            </div>
+            <span style={{ background: COLORS.primaryLight, color: COLORS.primaryDark, padding: '2px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600 }}>
+              {campagne.format}
+            </span>
+            {remise > 0 && (
+              <span style={{ background: COLORS.red, color: COLORS.white, padding: '2px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700 }}>
+                -{remise}%
+              </span>
+            )}
+          </div>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: COLORS.dark, marginBottom: '4px' }}>
+            {campagne.title}
+          </h3>
+          <p style={{ fontSize: '0.85rem', color: COLORS.gray, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {campagne.description}
+          </p>
+          <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '0.8rem', color: COLORS.gray }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Calendar size={14} /> {campagne.date}
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Clock size={14} /> {campagne.dureeHeures}h
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Users size={14} /> {campagne.placesRestantes} places
+            </span>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <p style={{ fontSize: '1.5rem', fontWeight: 800, color: COLORS.primary }}>
+            {campagne.prix} TND
+          </p>
+          {campagne.prixOriginal > campagne.prix && (
+            <p style={{ fontSize: '0.85rem', color: COLORS.gray, textDecoration: 'line-through' }}>
+              {campagne.prixOriginal} TND
+            </p>
+          )}
+          <button style={{ marginTop: '8px', background: COLORS.primary, color: COLORS.white, border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            Voir <ArrowRight size={14} />
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Mode GRID (par défaut)
   return (
     <motion.div
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.15, duration: 0.6 }}
-      className="formation-card"
+      style={{
+        background: COLORS.white,
+        borderRadius: '20px',
+        overflow: 'hidden',
+        boxShadow: '0 4px 20px rgba(10,10,10,0.08)',
+        transition: 'all 0.3s',
+        border: '1px solid ' + COLORS.grayBorder,
+        cursor: 'pointer'
+      }}
+      onClick={() => navigate('/campagnes/' + campagne.slug)}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-8px)';
+        e.currentTarget.style.boxShadow = '0 20px 40px rgba(10,10,10,0.15)';
+        e.currentTarget.style.borderColor = COLORS.primary;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = '0 4px 20px rgba(10,10,10,0.08)';
+        e.currentTarget.style.borderColor = COLORS.grayBorder;
+      }}
     >
-      <div className="card-image-wrapper">
-        <img src={campagne.image} alt={campagne.title} className="card-image" />
-        <div className="card-badge-remise">-{remise}%</div>
-        <div className="card-badge-places" style={{ 
-          background: placesPourcentage < 30 ? COLORS.red : placesPourcentage < 60 ? '#F59E0B' : COLORS.green 
-        }}>
+      <div style={{ position: 'relative', height: '200px', overflow: 'hidden' }}>
+        <img src={campagne.image} alt={campagne.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }} />
+        {remise > 0 && (
+          <div style={{ position: 'absolute', top: '12px', left: '12px', background: COLORS.red, color: COLORS.white, padding: '4px 12px', borderRadius: '20px', fontWeight: 700, fontSize: '0.85rem' }}>
+            -{remise}%
+          </div>
+        )}
+        <div style={{ position: 'absolute', top: '12px', right: '12px', background: placesPourcentage < 30 ? COLORS.red : placesPourcentage < 60 ? '#F59E0B' : COLORS.green, color: COLORS.white, padding: '4px 12px', borderRadius: '20px', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
           <Users size={12} />
-          {campagne.placesRestantes} places restantes
+          {campagne.placesRestantes} places
         </div>
       </div>
 
-      <div className="card-content">
-        <div className="card-header">
-          <div className="card-icon" style={{ background: COLORS.primaryLight, color: COLORS.primary }}>
-            <IconComponent size={22} />
+      <div style={{ padding: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+          <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: COLORS.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconComponent size={22} color={COLORS.primary} />
           </div>
-          <div className="card-meta">
-            <span className="card-type">Formation</span>
-            <span className="card-date"><Calendar size={12} /> {campagne.date}</span>
+          <div>
+            <span style={{ fontSize: '0.75rem', color: COLORS.gray, textTransform: 'uppercase', letterSpacing: '1px' }}>Formation</span>
+            <span style={{ fontSize: '0.85rem', color: COLORS.gray, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+              <Calendar size={12} /> {campagne.date}
+            </span>
           </div>
         </div>
 
-        <h3 className="card-title">{campagne.title}</h3>
-        <p className="card-description">{campagne.description.substring(0, 140)}...</p>
+        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: COLORS.dark, marginBottom: '10px', lineHeight: 1.3 }}>
+          {campagne.title}
+        </h3>
+        <p style={{ fontSize: '0.9rem', color: COLORS.gray, lineHeight: 1.5, marginBottom: '16px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          {campagne.description}
+        </p>
 
-        <div className="card-details">
-          <span className="detail-item"><Clock size={14} /> {campagne.dureeHeures}h</span>
-          <span className="detail-item"><MapPin size={14} /> Sfax</span>
-          <span className="detail-item"><BookOpen size={14} /> {campagne.format}</span>
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '14px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.8rem', color: COLORS.gray, display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Clock size={14} /> {campagne.dureeHeures}h
+          </span>
+          <span style={{ fontSize: '0.8rem', color: COLORS.gray, display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <MapPin size={14} /> Sfax
+          </span>
+          <span style={{ fontSize: '0.8rem', color: COLORS.gray, display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <BookOpen size={14} /> {campagne.format}
+          </span>
         </div>
 
-        <div className="card-tools">
-          {campagne.tools.slice(0, 4).map((tool, i) => (
-            <span key={i} className="tool-tag">{tool}</span>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
+          {campagne.tools?.slice(0, 4).map((tool, i) => (
+            <span key={i} style={{ background: COLORS.grayLight, color: COLORS.dark, padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 500, border: '1px solid ' + COLORS.grayBorder }}>
+              {tool}
+            </span>
           ))}
-          {campagne.tools.length > 4 && <span className="tool-tag">+{campagne.tools.length - 4}</span>}
+          {campagne.tools?.length > 4 && (
+            <span style={{ background: COLORS.grayLight, color: COLORS.dark, padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 500 }}>
+              +{campagne.tools.length - 4}
+            </span>
+          )}
         </div>
 
-        <div className="card-tags">
-          {campagne.tags.map((tag, i) => (
-            <span key={i} className="tag-item"><Tag size={10} /> {tag}</span>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '18px' }}>
+          {campagne.tags?.map((tag, i) => (
+            <span key={i} style={{ background: COLORS.primaryLight, color: COLORS.primaryDark, padding: '3px 10px', borderRadius: '15px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 500 }}>
+              <Tag size={10} /> {tag}
+            </span>
           ))}
         </div>
 
-        <div className="card-footer">
-          <div className="card-prix">
-            <span className="prix-original">{campagne.prixOriginal} TND</span>
-            <span className="prix-actuel" style={{ color: COLORS.primary }}>{campagne.prix} TND</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid ' + COLORS.grayBorder }}>
+          <div>
+            <span style={{ fontSize: '0.85rem', color: COLORS.gray, textDecoration: 'line-through', display: 'block' }}>
+              {campagne.prixOriginal} TND
+            </span>
+            <span style={{ fontSize: '1.4rem', fontWeight: 800, color: COLORS.primary }}>
+              {campagne.prix} TND
+            </span>
           </div>
-          <button 
-            className="btn-inscrire"
-            onClick={() => navigate('/campagnes/' + campagne.id)}
-          >
+          <button style={{ color: COLORS.white, background: COLORS.primary, border: 'none', padding: '10px 20px', borderRadius: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.3s', fontSize: '0.9rem' }}>
             Voir & S'inscrire <ArrowRight size={16} />
           </button>
         </div>
@@ -214,119 +224,272 @@ const FormationCard = ({ campagne, index }) => {
 };
 
 // ============================================================
-// PAGE PRINCIPALE : CAMPAGNES
+// STATISTIQUES EN TEMPS RÉEL
 // ============================================================
-export default function Campagnes() {
-  const [filtre, setFiltre] = useState('tous');
+const StatsBar = ({ formations, inscriptions, contacts }) => {
+  const totalHeures = formations.reduce((acc, f) => acc + (f.dureeHeures || 0), 0);
+  const totalPlaces = formations.reduce((acc, f) => acc + (f.placesRestantes || 0), 0);
+  const totalInscrits = inscriptions?.length || 0;
+  const totalContacts = contacts?.length || 0;
 
-  const formationsFiltrees = filtre === 'tous' 
-    ? CAMPAGNES_DATA 
-    : CAMPAGNES_DATA.filter(c => c.tags.some(t => t.toLowerCase().includes(filtre.toLowerCase())));
+  const stats = [
+    { label: 'Formations', value: formations.length, icon: BookOpen, color: COLORS.primary },
+    { label: 'Heures de cours', value: totalHeures + 'H', icon: Clock, color: COLORS.blue },
+    { label: 'Places disponibles', value: totalPlaces, icon: Users, color: COLORS.green },
+    { label: 'Inscriptions', value: totalInscrits, icon: CheckCircle, color: COLORS.purple },
+    { label: 'Contacts', value: totalContacts, icon: Globe, color: COLORS.red },
+  ];
 
   return (
-    <div className="campagnes-page">
-      <style>{`
-        .campagnes-page { min-height: 100vh; background: ${COLORS.grayLight}; padding: 40px 20px; }
-        .campagnes-container { max-width: 1280px; margin: 0 auto; }
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+      {stats.map((stat, index) => {
+        const Icon = stat.icon;
+        return (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            style={{
+              background: COLORS.white,
+              padding: '24px',
+              borderRadius: '16px',
+              textAlign: 'center',
+              boxShadow: '0 2px 10px rgba(10,10,10,0.05)',
+              border: '1px solid ' + COLORS.grayBorder,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px'
+            }}
+          >
+            <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: stat.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon size={24} color={stat.color} />
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: stat.color }}>{stat.value}</div>
+              <div style={{ fontSize: '0.9rem', color: COLORS.gray, marginTop: '2px' }}>{stat.label}</div>
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+};
 
-        .page-header { text-align: center; margin-bottom: 50px; }
-        .page-header h1 { font-size: 2.5rem; font-weight: 800; color: ${COLORS.dark}; margin-bottom: 12px; }
-        .page-header p { font-size: 1.1rem; color: ${COLORS.gray}; max-width: 600px; margin: 0 auto; }
-        .page-header .highlight { color: ${COLORS.primary}; }
+// ============================================================
+// FILTRES AVANCÉS
+// ============================================================
+const FilterBar = ({ filtre, setFiltre, searchTerm, setSearchTerm, viewMode, setViewMode, sortBy, setSortBy }) => {
+  const categories = [
+    { id: 'tous', label: 'Tous', icon: Grid },
+    { id: 'IA', label: 'IA', icon: Zap },
+    { id: 'Marketing', label: 'Marketing', icon: TrendingUp },
+    { id: 'Design', label: 'Design', icon: Palette },
+    { id: 'Web', label: 'Web', icon: Globe },
+  ];
 
-        .filtres { display: flex; gap: 10px; justify-content: center; margin-bottom: 40px; flex-wrap: wrap; }
-        .filtre-btn { padding: 8px 20px; border-radius: 25px; border: 2px solid ${COLORS.grayBorder}; background: ${COLORS.white}; color: ${COLORS.gray}; font-weight: 600; cursor: pointer; transition: all 0.3s; }
-        .filtre-btn:hover, .filtre-btn.actif { background: ${COLORS.primary}; color: ${COLORS.white}; border-color: ${COLORS.primary}; }
-
-        .formations-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 30px; }
-
-        .formation-card { background: ${COLORS.white}; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(10,10,10,0.08); transition: all 0.3s; border: 1px solid ${COLORS.grayBorder}; }
-        .formation-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(10,10,10,0.15); border-color: ${COLORS.primary}; }
-
-        .card-image-wrapper { position: relative; height: 200px; overflow: hidden; }
-        .card-image { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
-        .formation-card:hover .card-image { transform: scale(1.05); }
-        .card-badge-remise { position: absolute; top: 12px; left: 12px; background: ${COLORS.red}; color: ${COLORS.white}; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
-        .card-badge-places { position: absolute; top: 12px; right: 12px; color: ${COLORS.white}; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.8rem; display: flex; align-items: center; gap: 4px; }
-
-        .card-content { padding: 24px; }
-        .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-        .card-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
-        .card-meta { display: flex; flex-direction: column; }
-        .card-type { font-size: 0.75rem; color: ${COLORS.gray}; text-transform: uppercase; letter-spacing: 1px; }
-        .card-date { font-size: 0.85rem; color: ${COLORS.gray}; display: flex; align-items: center; gap: 4px; }
-
-        .card-title { font-size: 1.2rem; font-weight: 700; color: ${COLORS.dark}; margin-bottom: 10px; line-height: 1.3; }
-        .card-description { font-size: 0.9rem; color: ${COLORS.gray}; line-height: 1.5; margin-bottom: 16px; }
-
-        .card-details { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
-        .detail-item { font-size: 0.8rem; color: ${COLORS.gray}; display: flex; align-items: center; gap: 4px; }
-
-        .card-tools { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-        .tool-tag { background: ${COLORS.grayLight}; color: ${COLORS.dark}; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 500; border: 1px solid ${COLORS.grayBorder}; }
-
-        .card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
-        .tag-item { background: ${COLORS.primaryLight}; color: ${COLORS.primaryDark}; padding: 3px 10px; border-radius: 15px; font-size: 0.75rem; display: flex; align-items: center; gap: 3px; font-weight: 500; }
-
-        .card-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px solid ${COLORS.grayBorder}; }
-        .card-prix { display: flex; flex-direction: column; }
-        .prix-original { font-size: 0.85rem; color: ${COLORS.gray}; text-decoration: line-through; }
-        .prix-actuel { font-size: 1.4rem; font-weight: 800; }
-        .btn-inscrire { color: ${COLORS.white}; background: ${COLORS.primary}; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.3s; font-size: 0.9rem; }
-        .btn-inscrire:hover { background: ${COLORS.primaryDark}; transform: scale(1.05); }
-
-        .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 40px; }
-        .stat-card { background: ${COLORS.white}; padding: 24px; border-radius: 16px; text-align: center; box-shadow: 0 2px 10px rgba(10,10,10,0.05); border: 1px solid ${COLORS.grayBorder}; }
-        .stat-number { font-size: 2rem; font-weight: 800; color: ${COLORS.primary}; }
-        .stat-label { font-size: 0.9rem; color: ${COLORS.gray}; margin-top: 4px; }
-
-        @media (max-width: 768px) {
-          .formations-grid { grid-template-columns: 1fr; }
-          .page-header h1 { font-size: 1.8rem; }
-          .stats-bar { grid-template-columns: repeat(2, 1fr); }
-        }
-      `}</style>
-
-      <div className="campagnes-container">
-        <div className="page-header">
-          <h1>Nos <span className="highlight">Formations</span> Professionnelles</h1>
-          <p>Devenez un expert du digital avec nos formations pratiques et certifiantes. 100% orientees metier.</p>
+  return (
+    <div style={{ marginBottom: '40px' }}>
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
+          <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: COLORS.gray }} />
+          <input
+            type="text"
+            placeholder="Rechercher une formation..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ width: '100%', padding: '12px 16px 12px 44px', borderRadius: '12px', border: '2px solid ' + COLORS.grayBorder, fontSize: '0.95rem', outline: 'none', transition: 'border-color 0.3s' }}
+            onFocus={(e) => e.target.style.borderColor = COLORS.primary}
+            onBlur={(e) => e.target.style.borderColor = COLORS.grayBorder}
+          />
         </div>
 
-        <div className="stats-bar">
-          <div className="stat-card">
-            <div className="stat-number">4</div>
-            <div className="stat-label">Formations</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number">158H</div>
-            <div className="stat-label">Heures de cours</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number">90+</div>
-            <div className="stat-label">Places disponibles</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number">100%</div>
-            <div className="stat-label">Pratique</div>
-          </div>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          style={{ padding: '12px 16px', borderRadius: '12px', border: '2px solid ' + COLORS.grayBorder, fontSize: '0.95rem', background: COLORS.white, cursor: 'pointer', outline: 'none' }}
+        >
+          <option value="date">Trier par date</option>
+          <option value="prix-asc">Prix croissant</option>
+          <option value="prix-desc">Prix décroissant</option>
+          <option value="places">Places disponibles</option>
+        </select>
+
+        <div style={{ display: 'flex', gap: '8px', background: COLORS.white, padding: '4px', borderRadius: '12px', border: '2px solid ' + COLORS.grayBorder }}>
+          <button onClick={() => setViewMode('grid')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', background: viewMode === 'grid' ? COLORS.primary : 'transparent', color: viewMode === 'grid' ? COLORS.white : COLORS.gray, cursor: 'pointer', transition: 'all 0.3s' }}>
+            <Grid size={18} />
+          </button>
+          <button onClick={() => setViewMode('list')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', background: viewMode === 'list' ? COLORS.primary : 'transparent', color: viewMode === 'list' ? COLORS.white : COLORS.gray, cursor: 'pointer', transition: 'all 0.3s' }}>
+            <List size={18} />
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {categories.map((cat) => {
+          const Icon = cat.icon;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setFiltre(cat.id)}
+              style={{
+                padding: '10px 24px',
+                borderRadius: '25px',
+                border: '2px solid ' + (filtre === cat.id ? COLORS.primary : COLORS.grayBorder),
+                background: filtre === cat.id ? COLORS.primary : COLORS.white,
+                color: filtre === cat.id ? COLORS.white : COLORS.gray,
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '0.9rem'
+              }}
+            >
+              <Icon size={16} />
+              {cat.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// PAGE PRINCIPALE
+// ============================================================
+export default function Campagnes() {
+  const [formations, setFormations] = useState([]);
+  const [inscriptions, setInscriptions] = useState([]);
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [filtre, setFiltre] = useState('tous');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
+  const [sortBy, setSortBy] = useState('date');
+
+  // 🔄 FETCH DEPUIS PRISMA VIA API.JS
+  useEffect(() => {
+    const fetchAllData = async () => {
+      try {
+        setLoading(true);
+        const [formationsRes, inscriptionsRes, contactsRes] = await Promise.all([
+          api.get('/api/formations'),
+          api.get('/api/inscriptions').catch(() => ({ data: [] })),
+          api.get('/api/contacts').catch(() => ({ data: [] }))
+        ]);
+
+        setFormations(formationsRes.data);
+        setInscriptions(inscriptionsRes.data);
+        setContacts(contactsRes.data);
+      } catch (err) {
+        console.error('Erreur chargement données:', err);
+        setError('Impossible de charger les données depuis le serveur');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllData();
+  }, []);
+
+  // Filtre + recherche + tri
+  const formationsFiltrees = useMemo(() => {
+    let result = [...formations];
+
+    if (filtre !== 'tous') {
+      result = result.filter(c => c.tags?.some(t => t.toLowerCase().includes(filtre.toLowerCase())));
+    }
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(c => 
+        c.title?.toLowerCase().includes(term) ||
+        c.description?.toLowerCase().includes(term) ||
+        c.tools?.some(t => t.toLowerCase().includes(term))
+      );
+    }
+
+    switch (sortBy) {
+      case 'prix-asc': result.sort((a, b) => (a.prix || 0) - (b.prix || 0)); break;
+      case 'prix-desc': result.sort((a, b) => (b.prix || 0) - (a.prix || 0)); break;
+      case 'places': result.sort((a, b) => (b.placesRestantes || 0) - (a.placesRestantes || 0)); break;
+      case 'date':
+      default: result.sort((a, b) => new Date(a.dateScheduled || 0) - new Date(b.dateScheduled || 0));
+    }
+
+    return result;
+  }, [formations, filtre, searchTerm, sortBy]);
+
+  if (loading) return (
+    <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: COLORS.grayLight }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: '60px', height: '60px', border: '4px solid ' + COLORS.grayBorder, borderTop: '4px solid ' + COLORS.primary, borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 20px' }} />
+        <p style={{ color: COLORS.gray, fontSize: '1.1rem' }}>Chargement des formations...</p>
+      </div>
+      <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: COLORS.grayLight, padding: '20px' }}>
+      <div style={{ textAlign: 'center', maxWidth: '500px' }}>
+        <AlertTriangle size={48} style={{ color: COLORS.red, marginBottom: '16px' }} />
+        <p style={{ color: COLORS.red, fontSize: '1.2rem', fontWeight: 600, marginBottom: '12px' }}>{error}</p>
+        <p style={{ color: COLORS.gray, marginBottom: '24px' }}>Vérifiez que le backend est démarré</p>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <button onClick={() => window.location.reload()} style={{ padding: '12px 24px', background: COLORS.primary, color: COLORS.white, border: 'none', borderRadius: '10px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <RefreshCw size={16} /> Réessayer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight: '100vh', background: COLORS.grayLight }}>
+      {/* Header */}
+      <div style={{ background: COLORS.dark, color: COLORS.white, padding: '60px 20px 40px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.1, background: 'radial-gradient(circle at 50% 50%, ' + COLORS.primary + ' 0%, transparent 70%)' }} />
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: '800px', margin: '0 auto' }}>
+          <h1 style={{ fontSize: '2.8rem', fontWeight: 800, marginBottom: '16px', lineHeight: 1.2 }}>
+            Nos <span style={{ color: COLORS.primary }}>Campagnes</span> Professionnelles
+          </h1>
+          <p style={{ fontSize: '1.1rem', color: COLORS.gray, maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
+            Devenez un expert du digital avec nos formations pratiques et certifiantes.
+          </p>
+        </div>
+      </div>
+
+      {/* Contenu */}
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '40px 20px' }}>
+        <StatsBar formations={formations} inscriptions={inscriptions} contacts={contacts} />
+        <FilterBar filtre={filtre} setFiltre={setFiltre} searchTerm={searchTerm} setSearchTerm={setSearchTerm} viewMode={viewMode} setViewMode={setViewMode} sortBy={sortBy} setSortBy={setSortBy} />
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', color: COLORS.gray, fontSize: '0.9rem' }}>
+          <span>{formationsFiltrees.length} formation{formationsFiltrees.length > 1 ? 's' : ''} trouvée{formationsFiltrees.length > 1 ? 's' : ''}</span>
         </div>
 
-        <div className="filtres">
-          <button className={"filtre-btn " + (filtre === 'tous' ? 'actif' : '')} onClick={() => setFiltre('tous')}>Tous</button>
-          <button className={"filtre-btn " + (filtre === 'IA' ? 'actif' : '')} onClick={() => setFiltre('IA')}>IA</button>
-          <button className={"filtre-btn " + (filtre === 'Marketing' ? 'actif' : '')} onClick={() => setFiltre('Marketing')}>Marketing</button>
-          <button className={"filtre-btn " + (filtre === 'Design' ? 'actif' : '')} onClick={() => setFiltre('Design')}>Design</button>
-          <button className={"filtre-btn " + (filtre === 'Web' ? 'actif' : '')} onClick={() => setFiltre('Web')}>Web</button>
-        </div>
-
-        <div className="formations-grid">
+        <div style={viewMode === 'grid' ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '30px' } : { display: 'block' }}>
           <AnimatePresence>
             {formationsFiltrees.map((campagne, index) => (
-              <FormationCard key={campagne.id} campagne={campagne} index={index} />
+              <FormationCard key={campagne.id} campagne={campagne} index={index} viewMode={viewMode} />
             ))}
           </AnimatePresence>
         </div>
+
+        {formationsFiltrees.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '80px 20px' }}>
+            <Search size={48} style={{ color: COLORS.gray, marginBottom: '16px', opacity: 0.5 }} />
+            <p style={{ color: COLORS.gray, fontSize: '1.1rem' }}>Aucune formation ne correspond à votre recherche</p>
+            <button onClick={() => { setFiltre('tous'); setSearchTerm(''); }} style={{ marginTop: '16px', padding: '10px 20px', background: COLORS.primary, color: COLORS.white, border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 600 }}>
+              Réinitialiser les filtres
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
