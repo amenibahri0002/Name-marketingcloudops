@@ -1,25 +1,24 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { X, LogIn, UserPlus, Lock, ArrowRight } from 'lucide-react';
+import { X, LogIn, UserPlus, Lock, ArrowRight, Sparkles } from 'lucide-react';
 import { setRedirectAfterLogin } from '../utils/redirectUtils';
 
 const THEME = {
   gold: '#d4a574',
   goldDark: '#b8956a',
-  goldLight: '#f5efe6',
+  goldLight: 'rgba(212, 165, 116, 0.15)',
   text: '#1e293b',
   textLight: '#64748b',
   bg: '#f8fafc',
-  card: '#ffffff',
-  border: '#e2e8f0',
+  card: 'rgba(255, 255, 255, 0.85)',
+  border: 'rgba(226, 232, 240, 0.6)',
   dark: '#1a1a2e',
 };
 
 export default function LoginRequiredModal({ isOpen, onClose, campagneTitle, redirectUrl }) {
   const navigate = useNavigate();
   const modalRef = useRef(null);
-  const overlayRef = useRef(null);
 
   // Handle click outside
   const handleClickOutside = useCallback((event) => {
@@ -30,13 +29,8 @@ export default function LoginRequiredModal({ isOpen, onClose, campagneTitle, red
 
   useEffect(() => {
     if (!isOpen) return;
-
-    // Add event listener for clicks outside
     document.addEventListener('mousedown', handleClickOutside);
-
-    // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden';
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.body.style.overflow = 'unset';
@@ -46,266 +40,235 @@ export default function LoginRequiredModal({ isOpen, onClose, campagneTitle, red
   // Handle escape key
   useEffect(() => {
     if (!isOpen) return;
-
     const handleEscape = (e) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
+      if (e.key === 'Escape') onClose();
     };
-
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
   const handleRegister = () => {
-    if (redirectUrl) {
-      setRedirectAfterLogin(redirectUrl);
-    }
+    if (redirectUrl) setRedirectAfterLogin(redirectUrl);
     onClose();
-    navigate('/register');
+    navigate('/register', { state: { fromInscription: true, redirectUrl } });
   };
 
   const handleLogin = () => {
-    if (redirectUrl) {
-      setRedirectAfterLogin(redirectUrl);
-    }
+    if (redirectUrl) setRedirectAfterLogin(redirectUrl);
     onClose();
-    navigate('/login');
+    navigate('/login', { state: { redirectUrl } });
   };
 
   if (!isOpen) return null;
 
-  // Render using portal to avoid parent re-renders affecting the modal
   return createPortal(
     <div 
-      ref={overlayRef}
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.6)',
-        backdropFilter: 'blur(8px)',
+        background: 'rgba(0, 0, 0, 0.25)',
+        backdropFilter: 'blur(4px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(4px) saturate(180%)',
         zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: 24,
+        animation: 'fadeIn 0.3s ease',
       }}
     >
       <style>{`
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes fadeIn { 
+          from { opacity: 0; } 
+          to { opacity: 1; } 
+        }
+        @keyframes slideUp { 
+          from { opacity: 0; transform: translateY(30px) scale(0.95); } 
+          to { opacity: 1; transform: translateY(0) scale(1); } 
+        }
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(212, 165, 116, 0.2); }
+          50% { box-shadow: 0 0 40px rgba(212, 165, 116, 0.4); }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
       `}</style>
 
       <div 
         ref={modalRef}
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: THEME.card,
+          background: 'rgba(255, 255, 255, 0.92)',
           borderRadius: 24,
           width: '100%',
-          maxWidth: 520,
-          boxShadow: '0 40px 80px rgba(0,0,0,0.2)',
+          maxWidth: 480,
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.5) inset',
           overflow: 'hidden',
-          animation: 'slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          animation: 'slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
           position: 'relative',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.6)',
         }}
       >
-        {/* Header */}
-        <div style={{
-          background: `linear-gradient(135deg, ${THEME.dark}, #2d2d44)`,
-          padding: '40px 32px 32px',
-          textAlign: 'center',
-          position: 'relative',
-        }}>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
-            style={{
-              position: 'absolute',
-              top: 16,
-              right: 16,
-              width: 36,
-              height: 36,
-              borderRadius: 10,
-              background: 'rgba(255,255,255,0.1)',
-              border: 'none',
-              color: '#fff',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.3s',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-          >
-            <X size={18} />
-          </button>
-
-          <div style={{
-            width: 80,
-            height: 80,
+        {/* Close button - floating */}
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            width: 32,
+            height: 32,
             borderRadius: '50%',
-            background: `linear-gradient(135deg, ${THEME.gold}, ${THEME.goldDark})`,
+            background: 'rgba(0, 0, 0, 0.05)',
+            border: 'none',
+            color: '#64748b',
+            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 20px',
-            boxShadow: `0 8px 30px ${THEME.gold}40`,
+            transition: 'all 0.3s',
+            zIndex: 10,
+          }}
+          onMouseEnter={(e) => { 
+            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)'; 
+            e.currentTarget.style.color = '#1e293b';
+            e.currentTarget.style.transform = 'rotate(90deg)';
+          }}
+          onMouseLeave={(e) => { 
+            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)'; 
+            e.currentTarget.style.color = '#64748b';
+            e.currentTarget.style.transform = 'rotate(0deg)';
+          }}
+        >
+          <X size={16} />
+        </button>
+
+        {/* Header - Compact */}
+        <div style={{
+          padding: '32px 32px 20px',
+          textAlign: 'center',
+          position: 'relative',
+        }}>
+          {/* Floating icon */}
+          <div style={{
+            width: 64,
+            height: 64,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #d4a574, #c9956a)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+            boxShadow: '0 4px 20px rgba(212, 165, 116, 0.35)',
+            animation: 'float 3s ease-in-out infinite',
           }}>
-            <Lock size={36} color="#fff" />
+            <Sparkles size={28} color="#fff" />
           </div>
 
           <h2 style={{
-            fontSize: '1.6rem',
+            fontSize: '1.4rem',
             fontWeight: 800,
-            color: '#fff',
-            marginBottom: 8,
+            color: '#1e293b',
+            marginBottom: 6,
+            letterSpacing: '-0.02em',
           }}>
-            Accès réservé aux membres
+            Accès réservé
           </h2>
 
           <p style={{
-            fontSize: '0.95rem',
-            color: 'rgba(255,255,255,0.7)',
-            lineHeight: 1.6,
+            fontSize: '0.9rem',
+            color: '#64748b',
+            lineHeight: 1.5,
+            maxWidth: 320,
+            margin: '0 auto',
           }}>
-            {campagneTitle ? `Pour vous inscrire à "${campagneTitle}"` : 'Pour accéder à cette formation'}
+            {campagneTitle ? `Inscrivez-vous pour accéder à "${campagneTitle}"` : 'Connectez-vous pour accéder à cette formation'}
           </p>
         </div>
 
         {/* Body */}
-        <div style={{ padding: '32px' }}>
-          {/* Steps */}
+        <div style={{ padding: '0 32px 32px' }}>
+          {/* Steps - Horizontal compact */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 16,
-            marginBottom: 28,
+            gap: 12,
+            marginBottom: 24,
           }}>
-            {[
-              { num: '1', label: 'Inscription', active: true },
-              { num: '2', label: 'Connexion', active: false },
-              { num: '3', label: 'Accès', active: false },
-            ].map((step, i) => (
+            {[1, 2, 3].map((num, i) => (
               <React.Fragment key={i}>
                 <div style={{
                   display: 'flex',
-                  flexDirection: 'column',
                   alignItems: 'center',
-                  gap: 6,
+                  gap: 8,
                 }}>
                   <div style={{
-                    width: 36,
-                    height: 36,
+                    width: 28,
+                    height: 28,
                     borderRadius: '50%',
-                    background: step.active ? THEME.gold : '#f1f5f9',
-                    color: step.active ? '#fff' : THEME.textLight,
+                    background: i === 0 ? 'linear-gradient(135deg, #d4a574, #c9956a)' : '#f1f5f9',
+                    color: i === 0 ? '#fff' : '#94a3b8',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: 700,
+                    boxShadow: i === 0 ? '0 2px 8px rgba(212, 165, 116, 0.3)' : 'none',
                   }}>
-                    {step.num}
+                    {num}
                   </div>
                   <span style={{
                     fontSize: 11,
                     fontWeight: 600,
-                    color: step.active ? THEME.gold : THEME.textLight,
+                    color: i === 0 ? '#d4a574' : '#94a3b8',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                   }}>
-                    {step.label}
+                    {['Inscription', 'Connexion', 'Accès'][i]}
                   </span>
                 </div>
                 {i < 2 && (
-                  <ArrowRight size={16} style={{ color: THEME.border, marginTop: -14 }} />
+                  <ArrowRight size={14} style={{ color: '#e2e8f0' }} />
                 )}
               </React.Fragment>
             ))}
           </div>
 
+          {/* Benefits - Compact grid */}
           <div style={{
-            background: THEME.goldLight,
-            border: `1px solid ${THEME.gold}30`,
-            borderRadius: 16,
-            padding: '20px',
-            marginBottom: '24px',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 12,
-          }}>
-            <div style={{
-              width: 40,
-              height: 40,
-              borderRadius: 10,
-              background: THEME.gold,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              <LogIn size={20} color="#fff" />
-            </div>
-            <div>
-              <h3 style={{
-                fontSize: '1rem',
-                fontWeight: 700,
-                color: THEME.text,
-                marginBottom: 4,
-              }}>
-                Créez votre compte maintenant
-              </h3>
-              <p style={{
-                fontSize: '0.9rem',
-                color: THEME.textLight,
-                lineHeight: 1.6,
-              }}>
-                Inscrivez-vous pour accéder à toutes nos formations et suivre votre progression.
-              </p>
-            </div>
-          </div>
-
-          {/* Benefits */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-            marginBottom: '28px',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 8,
+            marginBottom: 24,
           }}>
             {[
-              { icon: '✓', text: 'Inscription aux formations en ligne' },
-              { icon: '✓', text: 'Suivi de vos cours et progression' },
-              { icon: '✓', text: 'Téléchargement des certificats' },
-              { icon: '✓', text: 'Accès à l\'espace client DigiPip' },
+              { icon: '🎓', text: 'Formations en ligne' },
+              { icon: '📊', text: 'Suivi progression' },
+              { icon: '🏆', text: 'Certificats' },
+              { icon: '💼', text: 'Espace client' },
             ].map((item, i) => (
               <div key={i} style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
+                gap: 8,
+                padding: '10px 12px',
+                background: 'rgba(212, 165, 116, 0.08)',
+                borderRadius: 10,
+                border: '1px solid rgba(212, 165, 116, 0.15)',
               }}>
-                <div style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: '50%',
-                  background: '#d1fae5',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 12,
-                  color: '#059669',
-                  fontWeight: 700,
-                  flexShrink: 0,
-                }}>
-                  {item.icon}
-                </div>
+                <span style={{ fontSize: 16 }}>{item.icon}</span>
                 <span style={{
-                  fontSize: '0.9rem',
-                  color: THEME.textLight,
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: '#475569',
                 }}>
                   {item.text}
                 </span>
@@ -317,7 +280,7 @@ export default function LoginRequiredModal({ isOpen, onClose, campagneTitle, red
           <div style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 12,
+            gap: 10,
           }}>
             <button
               onClick={(e) => {
@@ -326,25 +289,32 @@ export default function LoginRequiredModal({ isOpen, onClose, campagneTitle, red
               }}
               style={{
                 width: '100%',
-                padding: '16px',
-                background: THEME.gold,
+                padding: '14px',
+                background: 'linear-gradient(135deg, #d4a574, #c9956a)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 12,
-                fontSize: '1rem',
+                fontSize: '0.95rem',
                 fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 10,
+                gap: 8,
                 transition: 'all 0.3s',
+                boxShadow: '0 4px 16px rgba(212, 165, 116, 0.3)',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = THEME.goldDark; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = THEME.gold; e.currentTarget.style.transform = 'translateY(0)'; }}
+              onMouseEnter={(e) => { 
+                e.currentTarget.style.transform = 'translateY(-2px)'; 
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(212, 165, 116, 0.4)';
+              }}
+              onMouseLeave={(e) => { 
+                e.currentTarget.style.transform = 'translateY(0)'; 
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(212, 165, 116, 0.3)';
+              }}
             >
-              <UserPlus size={20} />
-              Créer un compte gratuit
+              <UserPlus size={18} />
+              Créer un compte 
             </button>
 
             <button
@@ -354,24 +324,32 @@ export default function LoginRequiredModal({ isOpen, onClose, campagneTitle, red
               }}
               style={{
                 width: '100%',
-                padding: '16px',
+                padding: '14px',
                 background: 'transparent',
-                color: THEME.text,
-                border: `2px solid ${THEME.border}`,
+                color: '#475569',
+                border: '1.5px solid #e2e8f0',
                 borderRadius: 12,
-                fontSize: '1rem',
+                fontSize: '0.95rem',
                 fontWeight: 600,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 10,
+                gap: 8,
                 transition: 'all 0.3s',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = THEME.gold; e.currentTarget.style.color = THEME.gold; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = THEME.border; e.currentTarget.style.color = THEME.text; }}
+              onMouseEnter={(e) => { 
+                e.currentTarget.style.borderColor = '#d4a574'; 
+                e.currentTarget.style.color = '#d4a574';
+                e.currentTarget.style.background = 'rgba(212, 165, 116, 0.05)';
+              }}
+              onMouseLeave={(e) => { 
+                e.currentTarget.style.borderColor = '#e2e8f0'; 
+                e.currentTarget.style.color = '#475569';
+                e.currentTarget.style.background = 'transparent';
+              }}
             >
-              <LogIn size={20} />
+              <LogIn size={18} />
               J'ai déjà un compte
             </button>
           </div>
@@ -383,17 +361,17 @@ export default function LoginRequiredModal({ isOpen, onClose, campagneTitle, red
             }}
             style={{
               width: '100%',
-              padding: '12px',
+              padding: '10px',
               background: 'none',
               border: 'none',
-              color: THEME.textLight,
-              fontSize: '0.9rem',
+              color: '#94a3b8',
+              fontSize: '0.85rem',
               cursor: 'pointer',
               marginTop: 8,
               transition: 'color 0.3s',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = THEME.text; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = THEME.textLight; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#64748b'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; }}
           >
             Continuer sans s'inscrire
           </button>
