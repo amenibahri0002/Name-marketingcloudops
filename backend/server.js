@@ -44,7 +44,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // 3. ROUTES (après app et middlewares)
 // ============================================================
 app.use('/api/chat', require('./routes/chat'));
-app.use('/api/formations', require('./routes/formations'));
+app.use('/api/Formations', require('./routes/Formations'));
 const cloudRoutes = require('./routes/cloud');
 app.use('/api/cloud', require('./routes/cloud'));
 const authRoutes = require('./routes/auth')
@@ -92,7 +92,7 @@ app.use('/api/devops', devopsRouter)
 
 const exportRoutes = require('./routes/export')
 app.use('/api/export', authenticate, exportRoutes)
-
+app.use('/api/certificats', require('./routes/certificats'));
 // ============================================================
 // 4. ROUTES INSCRIPTIONS (NOUVEAU)
 // ============================================================
