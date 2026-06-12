@@ -258,7 +258,7 @@ export default function LoginRequiredModal({ isOpen, onClose, campagneTitle, red
                 color: THEME.text,
                 marginBottom: 4,
               }}>
-                Créez votre compte gratuitement
+                Créez votre compte maintenant
               </h3>
               <p style={{
                 fontSize: '0.9rem',
