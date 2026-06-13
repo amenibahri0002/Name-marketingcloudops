@@ -65,7 +65,7 @@ model Campagne {
   sentAt          DateTime?      @db.Timestamp(6)
   updatedAt       DateTime?      @default(now()) @updatedAt @db.Timestamp(6)
   stats           CampagneStats?
-  inscriptions    Inscription[]
+  inscription   Inscription[]
   notifications   Notification[]
   alertes         Alerte[]
 }
@@ -162,7 +162,7 @@ model User {
   lastLogin        DateTime?
   PushSubscription PushSubscription[]
   client           Client?            @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  inscriptions     Inscription[]
+  inscription   Inscription[]
   paiements        Paiement[]
 }
 
