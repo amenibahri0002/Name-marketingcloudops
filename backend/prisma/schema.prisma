@@ -12,10 +12,12 @@ datasource db {
 // ENUMS
 // ============================================================
 enum CampagneType {
-  MARKETING
   FORMATION
-  EVENT
-  WEBINAR
+  PRODUIT
+  EVENEMENT
+  WEBINAIRE
+  NEWSLETTER
+  MARKETING 
 }
 
 enum CampagneStatus {
@@ -84,6 +86,8 @@ model Inscription {
   userId      Int?
   user        User?      @relation(fields: [userId], references: [id])
   createdAt   DateTime?  @default(now()) @db.Timestamp(6)
+  clientId    Int?
+  client      Client?   @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   paiements   Paiement[] // ← NOUVEAU
 }
 
@@ -109,7 +113,12 @@ model Client {
   name          String         @db.VarChar(255)
   email         String         @unique @db.VarChar(255)
   phone         String?        @db.VarChar(50)
+  password      String?        @db.VarChar(255)  
+  type          String?        @default("particulier") @db.VarChar(50) // particulier, entreprise, agence...
   fcmToken      String?
+  sector        String?        @db.VarChar(255)
+  status        String?        @default("active") @db.VarChar(50)
+  role          String?        @default("CLIENT") @db.VarChar(50)  // ← AJOUTÉ
   createdAt     DateTime?      @default(now()) @db.Timestamp(6)
   updatedAt     DateTime?      @updatedAt
   campagnes     Campagne[]
@@ -143,10 +152,10 @@ model User {
   name             String             @db.VarChar(255)
   email            String             @unique @db.VarChar(255)
   password         String             @db.VarChar(255)
-  role             String?            @default("user") @db.VarChar(50)
+  role             String?            @default("CLIENT")  // ADMIN, CLIENT, RESPONSABLE_MARKETING
   fcmToken         String?
   createdAt        DateTime?          @default(now()) @db.Timestamp(6)
-  updatedAt        DateTime           @updatedAt
+  updatedAt        DateTime?           @updatedAt
   clientId         Int?
   status           String             @default("active") @db.VarChar(50)
   lastLogin        DateTime?

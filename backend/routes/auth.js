@@ -26,63 +26,83 @@ const authenticate = (req, res, next) => {
   }
 };
 
-// ============================================================
-// INSCRIPTION PUBLIQUE
-// POST /api/auth/register
-// ============================================================
+// backend/routes/auth.js - Register CORRIGÉ
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, phone, type = 'particulier', sector = '' } = req.body;
+    const { name, email, password, phone, type, sector } = req.body;
 
+    // Validation
     if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Nom, email et mot de passe requis' });
+      return res.status(400).json({ 
+        error: 'Nom, email et mot de passe requis' 
+      });
     }
 
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        error: 'Le mot de passe doit contenir au moins 6 caractères' 
+      });
+    }
+
+    // Vérifier email existant dans User ET Client
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ error: 'Cet email est déjà utilisé' });
+      return res.status(400).json({ 
+        error: 'Cet email est déjà utilisé' 
+      });
     }
 
     const existingClient = await prisma.client.findUnique({ where: { email } });
     if (existingClient) {
-      return res.status(400).json({ error: 'Cet email est déjà utilisé' });
+      return res.status(400).json({ 
+        error: 'Cet email est déjà utilisé' 
+      });
     }
 
+    // Hasher le password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // 1. Créer le Client (CRM)
     const client = await prisma.client.create({
       data: {
         name,
         email,
         phone: phone || '',
-        password: hashedPassword,
-        type,
-        sector,
+        password: hashedPassword,  // ← Maintenant supporté dans le schéma
+        type: type || 'particulier',
+        sector: sector || '',
         status: 'active',
-        role :'CLIENT',
+        role: 'CLIENT'
       }
     });
 
+    // 2. Créer le User (Auth) lié au Client
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
         role: 'CLIENT',
-        clientId: client.id,
         status: 'active',
+        clientId: client.id,  // ← Lien vers le Client
         lastLogin: new Date()
       }
     });
 
+    // 3. Générer token JWT
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role, clientId: client.id },
+      { 
+        userId: user.id, 
+        email: user.email, 
+        role: user.role,
+        clientId: client.id 
+      },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
     res.status(201).json({
-      message: 'Inscription réussie !',
+      message: 'Inscription réussie ! Bienvenue chez DigiPip',
       token,
       user: {
         id: user.id,
@@ -95,7 +115,10 @@ router.post('/register', async (req, res) => {
 
   } catch (err) {
     console.error('[REGISTER ERROR]', err);
-    res.status(500).json({ error: "Erreur lors de l'inscription" });
+    res.status(500).json({ 
+      error: "Erreur lors de l'inscription", 
+      details: err.message 
+    });
   }
 });
 
