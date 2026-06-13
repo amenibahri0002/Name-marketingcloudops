@@ -471,7 +471,7 @@ export default function Campagnes() {
         <FilterBar filtre={filtre} setFiltre={setFiltre} searchTerm={searchTerm} setSearchTerm={setSearchTerm} viewMode={viewMode} setViewMode={setViewMode} sortBy={sortBy} setSortBy={setSortBy} />
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', color: COLORS.gray, fontSize: '0.9rem' }}>
-          <span>{formationsFiltrees.length} formation{formationsFiltrees.length > 1 ? 's' : ''} trouvée{formationsFiltrees.length > 1 ? 's' : ''}</span>
+          <span>{campagnesFiltrees.length} campagne{campagnesFiltrees.length > 1 ? 's' : ''} trouvée{campagnesFiltrees.length > 1 ? 's' : ''}</span>
         </div>
 
         <div style={viewMode === 'grid' ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '30px' } : { display: 'block' }}>
@@ -482,7 +482,7 @@ export default function Campagnes() {
           </AnimatePresence>
         </div>
 
-        {formationsFiltrees.length === 0 && (
+        {campagnesFiltrees.length === 0 && (
           <div style={{ textAlign: 'center', padding: '80px 20px' }}>
             <Search size={48} style={{ color: COLORS.gray, marginBottom: '16px', opacity: 0.5 }} />
             <p style={{ color: COLORS.gray, fontSize: '1.1rem' }}>Aucune formation ne correspond à votre recherche</p>
