@@ -55,9 +55,11 @@ router.post('/register', async (req, res) => {
         name,
         email,
         phone: phone || '',
+        password: hashedPassword,
         type,
         sector,
-        status: 'active'
+        status: 'active',
+        role :'CLIENT',
       }
     });
 

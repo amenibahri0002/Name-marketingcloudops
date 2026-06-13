@@ -111,12 +111,14 @@ model Client {
   phone         String?        @db.VarChar(50)
   fcmToken      String?
   createdAt     DateTime?      @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime?      @updatedAt
   campagnes     Campagne[]
   contacts      Contact[]
   segments      Segment[]
   users         User[]
   notifications Notification[] // ← AJOUTÉ : relation inverse
   alertes       Alerte[] // ← AJOUTÉ : relation inverse
+  inscription   Inscription[]
 }
 
 // ============================================================
@@ -144,6 +146,7 @@ model User {
   role             String?            @default("user") @db.VarChar(50)
   fcmToken         String?
   createdAt        DateTime?          @default(now()) @db.Timestamp(6)
+  updatedAt        DateTime           @updatedAt
   clientId         Int?
   status           String             @default("active") @db.VarChar(50)
   lastLogin        DateTime?
