@@ -89,6 +89,7 @@ model Inscription {
   clientId    Int?
   client      Client?   @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   paiements   Paiement[] // ← NOUVEAU
+  paymentData   Json?
 }
 
 // Ajouter le modèle Paiement

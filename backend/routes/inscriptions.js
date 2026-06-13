@@ -1,4 +1,4 @@
-// backend/routes/inscriptions.js - CORRIGÉ COMPLÈTEMENT
+// backend/routes/inscriptions.js - CORRIGÉ FINAL
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
@@ -10,8 +10,11 @@ router.post('/', async (req, res) => {
     const { 
       name, email, phone, entreprise, notes,
       formule, paymentType, prixTotal,
-      campagneId, userId
+      campagneId, userId, paymentData
     } = req.body;
+
+    console.log('=== INSCRIPTION REQUEST ===');
+    console.log('Body:', req.body);
 
     // Validation
     if (!campagneId) {
@@ -26,31 +29,35 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ error: 'Formation non trouvée' });
     }
 
-    // Si userId fourni (utilisateur connecté), récupérer ses infos
+    // Si userId fourni, récupérer les infos utilisateur
     let finalName = name;
     let finalEmail = email;
     let finalPhone = phone;
     
     if (userId) {
-      const user = await prisma.user.findUnique({
-        where: { id: parseInt(userId) },
-        include: { client: true }
-      });
-      if (user) {
-        finalName = finalName || user.name;
-        finalEmail = finalEmail || user.email;
-        finalPhone = finalPhone || user.client?.phone || '';
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: parseInt(userId) },
+          include: { client: true }
+        });
+        if (user) {
+          finalName = finalName || user.name;
+          finalEmail = finalEmail || user.email;
+          finalPhone = finalPhone || user.client?.phone || '';
+        }
+      } catch (e) {
+        console.log('User fetch error:', e.message);
       }
     }
 
-    // ⚠️ VÉRIFICATION CRUCIALE : Email doit être valide
+    // Validation email
     if (!finalEmail || finalEmail.trim() === '') {
       return res.status(400).json({ 
-        error: 'Email requis. Veuillez vous reconnecter ou remplir le formulaire.' 
+        error: 'Email requis' 
       });
     }
 
-    // Vérifier si déjà inscrit (par email ET campagneId)
+    // Vérifier si déjà inscrit
     const existing = await prisma.inscription.findFirst({
       where: { 
         AND: [
@@ -78,36 +85,52 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Créer l'inscription
-    const inscription = await prisma.inscription.create({
-      data: {
-        name: finalName || 'Inconnu',
-        email: finalEmail,
-        phone: finalPhone || '',
-        entreprise: entreprise || null,
-        notes: notes || null,
-        formule: formule || 'standard',
-        paymentType: paymentType || 'carte',
-        prixTotal: prixTotal ? parseInt(prixTotal) : null,
-        campagneId: parseInt(campagneId),
-        userId: userId ? parseInt(userId) : null,
-        status: paymentType === 'carte' ? 'paye' : 'en_attente'
-      },
-      include: { campagne: true }
-    });
-
-    // Créer un paiement associé
-    if (prixTotal) {
-      await prisma.paiement.create({
+    // CRÉER L'INSCRIPTION
+    let inscription;
+    try {
+      inscription = await prisma.inscription.create({
         data: {
-          inscriptionId: inscription.id,
-          montant: parseInt(prixTotal),
-          mode: paymentType || 'carte',
+          name: finalName || 'Inconnu',
+          email: finalEmail,
+          phone: finalPhone || '',
+          entreprise: entreprise || null,
+          notes: notes || null,
+          formule: formule || 'standard',
+          paymentType: paymentType || 'carte',
+          prixTotal: prixTotal ? Math.round(parseFloat(prixTotal)) : null,
+          campagneId: parseInt(campagneId),
+          userId: userId ? parseInt(userId) : null,
           status: paymentType === 'carte' ? 'paye' : 'en_attente',
-          reference: `INV-${Date.now()}-${inscription.id}`,
-          userId: userId ? parseInt(userId) : null
-        }
+          paymentData: paymentData || null
+        },
+        include: { campagne: true }
       });
+      console.log('Inscription créée:', inscription.id);
+    } catch (createError) {
+      console.error('Erreur création inscription:', createError);
+      return res.status(500).json({ 
+        error: 'Erreur lors de la création de l\'inscription',
+        details: createError.message 
+      });
+    }
+
+    // CRÉER LE PAIEMENT (optionnel)
+    if (prixTotal) {
+      try {
+        await prisma.paiement.create({
+          data: {
+            inscriptionId: inscription.id,
+            montant: Math.round(parseFloat(prixTotal)),
+            mode: paymentType || 'carte',
+            status: paymentType === 'carte' ? 'paye' : 'en_attente',
+            reference: `INV-${Date.now()}-${inscription.id}`,
+            userId: userId ? parseInt(userId) : null
+          }
+        });
+        console.log('Paiement créé');
+      } catch (paymentError) {
+        console.error('Erreur création paiement (non bloquant):', paymentError.message);
+      }
     }
 
     res.status(201).json({
@@ -117,13 +140,14 @@ router.post('/', async (req, res) => {
     });
 
   } catch (error) {
-  console.error('[INSCRIPTION ERROR]', error);
-  res.status(500).json({ 
-    error: 'Erreur serveur', 
-    details: error.message,
-    code: error.code  // ← Ajoute le code d'erreur Prisma
-  });
-}
+    console.error('[INSCRIPTION ERROR]', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur', 
+      details: error.message 
+    });
+  }
+});
+
 // GET /api/inscriptions/mes-inscriptions - Inscriptions du client connecté
 router.get('/mes-inscriptions', async (req, res) => {
   try {
