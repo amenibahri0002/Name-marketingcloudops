@@ -156,7 +156,7 @@ export default function ResponsableDashboard() {
   const [canauxStats, setCanauxStats] = useState([]);
   const [evolution, setEvolution] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
-
+  const [chartData, setChartData] = useState([]);
   const [notifForm, setNotifForm] = useState({
     title: '', message: '', type: 'promotion', canal: 'email', campagneId: ''
   });
@@ -179,7 +179,7 @@ export default function ResponsableDashboard() {
     fetchAllData();
   }, [user]);
 
-  const fetchAllData = async () => {
+const fetchAllData = async () => {
   setLoading(true);
   try {
     const token = localStorage.getItem('token');
@@ -218,11 +218,8 @@ export default function ResponsableDashboard() {
     const campagnesActives = campagnesData.length;
     const campagnesPubliees = campagnesData.filter(c => c.published).length;
     
-    // Calculer le taux de remplissage
     const placesTotal = campagnesData.reduce((sum, c) => sum + (c.placesTotal || 0), 0);
     const tauxRemplissage = placesTotal ? Math.round((totalInscriptions / placesTotal) * 100) : 0;
-
-    // Calculer le taux de conversion
     const tauxConversion = totalClients ? Math.round((totalInscriptions / totalClients) * 100) : 0;
 
     setKpis({
@@ -237,7 +234,6 @@ export default function ResponsableDashboard() {
     });
 
     // === DONNÉES POUR LES GRAPHIQUES ===
-    // Inscriptions par campagne
     const inscriptionsParCampagne = campagnesData.map(c => ({
       name: c.title,
       inscriptions: c.inscriptionsCount || c.inscriptions?.length || 0,
@@ -270,6 +266,49 @@ export default function ResponsableDashboard() {
       })) || [])
     ];
     setRecentActivities(activites);
+
+    // Canaux stats
+    const canauxCount = {};
+    notifsData.forEach(n => {
+      const type = n.type || 'Email';
+      canauxCount[type] = (canauxCount[type] || 0) + 1;
+    });
+    setCanauxStats(Object.keys(canauxCount).map(name => ({
+      name, value: canauxCount[name],
+      color: THEME.chartColors[Object.keys(canauxCount).indexOf(name) % THEME.chartColors.length]
+    })));
+
+    // Évolution (données réelles si possible)
+    const evoData = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+      
+      // Compter les inscriptions de ce jour
+      const dayInscriptions = inscriptionsData.filter(i => {
+        const iDate = new Date(i.createdAt);
+        return iDate.toDateString() === date.toDateString();
+      }).length;
+      
+      evoData.push({
+        date: dateStr,
+        inscriptions: dayInscriptions,
+        campagnes: campagnesData.filter(c => {
+          const cDate = new Date(c.createdAt);
+          return cDate.toDateString() === date.toDateString();
+        }).length,
+        notifications: notifsData.filter(n => {
+          const nDate = new Date(n.createdAt);
+          return nDate.toDateString() === date.toDateString();
+        }).length,
+        revenus: inscriptionsData.filter(i => {
+          const iDate = new Date(i.createdAt);
+          return iDate.toDateString() === date.toDateString();
+        }).reduce((sum, i) => sum + (i.prixTotal || 0), 0),
+      });
+    }
+    setEvolution(evoData);
 
   } catch (err) {
     console.error('Erreur chargement dashboard:', err);
@@ -514,7 +553,7 @@ export default function ResponsableDashboard() {
                         <div style={{ fontSize: '12px', color: THEME.textMuted, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ padding: '3px 8px', borderRadius: '6px', background: THEME.bgHover, fontSize: '11px' }}>{camp.type}</span>
                         <span>•</span>
-                        <span>{camp.inscriptionsCount || camp.inscriptions?.length || 0} inscrits</span>  ← CORRIGÉ
+                        <span>{camp.inscriptionsCount || camp.inscriptions?.length || 0} inscrits</span>
                         <span>•</span>
                         <span>{camp.placesTotal || 0} places</span>
                         </div>

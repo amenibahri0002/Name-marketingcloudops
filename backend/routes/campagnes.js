@@ -3,14 +3,13 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const router = express.Router();
 
-// Middleware auth (à adapter)
+// Middleware auth
 const authenticate = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Non authentifié' });
   next();
 };
 
-// Générer slug unique
 function generateSlug(title) {
   return title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').substring(0, 50);
 }
@@ -27,6 +26,7 @@ async function generateUniqueSlug(title, excludeId = null) {
   }
   return uniqueSlug;
 }
+
 // GET /api/campagnes/public - Campagnes publiques
 router.get('/public', async (req, res) => {
   try {
@@ -44,22 +44,30 @@ router.get('/public', async (req, res) => {
   }
 });
 
-// GET /api/campagnes - Liste
+// GET /api/campagnes - Liste avec compteurs dynamiques
 router.get('/', async (req, res) => {
   try {
     const campagnes = await prisma.campagne.findMany({
-      include: { client: { select: { name: true } },inscriptions: {
+      include: {
+        client: { select: { name: true } },
+        inscriptions: {
           select: {
             id: true,
             status: true,
             prixTotal: true,
             userId: true,
+            name: true,
+            email: true,
             createdAt: true
           }
         },
-         _count: { select: { inscriptions: true } } },
+        _count: {
+          select: { inscriptions: true }
+        }
+      },
       orderBy: { createdAt: 'desc' }
     });
+
     // Formater avec les données dynamiques
     const formatted = campagnes.map(c => ({
       ...c,
@@ -70,11 +78,15 @@ router.get('/', async (req, res) => {
       // Pour compatibilité avec le frontend
       inscriptions: c.inscriptions
     }));
-    res.json(campagnes);
-  } catch (e) { res.status(500).json({ message: e.message }); }
+
+    res.json(formatted);
+  } catch (e) { 
+    console.error('[CAMPAGNES ERROR]', e);
+    res.status(500).json({ message: e.message }); 
+  }
 });
 
-// GET /api/campagnes/:idOrSlug - Détail par ID ou SLUG (auto-détection)
+// GET /api/campagnes/:idOrSlug - Détail par ID ou SLUG
 router.get('/:idOrSlug', async (req, res) => {
   try {
     const { idOrSlug } = req.params;
@@ -85,7 +97,9 @@ router.get('/:idOrSlug', async (req, res) => {
       where,
       include: { 
         client: { select: { name: true } },
-        inscriptions: { select: { id: true, name: true, email: true, phone: true, status: true, createdAt: true } }
+        inscriptions: { 
+          select: { id: true, name: true, email: true, phone: true, status: true, createdAt: true } 
+        }
       },
     });
 
@@ -94,7 +108,7 @@ router.get('/:idOrSlug', async (req, res) => {
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
-// POST - Créer (génère slug auto)
+// POST - Créer
 router.post('/', authenticate, async (req, res) => {
   try {
     const slug = await generateUniqueSlug(req.body.title);
@@ -106,7 +120,7 @@ router.post('/', authenticate, async (req, res) => {
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
-// PUT - Modifier (met à jour slug si titre change)
+// PUT - Modifier
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const existing = await prisma.campagne.findUnique({ where: { id: Number(req.params.id) } });
