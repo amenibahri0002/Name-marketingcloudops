@@ -44,14 +44,32 @@ router.get('/public', async (req, res) => {
   }
 });
 
-
 // GET /api/campagnes - Liste
 router.get('/', async (req, res) => {
   try {
     const campagnes = await prisma.campagne.findMany({
-      include: { client: { select: { name: true } }, _count: { select: { inscriptions: true } } },
+      include: { client: { select: { name: true } },inscriptions: {
+          select: {
+            id: true,
+            status: true,
+            prixTotal: true,
+            userId: true,
+            createdAt: true
+          }
+        },
+         _count: { select: { inscriptions: true } } },
       orderBy: { createdAt: 'desc' }
     });
+    // Formater avec les données dynamiques
+    const formatted = campagnes.map(c => ({
+      ...c,
+      inscriptionsCount: c._count.inscriptions,
+      inscriptionsPayees: c.inscriptions.filter(i => i.status === 'paye').length,
+      inscriptionsEnAttente: c.inscriptions.filter(i => i.status === 'en_attente').length,
+      revenusTotal: c.inscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0),
+      // Pour compatibilité avec le frontend
+      inscriptions: c.inscriptions
+    }));
     res.json(campagnes);
   } catch (e) { res.status(500).json({ message: e.message }); }
 });

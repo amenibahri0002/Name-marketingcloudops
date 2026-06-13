@@ -183,94 +183,100 @@ export default function ResponsableDashboard() {
   setLoading(true);
   try {
     const token = localStorage.getItem('token');
- if (token) {
+    if (token) {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
 
-    const campagnesRes = await api.get('/api/campagnes').catch(() => null);
-    await new Promise(r => setTimeout(r, 100));
-    const notifsRes = await api.get('/api/notifications?limit=50').catch(() => null);
-    await new Promise(r => setTimeout(r, 100));
-    const clientsRes = await api.get('/api/clients').catch(() => null);
-    await new Promise(r => setTimeout(r, 100));
-    const inscRes = await api.get('/api/inscriptions').catch((err) => {
-      console.error('Erreur inscriptions:', err.response?.data || err.message);
-      return null;
+    // Récupérer toutes les données en parallèle
+    const [campagnesRes, inscRes, clientsRes, notifsRes] = await Promise.all([
+      api.get('/api/campagnes').catch(() => null),
+      api.get('/api/inscriptions').catch(() => null),
+      api.get('/api/clients').catch(() => null),
+      api.get('/api/notifications?limit=50').catch(() => null)
+    ]);
+
+    // Traiter les campagnes
+    const campagnesData = Array.isArray(campagnesRes?.data) ? campagnesRes.data : [];
+    setCampagnes(campagnesData);
+
+    // Traiter les inscriptions
+    const inscriptionsData = Array.isArray(inscRes?.data) ? inscRes.data : [];
+    setInscriptions(inscriptionsData);
+
+    // Traiter les clients
+    const clientsData = Array.isArray(clientsRes?.data) ? clientsRes.data : [];
+    setClients(clientsData);
+
+    // Traiter les notifications
+    const notifsData = Array.isArray(notifsRes?.data) ? notifsRes.data : [];
+    setNotifications(notifsData);
+
+    // === CALCULER LES KPIs DYNAMIQUEMENT ===
+    const totalInscriptions = inscriptionsData.length;
+    const totalRevenus = inscriptionsData.reduce((sum, i) => sum + (i.prixTotal || 0), 0);
+    const totalClients = clientsData.length;
+    const campagnesActives = campagnesData.length;
+    const campagnesPubliees = campagnesData.filter(c => c.published).length;
+    
+    // Calculer le taux de remplissage
+    const placesTotal = campagnesData.reduce((sum, c) => sum + (c.placesTotal || 0), 0);
+    const tauxRemplissage = placesTotal ? Math.round((totalInscriptions / placesTotal) * 100) : 0;
+
+    // Calculer le taux de conversion
+    const tauxConversion = totalClients ? Math.round((totalInscriptions / totalClients) * 100) : 0;
+
+    setKpis({
+      campagnesActives: campagnesActives,
+      campagnesPubliees: campagnesPubliees,
+      inscriptionsTotal: totalInscriptions,
+      tauxRemplissage: tauxRemplissage,
+      notificationsSent: notifsData.length,
+      totalClients: totalClients,
+      revenus: totalRevenus,
+      tauxConversion: tauxConversion
     });
-      if (campagnesRes) {
-      const data = Array.isArray(campagnesRes.data) ? campagnesRes.data : [];
-      setCampagnes(data);
-       const publiees = data.filter(c => c.published).length;
-      const inscritsTotal = inscRes?.data?.length || 0; // Utiliser les inscriptions réelles
-      const placesTotal = data.reduce((sum, c) => sum + (c.placesTotal || 0), 0);
-      const revenusTotal = inscRes?.data?.reduce((sum, i) => sum + (i.prixTotal || 0), 0) || 0;
 
-        setKpis({
-        campagnesActives: data.length,
-        campagnesPubliees: publiees,
-        inscriptionsTotal: inscritsTotal,
-        tauxRemplissage: placesTotal ? Math.round((inscritsTotal / placesTotal) * 100) : 0,
-        notificationsSent: notifsRes?.data?.length || 0,
-        totalClients: clientsRes?.data?.length || 0,
-        revenus: revenusTotal,
-        tauxConversion: inscritsTotal && clientsRes?.data?.length ? Math.round((inscritsTotal / clientsRes.data.length) * 100) : 0,
-      });
-    }
+    // === DONNÉES POUR LES GRAPHIQUES ===
+    // Inscriptions par campagne
+    const inscriptionsParCampagne = campagnesData.map(c => ({
+      name: c.title,
+      inscriptions: c.inscriptionsCount || c.inscriptions?.length || 0,
+      revenus: c.revenusTotal || 0
+    }));
+    setChartData(inscriptionsParCampagne);
 
-         if (notifsRes) setNotifications(Array.isArray(notifsRes.data) ? notifsRes.data : []);
-    if (clientsRes) setClients(Array.isArray(clientsRes.data) ? clientsRes.data : []);
-    if (inscRes) setInscriptions(Array.isArray(inscRes.data) ? inscRes.data : []);
+    // Activités récentes (dynamiques)
+    const activites = [
+      ...inscriptionsData.slice(0, 5).map(i => ({
+        type: 'inscription',
+        title: `${i.name || 'Un utilisateur'} s'est inscrit à ${i.campagne?.title || 'une formation'}`,
+        time: i.createdAt ? new Date(i.createdAt).toLocaleDateString('fr-FR') : 'Récemment',
+        icon: '👤',
+        color: THEME.success
+      })),
+      ...campagnesData.slice(0, 3).map(c => ({
+        type: 'campagne',
+        title: `Campagne "${c.title}" ${c.published ? 'publiée' : 'créée'}`,
+        time: 'Récemment',
+        icon: '🚀',
+        color: THEME.primary
+      })),
+      ...(notifsData?.slice(0, 2).map(n => ({
+        type: 'notification',
+        title: `Notification envoyée`,
+        time: 'Récemment',
+        icon: '🔔',
+        color: THEME.info
+      })) || [])
+    ];
+    setRecentActivities(activites);
 
-      const notifArray = notifsRes?.data || [];
-      const canauxCount = {};
-      notifArray.forEach(n => {
-        const type = n.type || 'Email';
-        canauxCount[type] = (canauxCount[type] || 0) + 1;
-      });
-      setCanauxStats(Object.keys(canauxCount).map(name => ({
-        name, value: canauxCount[name],
-        color: THEME.chartColors[Object.keys(canauxCount).indexOf(name) % THEME.chartColors.length]
-      })));
-
-      const evoData = [];
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        evoData.push({
-          date: date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }),
-          inscriptions: Math.floor(Math.random() * 15) + 2,
-          campagnes: Math.floor(Math.random() * 3),
-          notifications: Math.floor(Math.random() * 20) + 5,
-          revenus: Math.floor(Math.random() * 2000) + 500,
-        });
-      }
-      setEvolution(evoData);
-
-      const activities = [
-        ...data.slice(0, 3).map(c => ({
-          type: 'campagne',
-          title: `Campagne "${c.title}" ${c.published ? 'publiée' : 'créée'}`,
-          time: 'Il y a 2h', icon: '🚀', color: THEME.primary,
-        })),
-        ...(notifsRes?.data?.slice(0, 2).map(n => ({
-          type: 'notification',
-          title: `Notification envoyée via ${n.type}`,
-          time: 'Il y a 4h', icon: '🔔', color: THEME.info,
-        })) || []),
-        ...(clientsRes?.data?.slice(0, 2).map(c => ({
-          type: 'client',
-          title: `Nouveau client : ${c.nom || c.name || 'Client'}`,
-          time: 'Il y a 6h', icon: '👤', color: THEME.success,
-        })) || []),
-      ];
-      setRecentActivities(activities);
-    } catch (err) {
+  } catch (err) {
     console.error('Erreur chargement dashboard:', err);
   } finally {
     setLoading(false);
   }
 };
-
   const envoyerNotification = async () => {
     if (!notifForm.title || !notifForm.message) {
       alert('Veuillez remplir le titre et le message');
@@ -506,11 +512,11 @@ export default function ResponsableDashboard() {
                           {camp.title}
                         </div>
                         <div style={{ fontSize: '12px', color: THEME.textMuted, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ padding: '3px 8px', borderRadius: '6px', background: THEME.bgHover, fontSize: '11px' }}>{camp.type}</span>
-                          <span>•</span>
-                          <span>{camp.inscriptions?.length || 0} inscrits</span>
-                          <span>•</span>
-                          <span>{camp.placesTotal || 0} places</span>
+                        <span style={{ padding: '3px 8px', borderRadius: '6px', background: THEME.bgHover, fontSize: '11px' }}>{camp.type}</span>
+                        <span>•</span>
+                        <span>{camp.inscriptionsCount || camp.inscriptions?.length || 0} inscrits</span>  ← CORRIGÉ
+                        <span>•</span>
+                        <span>{camp.placesTotal || 0} places</span>
                         </div>
                       </div>
                       <StatusBadge status={camp.published ? 'published' : 'draft'} />
@@ -655,13 +661,13 @@ export default function ResponsableDashboard() {
                             </span>
                           </td>
                           <td style={{ textAlign: 'center', padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}`, color: THEME.text, fontWeight: '700', fontSize: '15px' }}>
-                            {camp.inscriptions?.length || 0}
+                            {camp.inscriptionsCount || camp.inscriptions?.length || 0}
                           </td>
                           <td style={{ textAlign: 'center', padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}`, color: THEME.text, fontWeight: '700', fontSize: '15px' }}>
                             {camp.placesTotal || 0}
                           </td>
                           <td style={{ padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}`, minWidth: '140px' }}>
-                            <ProgressBar current={camp.inscriptions?.length || 0} total={camp.placesTotal || 0} />
+                            <ProgressBar current={camp.inscriptionsCount || 0} total={camp.placesTotal || 0} />
                           </td>
                           <td style={{ textAlign: 'center', padding: '16px 12px', borderBottom: `1px solid ${THEME.borderLight}` }}>
                             <StatusBadge status={camp.published ? 'published' : 'draft'} />

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import api from '../api';
 
+
 const ICON_MAP = { Sparkles, Zap, Palette, TrendingUp, BookOpen, Award };
 
 const COLORS = {
@@ -361,7 +362,7 @@ const FilterBar = ({ filtre, setFiltre, searchTerm, setSearchTerm, viewMode, set
 // PAGE PRINCIPALE
 // ============================================================
 export default function Campagnes() {
-  const [formations, setFormations] = useState([]);
+  const [campagnes, setCampagnes] = useState([]);
   const [inscriptions, setInscriptions] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -376,13 +377,13 @@ export default function Campagnes() {
     const fetchAllData = async () => {
       try {
         setLoading(true);
-        const [formationsRes, inscriptionsRes, contactsRes] = await Promise.all([
-          api.get('/api/formations'),
+        const [campagnesRes, inscriptionsRes, contactsRes] = await Promise.all([
+          api.get('/api/campagnes').catch(() => ({ data: [] })),
           api.get('/api/inscriptions').catch(() => ({ data: [] })),
           api.get('/api/contacts').catch(() => ({ data: [] }))
         ]);
 
-        setFormations(formationsRes.data);
+        setCampagnes(campagnesRes.data);
         setInscriptions(inscriptionsRes.data);
         setContacts(contactsRes.data);
       } catch (err) {
@@ -397,8 +398,8 @@ export default function Campagnes() {
   }, []);
 
   // Filtre + recherche + tri
-  const formationsFiltrees = useMemo(() => {
-    let result = [...formations];
+  const campagnesFiltrees = useMemo(() => {
+    let result = [...campagnes];
 
     if (filtre !== 'tous') {
       result = result.filter(c => c.tags?.some(t => t.toLowerCase().includes(filtre.toLowerCase())));
@@ -422,13 +423,13 @@ export default function Campagnes() {
     }
 
     return result;
-  }, [formations, filtre, searchTerm, sortBy]);
+  }, [campagnes, filtre, searchTerm, sortBy]);
 
   if (loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: COLORS.grayLight }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ width: '60px', height: '60px', border: '4px solid ' + COLORS.grayBorder, borderTop: '4px solid ' + COLORS.primary, borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 20px' }} />
-        <p style={{ color: COLORS.gray, fontSize: '1.1rem' }}>Chargement des formations...</p>
+        <p style={{ color: COLORS.gray, fontSize: '1.1rem' }}>Chargement des campagnes...</p>
       </div>
       <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
     </div>
@@ -466,7 +467,7 @@ export default function Campagnes() {
 
       {/* Contenu */}
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '40px 20px' }}>
-        <StatsBar formations={formations} inscriptions={inscriptions} contacts={contacts} />
+        <StatsBar campagnes={campagnes} inscriptions={inscriptions} contacts={contacts} />
         <FilterBar filtre={filtre} setFiltre={setFiltre} searchTerm={searchTerm} setSearchTerm={setSearchTerm} viewMode={viewMode} setViewMode={setViewMode} sortBy={sortBy} setSortBy={setSortBy} />
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', color: COLORS.gray, fontSize: '0.9rem' }}>
