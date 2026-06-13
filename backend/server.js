@@ -31,6 +31,8 @@ app.use(cors({
     'https://digipip.vercel.app',
     'https://marketingcloudops-frontend.vercel.app'
   ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 

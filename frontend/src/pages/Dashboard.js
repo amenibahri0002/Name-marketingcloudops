@@ -180,39 +180,46 @@ export default function ResponsableDashboard() {
   }, [user]);
 
   const fetchAllData = async () => {
-    setLoading(true);
-    try {
-      const campagnesRes = await api.get('/api/campagnes').catch(() => null);
-      await new Promise(r => setTimeout(r, 100));
-      const notifsRes = await api.get('/api/notifications?limit=50').catch(() => null);
-      await new Promise(r => setTimeout(r, 100));
-      const clientsRes = await api.get('/api/clients').catch(() => null);
-      await new Promise(r => setTimeout(r, 100));
-      const inscRes = await api.get('/api/inscriptions').catch(() => null);
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+ if (token) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
 
+    const campagnesRes = await api.get('/api/campagnes').catch(() => null);
+    await new Promise(r => setTimeout(r, 100));
+    const notifsRes = await api.get('/api/notifications?limit=50').catch(() => null);
+    await new Promise(r => setTimeout(r, 100));
+    const clientsRes = await api.get('/api/clients').catch(() => null);
+    await new Promise(r => setTimeout(r, 100));
+    const inscRes = await api.get('/api/inscriptions').catch((err) => {
+      console.error('Erreur inscriptions:', err.response?.data || err.message);
+      return null;
+    });
       if (campagnesRes) {
-        const data = Array.isArray(campagnesRes.data) ? campagnesRes.data : [];
-        setCampagnes(data);
-        const publiees = data.filter(c => c.published).length;
-        const inscritsTotal = data.reduce((sum, c) => sum + (c.inscriptions?.length || 0), 0);
-        const placesTotal = data.reduce((sum, c) => sum + (c.placesTotal || 0), 0);
-        const revenusTotal = data.reduce((sum, c) => sum + ((c.inscriptions?.length || 0) * (c.prix || 0)), 0);
+      const data = Array.isArray(campagnesRes.data) ? campagnesRes.data : [];
+      setCampagnes(data);
+       const publiees = data.filter(c => c.published).length;
+      const inscritsTotal = inscRes?.data?.length || 0; // Utiliser les inscriptions réelles
+      const placesTotal = data.reduce((sum, c) => sum + (c.placesTotal || 0), 0);
+      const revenusTotal = inscRes?.data?.reduce((sum, i) => sum + (i.prixTotal || 0), 0) || 0;
 
         setKpis({
-          campagnesActives: data.length,
-          campagnesPubliees: publiees,
-          inscriptionsTotal: inscritsTotal,
-          tauxRemplissage: placesTotal ? Math.round((inscritsTotal / placesTotal) * 100) : 0,
-          notificationsSent: notifsRes?.data?.length || 0,
-          totalClients: clientsRes?.data?.length || 0,
-          revenus: revenusTotal,
-          tauxConversion: inscritsTotal && clientsRes?.data?.length ? Math.round((inscritsTotal / clientsRes.data.length) * 100) : 0,
-        });
-      }
+        campagnesActives: data.length,
+        campagnesPubliees: publiees,
+        inscriptionsTotal: inscritsTotal,
+        tauxRemplissage: placesTotal ? Math.round((inscritsTotal / placesTotal) * 100) : 0,
+        notificationsSent: notifsRes?.data?.length || 0,
+        totalClients: clientsRes?.data?.length || 0,
+        revenus: revenusTotal,
+        tauxConversion: inscritsTotal && clientsRes?.data?.length ? Math.round((inscritsTotal / clientsRes.data.length) * 100) : 0,
+      });
+    }
 
-      if (notifsRes) setNotifications(Array.isArray(notifsRes.data) ? notifsRes.data : []);
-      if (clientsRes) setClients(Array.isArray(clientsRes.data) ? clientsRes.data : []);
-      if (inscRes) setInscriptions(Array.isArray(inscRes.data) ? inscRes.data : []);
+         if (notifsRes) setNotifications(Array.isArray(notifsRes.data) ? notifsRes.data : []);
+    if (clientsRes) setClients(Array.isArray(clientsRes.data) ? clientsRes.data : []);
+    if (inscRes) setInscriptions(Array.isArray(inscRes.data) ? inscRes.data : []);
 
       const notifArray = notifsRes?.data || [];
       const canauxCount = {};
@@ -258,11 +265,11 @@ export default function ResponsableDashboard() {
       ];
       setRecentActivities(activities);
     } catch (err) {
-      console.error('Erreur chargement dashboard:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    console.error('Erreur chargement dashboard:', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const envoyerNotification = async () => {
     if (!notifForm.title || !notifForm.message) {
