@@ -64,29 +64,47 @@ const InscriptionForm = ({ campagne, onSuccess }) => {
 
   const handleBack = () => { setError(''); setStep(step - 1); };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.acceptConditions) {
-      setError('Vous devez accepter les conditions generales');
-      return;
-    }
-    setLoading(true);
-    setError('');
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!formData.acceptConditions) {
+    setError('Vous devez accepter les conditions generales');
+    return;
+  }
+  setLoading(true);
+  setError('');
 
-    try {
-      const response = await api.post('/api/inscriptions', {
-        ...formData,
-        campagneId: parseInt(campagne.id),
-        prixTotal: totalTTC,
-      });
-      setSuccess(true);
-      if (onSuccess) onSuccess(response.data.inscription);
-    } catch (err) {
-      setError(err.response && err.response.data && err.response.data.error ? err.response.data.error : "Erreur lors de l'inscription");
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    // Récupérer l'utilisateur connecté
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const token = localStorage.getItem('token');
+    
+    // Préparer les données
+    const payload = {
+      // Si connecté, utiliser les infos du user, sinon du formulaire
+      name: user.name || formData.name,
+      email: user.email || formData.email,
+      phone: user.phone || formData.phone,
+      entreprise: formData.entreprise,
+      notes: formData.notes,
+      formule: formData.formule,
+      paymentType: formData.paymentType,
+      prixTotal: totalTTC,
+      campagneId: parseInt(campagne.id),
+      userId: user.id || null  // ← IMPORTANT pour les inscriptions connectées
+    };
+
+    const response = await api.post('/api/inscriptions', payload, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    
+    setSuccess(true);
+    if (onSuccess) onSuccess(response.data.inscription);
+  } catch (err) {
+    setError(err.response?.data?.error || "Erreur lors de l'inscription");
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (success) {
     return (
