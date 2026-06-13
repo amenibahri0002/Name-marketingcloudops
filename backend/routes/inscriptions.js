@@ -205,8 +205,8 @@ router.get('/', async (req, res) => {
           select: { 
             id: true, 
             name: true, 
-            email: true,
-            phone: true
+            email: true
+            
           } 
         },
         paiements: true
