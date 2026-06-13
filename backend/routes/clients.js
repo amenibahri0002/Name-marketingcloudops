@@ -1,3 +1,4 @@
+// backend/routes/clients.js - CORRIGÉ
 const express = require('express')
 const router = express.Router()
 const { PrismaClient } = require('@prisma/client')
@@ -6,24 +7,26 @@ const prisma = new PrismaClient()
 // GET /api/clients - Tous les clients (avec inscriptions dynamiques)
 router.get('/', async (req, res) => {
   try {
-    // 1. Récupérer tous les clients de la table Client avec leurs relations
+    // 1. Récupérer tous les clients avec leurs users
     const clientsFromTable = await prisma.client.findMany({
       include: {
-        users: true,
-        inscription: {
-          include: {
-            campagne: { select: { id: true, title: true, prix: true } }
-          }
-        }
+        users: true
       },
       orderBy: { createdAt: 'desc' }
     })
 
-    // 2. Récupérer les Users qui ont des inscriptions mais pas de Client associé
+    // 2. Récupérer TOUTES les inscriptions (pour compter par client via userId)
+    const allInscriptions = await prisma.inscription.findMany({
+      include: {
+        campagne: { select: { id: true, title: true, prix: true } }
+      }
+    })
+
+    // 3. Récupérer les Users sans Client
     const usersWithInscriptions = await prisma.user.findMany({
       where: {
-        inscription: { some: {} },
-        clientId: null
+        clientId: null,
+        inscription: { some: {} }
       },
       include: {
         inscription: {
@@ -31,25 +34,23 @@ router.get('/', async (req, res) => {
             campagne: { select: { id: true, title: true, prix: true } }
           }
         }
-      },
-      orderBy: { createdAt: 'desc' }
+      }
     })
 
-    // 3. Fusionner les données
+    // 4. Fusionner et compter
     const allClients = []
-    const addedIds = new Set()
 
-    // Traiter les clients de la table Client
     clientsFromTable.forEach(client => {
-      const clientInscriptions = client.inscription || []
-      let inscriptionsCount = clientInscriptions.length
-      let revenusTotal = clientInscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0)
-
-      client.users?.forEach(user => {
-        const userInscriptions = user.inscription || []
-        inscriptionsCount += userInscriptions.length
-        revenusTotal += userInscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0)
-      })
+      // Récupérer les IDs des users de ce client
+      const userIds = client.users?.map(u => u.id) || []
+      
+      // Filtrer les inscriptions qui ont userId dans cette liste
+      const clientInscriptions = allInscriptions.filter(i => 
+        userIds.includes(i.userId)
+      )
+      
+      const inscriptionsCount = clientInscriptions.length
+      const revenusTotal = clientInscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0)
 
       allClients.push({
         id: client.id,
@@ -67,15 +68,11 @@ router.get('/', async (req, res) => {
         users: client.users || [],
         source: 'client_table'
       })
-      addedIds.add(`client_${client.id}`)
     })
 
-    // Ajouter les Users sans Client comme clients virtuels
+    // Ajouter les users sans client
     usersWithInscriptions.forEach(user => {
       const userInscriptions = user.inscription || []
-      const inscriptionsCount = userInscriptions.length
-      const revenusTotal = userInscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0) || 0
-
       allClients.push({
         id: user.id,
         name: user.name || 'Utilisateur',
@@ -86,10 +83,10 @@ router.get('/', async (req, res) => {
         status: user.status || 'active',
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
-        inscriptionsCount: inscriptionsCount,
+        inscriptionsCount: userInscriptions.length,
         usersCount: 1,
-        revenusTotal: revenusTotal,
-        users: [{ id: user.id, name: user.name, email: user.email, role: user.role }],
+        revenusTotal: userInscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0),
+        users: [{ id: user.id, name: user.name, email: user.email }],
         source: 'user_table'
       })
     })
@@ -98,7 +95,7 @@ router.get('/', async (req, res) => {
     res.json(allClients)
   } catch (err) {
     console.error('[CLIENTS ERROR]', err)
-    res.status(500).json({ error: err.message, clients: [] })
+    res.status(500).json({ error: err.message })
   }
 })
 
