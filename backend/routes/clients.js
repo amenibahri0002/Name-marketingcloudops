@@ -6,17 +6,23 @@ const prisma = new PrismaClient()
 // GET /api/clients - Tous les clients (avec inscriptions dynamiques)
 router.get('/', async (req, res) => {
   try {
-    // 1. Récupérer tous les clients de la table Client
-    // Le modèle Client a : users, campagnes, contacts, segments, notifications, alertes, inscription (singulier)
+    // 1. Récupérer tous les clients de la table Client avec leurs users
     const clientsFromTable = await prisma.client.findMany({
       include: {
         users: {
-          select: { id: true, name: true, email: true, role: true }
-        },
-        // Utiliser "inscription" (singulier) car c'est le nom dans le schema Prisma
-        inscription: {
-          include: {
-            campagne: { select: { id: true, title: true, prix: true } }
+          select: { 
+            id: true, 
+            name: true, 
+            email: true, 
+            role: true,
+            inscriptions: {
+              select: {
+                id: true,
+                status: true,
+                prixTotal: true,
+                campagneId: true
+              }
+            }
           }
         },
         _count: {
@@ -26,33 +32,42 @@ router.get('/', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     })
 
-    // 2. Récupérer les Users qui ont des inscriptions
+    // 2. Récupérer les Users qui ont des inscriptions mais pas de Client associé
     const usersWithInscriptions = await prisma.user.findMany({
       where: {
-        inscriptions: { some: {} }  // "inscriptions" avec s sur User
+        inscriptions: { some: {} },
+        clientId: null  // Seulement ceux sans client
       },
       include: {
         inscriptions: {
           include: {
             campagne: { select: { id: true, title: true, prix: true } }
           }
-        },
-        client: true
+        }
       },
       orderBy: { createdAt: 'desc' }
     })
 
-    // 3. Fusionner les deux listes
+    // 3. Fusionner les données
     const allClients = []
     const addedIds = new Set()
 
     // Traiter les clients de la table Client
     clientsFromTable.forEach(client => {
-      // "inscription" est un tableau (Inscription[])
-      const clientInscriptions = client.inscription || []
-      const inscriptionsCount = client._count?.inscription || clientInscriptions.length || 0
-      const revenusTotal = clientInscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0)
+      // Compter les inscriptions via les users liés
+      let inscriptionsCount = 0
+      let revenusTotal = 0
       
+      client.users?.forEach(user => {
+        const userInscriptions = user.inscriptions || []
+        inscriptionsCount += userInscriptions.length
+        revenusTotal += userInscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0)
+      })
+      
+      // Ajouter aussi les inscriptions directes du client (si existantes)
+      const clientDirectInscriptions = client._count?.inscription || 0
+      inscriptionsCount += clientDirectInscriptions
+
       allClients.push({
         id: client.id,
         name: client.name,
@@ -64,45 +79,35 @@ router.get('/', async (req, res) => {
         createdAt: client.createdAt,
         updatedAt: client.updatedAt,
         inscriptionsCount: inscriptionsCount,
-        usersCount: client._count?.users || client.users?.length || 0,
+        usersCount: client.users?.length || 0,
         revenusTotal: revenusTotal,
-        inscription: clientInscriptions,
         users: client.users || [],
         source: 'client_table'
       })
       addedIds.add(`client_${client.id}`)
     })
 
-    // Ajouter les Users qui n'ont pas de Client associé
+    // Ajouter les Users sans Client comme clients virtuels
     usersWithInscriptions.forEach(user => {
-      // Si l'user a déjà un client associé qui est dans la liste, ne pas dupliquer
-      if (user.clientId && addedIds.has(`client_${user.clientId}`)) {
-        return
-      }
+      const inscriptionsCount = user.inscriptions?.length || 0
+      const revenusTotal = user.inscriptions?.reduce((sum, i) => sum + (i.prixTotal || 0), 0) || 0
       
-      // Si l'user n'a pas de client, l'ajouter comme client virtuel
-      if (!user.clientId) {
-        const inscriptionsCount = user.inscriptions?.length || 0
-        const revenusTotal = user.inscriptions?.reduce((sum, i) => sum + (i.prixTotal || 0), 0) || 0
-        
-        allClients.push({
-          id: user.id,
-          name: user.name || 'Utilisateur',
-          email: user.email,
-          phone: user.phone || '',
-          type: user.type || 'particulier',
-          sector: user.sector || '',
-          status: user.status || 'active',
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
-          inscriptionsCount: inscriptionsCount,
-          usersCount: 1,
-          revenusTotal: revenusTotal,
-          inscription: user.inscriptions || [],
-          users: [{ id: user.id, name: user.name, email: user.email, role: user.role }],
-          source: 'user_table'
-        })
-      }
+      allClients.push({
+        id: user.id,
+        name: user.name || 'Utilisateur',
+        email: user.email,
+        phone: user.phone || '',
+        type: user.type || 'particulier',
+        sector: user.sector || '',
+        status: user.status || 'active',
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        inscriptionsCount: inscriptionsCount,
+        usersCount: 1,
+        revenusTotal: revenusTotal,
+        users: [{ id: user.id, name: user.name, email: user.email, role: user.role }],
+        source: 'user_table'
+      })
     })
 
     console.log(`[CLIENTS] ${allClients.length} clients retournés`)
@@ -122,11 +127,18 @@ router.get('/:id', async (req, res) => {
     let client = await prisma.client.findUnique({
       where: { id },
       include: {
-        users: { select: { id: true, name: true, email: true, role: true } },
-        inscription: {
-          include: {
-            campagne: { select: { id: true, title: true, image: true, prix: true } }
-          }
+        users: { 
+          select: { 
+            id: true, 
+            name: true, 
+            email: true, 
+            role: true,
+            inscriptions: {
+              include: {
+                campagne: { select: { id: true, title: true, image: true, prix: true } }
+              }
+            }
+          } 
         },
         _count: { select: { inscription: true } }
       }
@@ -156,7 +168,7 @@ router.get('/:id', async (req, res) => {
           status: user.status || 'active',
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
-          inscription: user.inscriptions || [],
+          inscriptions: user.inscriptions || [],
           inscriptionsCount: user.inscriptions?.length || 0,
           users: [{ id: user.id, name: user.name, email: user.email }],
           source: 'user_table'
