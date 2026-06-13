@@ -3,31 +3,29 @@ const router = express.Router()
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 
-// GET /api/clients - Tous les clients (avec inscriptions dynamiques)
+// GET /api/clients - Tous les clients (avec données dynamiques)
 router.get('/', async (req, res) => {
   try {
-    // 1. Récupérer tous les clients de la table Client avec leurs relations
+    // 1. Récupérer tous les clients de la table Client
+    // Le modèle Client n'a PAS de relation "inscriptions" directe
+    // Il a : users, campagnes, contacts, segments, notifications, alertes, inscription (singulier)
     const clientsFromTable = await prisma.client.findMany({
       include: {
         users: {
           select: { id: true, name: true, email: true, role: true }
         },
-        inscriptions: {
-          include: {
-            campagne: { select: { id: true, title: true, prix: true } }
-          }
-        },
+        // Pas "inscriptions" ici - le modèle Client n'a pas cette relation
         _count: {
-          select: { inscriptions: true, users: true }
+          select: { users: true, campagnes: true, contacts: true }
         }
       },
       orderBy: { createdAt: 'desc' }
     })
 
-    // 2. Récupérer les Users qui ont des inscriptions mais pas de Client associé
+    // 2. Récupérer les Users qui ont des inscriptions (pour compter les vrais clients actifs)
     const usersWithInscriptions = await prisma.user.findMany({
       where: {
-        inscriptions: { some: {} }
+        inscriptions: { some: {} }  // Relation "inscriptions" existe sur User
       },
       include: {
         inscriptions: {
@@ -35,20 +33,32 @@ router.get('/', async (req, res) => {
             campagne: { select: { id: true, title: true, prix: true } }
           }
         },
-        client: true
+        client: true  // Relation inverse vers Client
       },
       orderBy: { createdAt: 'desc' }
     })
 
-    // 3. Fusionner les deux listes (éviter les doublons)
+    // 3. Compter les inscriptions par clientId
+    const inscriptionsParClient = await prisma.inscription.groupBy({
+      by: ['clientId'],
+      _count: { id: true },
+      _sum: { prixTotal: true }
+    })
+
+    // 4. Fusionner les données
     const allClients = []
     const addedIds = new Set()
 
-    // Ajouter les clients de la table Client (avec données enrichies)
+    // Traiter les clients de la table Client
     clientsFromTable.forEach(client => {
-      const inscriptionsCount = client._count?.inscriptions || client.inscriptions?.length || 0
-      const revenusTotal = client.inscriptions?.reduce((sum, i) => sum + (i.prixTotal || i.campagne?.prix || 0), 0) || 0
+      // Trouver les inscriptions liées à ce client via les users
+      const clientInscriptions = usersWithInscriptions
+        .filter(u => u.clientId === client.id)
+        .flatMap(u => u.inscriptions || [])
       
+      const inscriptionsCount = clientInscriptions.length
+      const revenusTotal = clientInscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0)
+
       allClients.push({
         id: client.id,
         name: client.name,
@@ -57,30 +67,22 @@ router.get('/', async (req, res) => {
         type: client.type || 'particulier',
         sector: client.sector,
         status: client.status || 'active',
-        fcmToken: client.fcmToken,
         createdAt: client.createdAt,
         updatedAt: client.updatedAt,
         inscriptionsCount: inscriptionsCount,
         usersCount: client._count?.users || client.users?.length || 0,
         revenusTotal: revenusTotal,
-        inscriptions: client.inscriptions || [],
         users: client.users || [],
         source: 'client_table'
       })
       addedIds.add(`client_${client.id}`)
     })
 
-    // Ajouter les Users qui n'ont pas de Client associé (inscriptions via user direct)
+    // Ajouter les Users qui n'ont pas de Client associé
     usersWithInscriptions.forEach(user => {
-      // Si l'user a déjà un client associé qui est dans la liste, ne pas dupliquer
-      if (user.clientId && addedIds.has(`client_${user.clientId}`)) {
-        return
-      }
-      
-      // Si l'user n'a pas de client, l'ajouter comme client virtuel
       if (!user.clientId) {
         const inscriptionsCount = user.inscriptions?.length || 0
-        const revenusTotal = user.inscriptions?.reduce((sum, i) => sum + (i.prixTotal || i.campagne?.prix || 0), 0) || 0
+        const revenusTotal = user.inscriptions?.reduce((sum, i) => sum + (i.prixTotal || 0), 0) || 0
         
         allClients.push({
           id: user.id,
@@ -90,20 +92,18 @@ router.get('/', async (req, res) => {
           type: user.type || 'particulier',
           sector: user.sector || '',
           status: user.status || 'active',
-          fcmToken: null,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
           inscriptionsCount: inscriptionsCount,
           usersCount: 1,
           revenusTotal: revenusTotal,
-          inscriptions: user.inscriptions || [],
           users: [{ id: user.id, name: user.name, email: user.email, role: user.role }],
           source: 'user_table'
         })
       }
     })
 
-    console.log(`[CLIENTS] ${allClients.length} clients retournés (${clientsFromTable.length} depuis Client + ${usersWithInscriptions.length} depuis User)`)
+    console.log(`[CLIENTS] ${allClients.length} clients retournés`)
     res.json(allClients)
   } catch (err) {
     console.error('[CLIENTS ERROR]', err)
@@ -116,17 +116,11 @@ router.get('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id)
     
-    // Essayer d'abord dans la table Client
+    // Chercher dans Client
     let client = await prisma.client.findUnique({
       where: { id },
       include: {
-        users: { select: { id: true, name: true, email: true, role: true } },
-        inscriptions: {
-          include: {
-            campagne: { select: { id: true, title: true, image: true, prix: true } }
-          }
-        },
-        _count: { select: { inscriptions: true } }
+        users: { select: { id: true, name: true, email: true, role: true } }
       }
     })
 
@@ -154,7 +148,6 @@ router.get('/:id', async (req, res) => {
           status: user.status || 'active',
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
-          inscriptions: user.inscriptions || [],
           inscriptionsCount: user.inscriptions?.length || 0,
           users: [{ id: user.id, name: user.name, email: user.email }],
           source: 'user_table'
