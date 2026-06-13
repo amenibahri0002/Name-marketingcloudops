@@ -6,27 +6,14 @@ const prisma = new PrismaClient()
 // GET /api/clients - Tous les clients (avec inscriptions dynamiques)
 router.get('/', async (req, res) => {
   try {
-    // 1. Récupérer tous les clients de la table Client avec leurs users
+    // 1. Récupérer tous les clients de la table Client avec leurs relations
     const clientsFromTable = await prisma.client.findMany({
       include: {
-        users: {
-          select: { 
-            id: true, 
-            name: true, 
-            email: true, 
-            role: true,
-            inscriptions: {
-              select: {
-                id: true,
-                status: true,
-                prixTotal: true,
-                campagneId: true
-              }
-            }
+        users: true,
+        inscription: {
+          include: {
+            campagne: { select: { id: true, title: true, prix: true } }
           }
-        },
-        _count: {
-          select: { users: true, campagnes: true, contacts: true, inscription: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -35,11 +22,11 @@ router.get('/', async (req, res) => {
     // 2. Récupérer les Users qui ont des inscriptions mais pas de Client associé
     const usersWithInscriptions = await prisma.user.findMany({
       where: {
-        inscriptions: { some: {} },
-        clientId: null  // Seulement ceux sans client
+        inscription: { some: {} },
+        clientId: null
       },
       include: {
-        inscriptions: {
+        inscription: {
           include: {
             campagne: { select: { id: true, title: true, prix: true } }
           }
@@ -54,19 +41,15 @@ router.get('/', async (req, res) => {
 
     // Traiter les clients de la table Client
     clientsFromTable.forEach(client => {
-      // Compter les inscriptions via les users liés
-      let inscriptionsCount = 0
-      let revenusTotal = 0
-      
+      const clientInscriptions = client.inscription || []
+      let inscriptionsCount = clientInscriptions.length
+      let revenusTotal = clientInscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0)
+
       client.users?.forEach(user => {
-        const userInscriptions = user.inscriptions || []
+        const userInscriptions = user.inscription || []
         inscriptionsCount += userInscriptions.length
         revenusTotal += userInscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0)
       })
-      
-      // Ajouter aussi les inscriptions directes du client (si existantes)
-      const clientDirectInscriptions = client._count?.inscription || 0
-      inscriptionsCount += clientDirectInscriptions
 
       allClients.push({
         id: client.id,
@@ -89,9 +72,10 @@ router.get('/', async (req, res) => {
 
     // Ajouter les Users sans Client comme clients virtuels
     usersWithInscriptions.forEach(user => {
-      const inscriptionsCount = user.inscriptions?.length || 0
-      const revenusTotal = user.inscriptions?.reduce((sum, i) => sum + (i.prixTotal || 0), 0) || 0
-      
+      const userInscriptions = user.inscription || []
+      const inscriptionsCount = userInscriptions.length
+      const revenusTotal = userInscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0) || 0
+
       allClients.push({
         id: user.id,
         name: user.name || 'Utilisateur',
@@ -122,42 +106,33 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id)
-    
-    // Essayer d'abord dans la table Client
+
     let client = await prisma.client.findUnique({
       where: { id },
       include: {
-        users: { 
-          select: { 
-            id: true, 
-            name: true, 
-            email: true, 
-            role: true,
-            inscriptions: {
-              include: {
-                campagne: { select: { id: true, title: true, image: true, prix: true } }
-              }
-            }
-          } 
-        },
-        _count: { select: { inscription: true } }
+        users: true,
+        inscription: {
+          include: {
+            campagne: { select: { id: true, title: true, image: true, prix: true } }
+          }
+        }
       }
     })
 
-    // Si pas trouvé, chercher dans User
     if (!client) {
       const user = await prisma.user.findUnique({
         where: { id },
         include: {
-          inscriptions: {
+          inscription: {
             include: {
               campagne: { select: { id: true, title: true, image: true, prix: true } }
             }
           }
         }
       })
-      
+
       if (user) {
+        const userInscriptions = user.inscription || []
         client = {
           id: user.id,
           name: user.name || 'Utilisateur',
@@ -168,8 +143,8 @@ router.get('/:id', async (req, res) => {
           status: user.status || 'active',
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
-          inscriptions: user.inscriptions || [],
-          inscriptionsCount: user.inscriptions?.length || 0,
+          inscription: userInscriptions,
+          inscriptionsCount: userInscriptions.length,
           users: [{ id: user.id, name: user.name, email: user.email }],
           source: 'user_table'
         }
@@ -191,7 +166,6 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { name, email, phone, type, sector } = req.body
-    
     const client = await prisma.client.create({
       data: {
         name,
@@ -202,7 +176,6 @@ router.post('/', async (req, res) => {
         status: 'active'
       }
     })
-    
     res.status(201).json(client)
   } catch (err) {
     console.error('[CREATE CLIENT ERROR]', err)
@@ -215,7 +188,6 @@ router.put('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id)
     const { name, email, phone, type, sector, status } = req.body
-    
     const client = await prisma.client.update({
       where: { id },
       data: {
@@ -227,7 +199,6 @@ router.put('/:id', async (req, res) => {
         ...(status !== undefined && { status })
       }
     })
-    
     res.json(client)
   } catch (err) {
     console.error('[UPDATE CLIENT ERROR]', err)

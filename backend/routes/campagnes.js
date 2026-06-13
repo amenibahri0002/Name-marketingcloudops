@@ -34,7 +34,7 @@ router.get('/public', async (req, res) => {
       where: { isPublic: true, status: 'ACTIVE' },
       include: { 
         client: { select: { name: true } },
-        _count: { select: { inscriptions: true } }
+        _count: { select: { inscription: true } }
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -50,7 +50,7 @@ router.get('/', async (req, res) => {
     const campagnes = await prisma.campagne.findMany({
       include: {
         client: { select: { name: true } },
-        inscriptions: {
+        inscription: {
           select: {
             id: true,
             status: true,
@@ -62,21 +62,19 @@ router.get('/', async (req, res) => {
           }
         },
         _count: {
-          select: { inscriptions: true }
+          select: { inscription: true }
         }
       },
       orderBy: { createdAt: 'desc' }
     });
 
-    // Formater avec les données dynamiques
     const formatted = campagnes.map(c => ({
       ...c,
-      inscriptionsCount: c._count.inscriptions,
-      inscriptionsPayees: c.inscriptions.filter(i => i.status === 'paye').length,
-      inscriptionsEnAttente: c.inscriptions.filter(i => i.status === 'en_attente').length,
-      revenusTotal: c.inscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0),
-      // Pour compatibilité avec le frontend
-      inscriptions: c.inscriptions
+      inscriptionsCount: c._count.inscription,
+      inscriptionsPayees: c.inscription.filter(i => i.status === 'paye').length,
+      inscriptionsEnAttente: c.inscription.filter(i => i.status === 'en_attente').length,
+      revenusTotal: c.inscription.reduce((sum, i) => sum + (i.prixTotal || 0), 0),
+      inscriptions: c.inscription
     }));
 
     res.json(formatted);
@@ -97,7 +95,7 @@ router.get('/:idOrSlug', async (req, res) => {
       where,
       include: { 
         client: { select: { name: true } },
-        inscriptions: { 
+        inscription: { 
           select: { id: true, name: true, email: true, phone: true, status: true, createdAt: true } 
         }
       },
