@@ -503,8 +503,8 @@ function ClientCard({ client, onEdit, onDelete, onView, idx }) {
             👥 {client.participants?.length || 0}
           </span>
           <span style={{ background: T.goldDim, color: T.goldDark, border: `1px solid ${T.goldBorder}`, padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
-            📢 {client.campagnesInscrites?.length || 0}
-          </span>
+  📢 {client.inscriptionsCount || 0}
+      </span>
         </div>
       </div>
     </div>
@@ -542,17 +542,18 @@ export default function Clients() {
 
       // Transformer les données clients pour le format attendu
       const clientsFormates = clientsRes.data.map(c => ({
-        id: c.id,
-        type: c.type || 'entreprise',
-        name: c.name,
-        email: c.email,
-        phone: c.phone,
-        createdAt: c.createdAt,
-        sector: c.sector || 'Non spécifié',
-        status: c.status || 'active',
-        participants: c.participants || [],
-        campagnesInscrites: c.campagnesInscrites || [],
-      }));
+  id: c.id,
+  type: c.type || 'entreprise',
+  name: c.name,
+  email: c.email,
+  phone: c.phone,
+  createdAt: c.createdAt,
+  sector: c.sector || 'Non spécifié',
+  status: c.status || 'active',
+  inscriptionsCount: c.inscriptionsCount || 0,  // ← CORRECT
+  participants: c.users || [],  // ← les users sont les participants
+  campagnesInscrites: c.inscription?.map(i => i.campagneId) || [],  // ← les campagnes des inscriptions
+}));
 
       setClients(clientsFormates);
       setCampagnes(campagnesRes.data);
@@ -587,13 +588,12 @@ export default function Clients() {
   });
 
   const totalParticipants = clients.reduce((a, c) => a + (c.participants?.length || 0), 0);
-  const totalCampagnes = clients.reduce((a, c) => a + (c.campagnesInscrites?.length || 0), 0);
-
-  const stats = [
-    { label: 'Utilisateurs', value: clients.length, color: T.gold, dim: T.goldDim, icon: '👤' },
-    { label: 'Participants', value: totalParticipants, color: T.blue, dim: T.blueDim, icon: '👥' },
-    { label: 'Inscriptions', value: totalCampagnes, color: T.purple, dim: T.purpleDim, icon: '📢' },
-  ];
+const totalInscriptions = clients.reduce((a, c) => a + (c.inscriptionsCount || 0), 0);
+const stats = [
+  { label: 'Utilisateurs', value: clients.length, color: T.gold, dim: T.goldDim, icon: '👤' },
+  { label: 'Participants', value: totalParticipants, color: T.blue, dim: T.blueDim, icon: '👥' },
+  { label: 'Inscriptions', value: totalInscriptions, color: T.purple, dim: T.purpleDim, icon: '📢' },
+];
 
   return (
     <div style={{ background: T.bg, minHeight: '100vh', padding: '28px 32px', fontFamily: T.sans, color: T.text }}>
@@ -814,8 +814,7 @@ export default function Clients() {
                         <span style={{ background: T.blueDim, color: T.blue, border: `1px solid rgba(59,130,246,0.25)`, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>👥 {c.participants?.length || 0}</span>
                       </td>
                       <td style={{ padding: '13px 18px' }}>
-                        <span style={{ background: T.goldDim, color: T.goldDark, border: `1px solid ${T.goldBorder}`, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>📢 {c.campagnesInscrites?.length || 0}</span>
-                      </td>
+<span style={{ background: T.goldDim, color: T.goldDark, border: `1px solid ${T.goldBorder}`, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>📢 {c.inscriptionsCount || 0}</span>                      </td>
                       <td style={{ padding: '13px 18px' }}>
                         <Pill label={c.status === 'active' ? '🟢' : '🔴'} color={c.status === 'active' ? T.green : T.red} bg={c.status === 'active' ? T.greenDim : T.redDim} border={c.status === 'active' ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'} />
                       </td>
