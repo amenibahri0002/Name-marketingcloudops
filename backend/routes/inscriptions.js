@@ -176,28 +176,9 @@ router.get('/mes-inscriptions', async (req, res) => {
   }
 });
 
-// GET /api/inscriptions - Liste toutes les inscriptions (ADMIN/MARKETING uniquement)
+// GET /api/inscriptions - Liste toutes les inscriptions (PUBLIC)
 router.get('/', async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    
-    // Vérifier l'authentification
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Non authentifié - Token manquant' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'techevent_secret_2026');
-    
-    console.log('GET /api/inscriptions - Token decoded:', decoded);
-    
-    // Vérifier le rôle
-    if (decoded.role !== 'ADMIN' && decoded.role !== 'RESPONSABLE_MARKETING') {
-      return res.status(403).json({ error: 'Accès interdit - Rôle insuffisant' });
-    }
-
-    // ADMIN ou RESPONSABLE_MARKETING → voit TOUTES les inscriptions
     const inscriptions = await prisma.inscription.findMany({
       include: {
         campagne: true,
@@ -205,8 +186,7 @@ router.get('/', async (req, res) => {
           select: { 
             id: true, 
             name: true, 
-            email: true
-            
+            email: true 
           } 
         },
         paiements: true
@@ -214,7 +194,7 @@ router.get('/', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
     
-    console.log(`[ADMIN/MARKETING] ${inscriptions.length} inscriptions retournées`);
+    console.log(`[PUBLIC] ${inscriptions.length} inscriptions retournées`);
     res.json(inscriptions);
   } catch (error) {
     console.error('[INSCRIPTIONS LIST ERROR]', error);

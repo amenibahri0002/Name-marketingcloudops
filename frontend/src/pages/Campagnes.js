@@ -476,7 +476,7 @@ export default function Campagnes() {
 
         <div style={viewMode === 'grid' ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '30px' } : { display: 'block' }}>
           <AnimatePresence>
-            {formationsFiltrees.map((campagne, index) => (
+            {campagnesFiltrees.map((campagne, index) => (
               <FormationCard key={campagne.id} campagne={campagne} index={index} viewMode={viewMode} />
             ))}
           </AnimatePresence>
