@@ -65,7 +65,7 @@ export default function MesInscriptions() {
     }
   };
 
-  const formationsFiltrees = filtre === 'tous' ? formations : formations.filter(f => f.status === filtre);
+  const campagnesFiltrees = filtre === 'tous' ? formations : formations.filter(f => f.status === filtre);
   const terminees = formations.filter(f => f.status === 'terminee').length;
   const enCours = formations.filter(f => f.status === 'en_cours').length;
   const certificats = formations.filter(f => f.certificat).length;
@@ -288,7 +288,7 @@ export default function MesInscriptions() {
                 border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
               }}>Réessayer</button>
             </div>
-          ) : formationsFiltrees.length === 0 ? (
+          ) : campagnesFiltrees.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 80 }}>
               <div style={{ fontSize: 64, marginBottom: 20, opacity: 0.3 }}>📚</div>
               <h3 style={{ fontSize: '1.3rem', color: THEME.text, marginBottom: 8 }}>Aucune inscription</h3>
@@ -308,7 +308,7 @@ export default function MesInscriptions() {
               gap: 30, justifyContent: 'center', maxWidth: 1000, margin: '0 auto',
             }}>
               <AnimatePresence>
-                {formationsFiltrees.map((formation, index) => (
+                {campagnesFiltrees.map((formation, index) => (
                   <FormationCard key={formation.id} formation={formation} index={index} />
                 ))}
               </AnimatePresence>
