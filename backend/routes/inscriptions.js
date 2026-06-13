@@ -1,4 +1,4 @@
-// backend/routes/inscriptions.js - CORRIGÉ
+// backend/routes/inscriptions.js - CORRIGÉ COMPLÈTEMENT
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
@@ -43,20 +43,23 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Validation des champs requis
-    if (!finalName || !finalEmail) {
+    // ⚠️ VÉRIFICATION CRUCIALE : Email doit être valide
+    if (!finalEmail || finalEmail.trim() === '') {
       return res.status(400).json({ 
-        error: 'Nom et email requis (connectez-vous ou remplissez le formulaire)' 
+        error: 'Email requis. Veuillez vous reconnecter ou remplir le formulaire.' 
       });
     }
 
-    // Vérifier si déjà inscrit
+    // Vérifier si déjà inscrit (par email ET campagneId)
     const existing = await prisma.inscription.findFirst({
       where: { 
-        email: finalEmail, 
-        campagneId: parseInt(campagneId) 
+        AND: [
+          { email: finalEmail },
+          { campagneId: parseInt(campagneId) }
+        ]
       }
     });
+    
     if (existing) {
       return res.status(400).json({ 
         error: 'Vous êtes déjà inscrit à cette formation' 
@@ -78,7 +81,7 @@ router.post('/', async (req, res) => {
     // Créer l'inscription
     const inscription = await prisma.inscription.create({
       data: {
-        name: finalName,
+        name: finalName || 'Inconnu',
         email: finalEmail,
         phone: finalPhone || '',
         entreprise: entreprise || null,
@@ -121,7 +124,6 @@ router.post('/', async (req, res) => {
     });
   }
 });
-
 // GET /api/inscriptions/mes-inscriptions - Inscriptions du client connecté
 router.get('/mes-inscriptions', async (req, res) => {
   try {

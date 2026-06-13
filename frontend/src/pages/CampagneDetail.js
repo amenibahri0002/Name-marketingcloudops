@@ -67,7 +67,7 @@ const InscriptionForm = ({ campagne, onSuccess }) => {
 const handleSubmit = async (e) => {
   e.preventDefault();
   if (!formData.acceptConditions) {
-    setError('Vous devez accepter les conditions generales');
+    setError('Vous devez accepter les conditions générales');
     return;
   }
   setLoading(true);
@@ -78,20 +78,29 @@ const handleSubmit = async (e) => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const token = localStorage.getItem('token');
     
+    // ⚠️ VÉRIFICATION : Email doit exister
+    const email = user.email || formData.email;
+    if (!email) {
+      setError('Email requis. Veuillez vous reconnecter.');
+      setLoading(false);
+      return;
+    }
+
     // Préparer les données
     const payload = {
-      // Si connecté, utiliser les infos du user, sinon du formulaire
-      name: user.name || formData.name,
-      email: user.email || formData.email,
-      phone: user.phone || formData.phone,
+      name: user.name || formData.name || 'Utilisateur',
+      email: email,
+      phone: user.phone || formData.phone || '',
       entreprise: formData.entreprise,
       notes: formData.notes,
       formule: formData.formule,
       paymentType: formData.paymentType,
       prixTotal: totalTTC,
       campagneId: parseInt(campagne.id),
-      userId: user.id || null  // ← IMPORTANT pour les inscriptions connectées
+      userId: user.id || null
     };
+
+    console.log('Payload inscription:', payload); // Debug
 
     const response = await api.post('/api/inscriptions', payload, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -100,6 +109,7 @@ const handleSubmit = async (e) => {
     setSuccess(true);
     if (onSuccess) onSuccess(response.data.inscription);
   } catch (err) {
+    console.error('Erreur inscription:', err);
     setError(err.response?.data?.error || "Erreur lors de l'inscription");
   } finally {
     setLoading(false);
