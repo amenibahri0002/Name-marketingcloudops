@@ -117,13 +117,13 @@ router.post('/', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[INSCRIPTION ERROR]', error);
-    res.status(500).json({ 
-      error: 'Erreur serveur', 
-      details: error.message 
-    });
-  }
-});
+  console.error('[INSCRIPTION ERROR]', error);
+  res.status(500).json({ 
+    error: 'Erreur serveur', 
+    details: error.message,
+    code: error.code  // ← Ajoute le code d'erreur Prisma
+  });
+}
 // GET /api/inscriptions/mes-inscriptions - Inscriptions du client connecté
 router.get('/mes-inscriptions', async (req, res) => {
   try {
