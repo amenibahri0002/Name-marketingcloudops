@@ -142,31 +142,31 @@ router.post('/', async (req, res) => {
     // ============================================================
     // ENVOYER L'EMAIL DE CONFIRMATION (APRÈS création de l'inscription)
     // ============================================================
-    if (inscription.email) {
-      try {
-        await sendInscriptionConfirmationEmail(
-          inscription.email,
-          inscription.name,
-          {
-            title: campagne.title,
-            date: campagne.date,
-            dureeHeures: campagne.dureeHeures,
-            location: campagne.location,
-            format: campagne.format,
-            prix: campagne.prix
-          }
-        );
-        console.log('Email de confirmation envoyé à', inscription.email);
-      } catch (emailError) {
-        console.error('Erreur envoi email (non bloquant):', emailError.message);
-      }
+// ============================================================
+// ENVOYER EMAIL - NON BLOQUANT (fire-and-forget)
+// ============================================================
+if (inscription.email) {
+  // PAS DE await ! On lance et on répond immédiatement
+  sendInscriptionConfirmationEmail(
+    inscription.email,
+    inscription.name,
+    {
+      title: campagne.title,
+      date: campagne.date,
+      dureeHeures: campagne.dureeHeures,
+      location: campagne.location,
+      format: campagne.format,
+      prix: campagne.prix
     }
+  );
+}
 
-    res.status(201).json({
-      message: 'Inscription réussie ! Un email de confirmation vous a été envoyé.',
-      inscription,
-      needAccount: !userId
-    });
+// RÉPONDRE IMMÉDIATEMENT
+res.status(201).json({
+  message: 'Inscription réussie ! Un email de confirmation vous a été envoyé.',
+  inscription,
+  needAccount: !userId
+});
 
   } catch (error) {
     console.error('[INSCRIPTION ERROR]', error);
