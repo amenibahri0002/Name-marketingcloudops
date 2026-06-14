@@ -48,11 +48,12 @@ const clientMenu = [
   ]},
   { section: 'Mes Données', items: [
     { path: '/Paiements', icon: '💰', label: 'Mes Paiements' },
-    {path: '/certificats', icon: '📜', label: 'Mes Certificats' },
+    {path: '/Certificats', icon: '📜', label: 'Mes Certificats' },
   ]},
   
   { section: 'Compte', items: [
     { path: '/profil', icon: '👤', label: 'Mon Profil' },
+     { path: '#notifications', icon: '🔔', label: 'Notifications', isToggle: true },
   ]},
 ];
 
