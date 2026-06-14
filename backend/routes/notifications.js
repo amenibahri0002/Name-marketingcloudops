@@ -4,6 +4,8 @@ const { authMiddleware: authenticate } = require('../middleware/auth');
 const { sendCampagneNotification } = require('../services/emailService');  // ← Importer mailer.js
 const router = express.Router();
 const prisma = new PrismaClient();
+const { sendPush } = require('../services/pushService');
+
 // POST /api/notifications - Créer ET envoyer (non-bloquant)
 router.post('/', authenticate, async (req, res) => {
   try {
@@ -45,44 +47,39 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 // Fonction async qui tourne en arrière-plan
-async function envoyerEmailEnArrierePlan(notification, title, message) {
+async function envoyerPushEnArrierePlan(notification, title, message) {
   try {
-    // Récupérer les destinataires
-    const contacts = await prisma.contact.findMany({
-      select: { email: true, name: true }
-    });
-    
-    const users = await prisma.user.findMany({
-      where: { role: 'CLIENT' },
-      select: { email: true, name: true }
+    const result = await sendPush({
+      title: title,
+      message: message,
+      type: notification.type,
+      campagneId: notification.campagneId,
+      segmentId: notification.segmentId
     });
 
-    const destinataires = contacts.length > 0 ? contacts : users;
-    
-    // Récupérer la campagne si campagneId
-    const campagne = notification.campagneId ? await prisma.campagne.findUnique({
-      where: { id: notification.campagneId }
-    }) : null;
-
-    // Utiliser mailer.js pour envoyer
-    const result = await sendCampagneNotification(destinataires, title, message, campagne);
-
-    // Mettre à jour le statut en base
     await prisma.notification.update({
       where: { id: notification.id },
       data: { 
         status: result.success ? 'sent' : 'failed',
-        sentAt: result.success ? new Date() : null
+        sentAt: result.success ? new Date() : null,
+        metadata: {
+          sent: result.sent,
+          failed: result.failed,
+          total: result.total
+        }
       }
     });
 
-    console.log(`[EMAIL] ✅ ${result.sent}/${result.total} emails envoyés`);
+    console.log(`[PUSH] ✅ ${result.sent}/${result.total} push envoyés`);
 
   } catch (err) {
-    console.error('[EMAIL BACKGROUND ERROR]', err);
+    console.error('[PUSH BACKGROUND ERROR]', err);
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: { status: 'failed', metadata: { error: err.message } }
+    });
   }
 }
-
 // ============================================================
 // GET /api/notifications - Historique
 // ============================================================

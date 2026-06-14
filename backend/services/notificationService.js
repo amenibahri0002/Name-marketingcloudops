@@ -3,6 +3,8 @@ const prisma = new PrismaClient();
 const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
 const { sendCampagneNotification } = require('./emailService'); 
+const { sendPush } = require('./pushService');
+
 // Configuration double
 const gmailTransporter = nodemailer.createTransport({
   service: 'gmail',
@@ -83,8 +85,14 @@ async function notifierClients({ type, campagne, message, canaux = ['email'] }) 
           result = await envoyerSMS(destinataires, { type, campagne, message, template });
           break;
         case 'push':
-          result = await envoyerPush(destinataires, { type, campagne, message, template });
-          break;
+  result = await sendPush({
+    title: `${template.emoji} ${template.title}`,
+    message: message || genererMessage({ type, campagne, template }),
+    type: type,
+    campagneId: campagne.id,
+    segmentId: null // ou segmentId si tu as des segments
+  });
+  break;
         case 'whatsapp':
           result = await envoyerWhatsApp(destinataires, { type, campagne, message, template });
           break;
