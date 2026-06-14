@@ -1,4 +1,5 @@
-﻿const express = require('express');
+﻿// backend/routes/notifications.js - CORRIGÉ
+const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authMiddleware: authenticate } = require('../middleware/auth');
 const { sendCampagneNotification } = require('../services/emailService');
@@ -16,7 +17,7 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Titre, message et canal requis' });
     }
 
-    // Créer la notification
+    // 1. Créer la notification
     const notification = await prisma.notification.create({
       data: {
         title,
@@ -28,30 +29,56 @@ router.post('/', authenticate, async (req, res) => {
       }
     });
 
-    // Répondre immédiatement
+    // 2. RÉPONDRE immédiatement (UNE SEULE FOIS)
     res.status(201).json({
       message: 'Notification créée - Envoi en cours',
       notification
     });
 
-    // Envoyer en arrière-plan (après la réponse)
-    if (canal === 'email') {
-      envoyerEmail(notification, title, message);
-    } else if (canal === 'push') {
-      envoyerPushNotif(notification, title, message);
-    }
+    // 3. ENVOYER en arrière-plan (après la réponse, avec setTimeout)
+    setTimeout(async () => {
+      try {
+        let result;
+        
+        if (canal === 'email') {
+          result = await envoyerEmail(notification, title, message);
+        } else if (canal === 'push') {
+          result = await envoyerPushNotif(notification, title, message);
+        } else {
+          result = { success: false, error: `${canal} non configuré` };
+        }
+
+        // Mettre à jour le statut
+        await prisma.notification.update({
+          where: { id: notification.id },
+          data: { 
+            status: result.success ? 'sent' : 'failed',
+            sentAt: result.success ? new Date() : null,
+            metadata: result
+          }
+        });
+
+        console.log(`[${canal.toUpperCase()}] ✅ ${result.sent || 0}/${result.total || 0} envoyés`);
+
+      } catch (err) {
+        console.error(`[NOTIFICATION SEND ERROR]`, err);
+        await prisma.notification.update({
+          where: { id: notification.id },
+          data: { status: 'failed', metadata: { error: err.message } }
+        });
+      }
+    }, 100);
 
   } catch (error) {
-    console.error('[NOTIFICATION ERROR]', error);
+    console.error('[NOTIFICATION CREATE ERROR]', error);
+    // ✅ Vérifier si on a déjà répondu avant d'envoyer une erreur
     if (!res.headersSent) {
       res.status(500).json({ error: 'Erreur serveur' });
     }
   }
 });
 
-// ============================================================
-// FONCTION EMAIL (définie dans le même fichier)
-// ============================================================
+// ✅ CORRECTION : Fonctions définies DANS le fichier
 async function envoyerEmail(notification, title, message) {
   try {
     const contacts = await prisma.contact.findMany({
@@ -74,28 +101,19 @@ async function envoyerEmail(notification, title, message) {
 
     const result = await sendCampagneNotification(uniqueDestinataires, title, message, campagne);
 
-    await prisma.notification.update({
-      where: { id: notification.id },
-      data: { 
-        status: result.success ? 'sent' : 'failed',
-        sentAt: result.success ? new Date() : null
-      }
-    });
-
-    console.log(`[EMAIL] ✅ ${result.sent}/${result.total} emails envoyés`);
+    return {
+      success: result.success,
+      sent: result.sent,
+      failed: result.failed,
+      total: result.total
+    };
 
   } catch (err) {
     console.error('[EMAIL ERROR]', err);
-    await prisma.notification.update({
-      where: { id: notification.id },
-      data: { status: 'failed' }
-    });
+    return { success: false, error: err.message };
   }
 }
 
-// ============================================================
-// FONCTION PUSH (définie dans le même fichier)
-// ============================================================
 async function envoyerPushNotif(notification, title, message) {
   try {
     const result = await sendPush({
@@ -105,26 +123,11 @@ async function envoyerPushNotif(notification, title, message) {
       campagneId: notification.campagneId
     });
 
-    await prisma.notification.update({
-      where: { id: notification.id },
-      data: { 
-        status: result.success ? 'sent' : 'failed',
-        sentAt: result.success ? new Date() : null,
-        metadata: {
-          sent: result.sent,
-          failed: result.failed
-        }
-      }
-    });
-
-    console.log(`[PUSH] ✅ ${result.sent}/${result.total} push envoyés`);
+    return result;
 
   } catch (err) {
     console.error('[PUSH ERROR]', err);
-    await prisma.notification.update({
-      where: { id: notification.id },
-      data: { status: 'failed' }
-    });
+    return { success: false, error: err.message };
   }
 }
 
