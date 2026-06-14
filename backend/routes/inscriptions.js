@@ -3,7 +3,7 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
 const prisma = new PrismaClient();
-const { sendInscriptionConfirmationEmail } = require('../services/emailService');
+const { sendInscriptionConfirmationEmail } = require('../services/mailer');
 
 // POST /api/inscriptions - Inscription (publique ou connectée)
 router.post('/', async (req, res) => {
