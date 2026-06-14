@@ -1,16 +1,12 @@
 // services/notificationService.js
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// Transporter email
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS
-  }
-});
+// ============================================================
+// RESEND (API HTTP - pas SMTP bloqué)
+// ============================================================
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Templates de notifications
 const TEMPLATES = {
@@ -47,7 +43,7 @@ const TEMPLATES = {
 };
 
 // ============================================================
-// NOTIFIER TOUS LES CLIENTS (multi-canal)
+// NOTIFIER TOUS LES CLIENTS (multi-canal) - NON BLOQUANT
 // ============================================================
 async function notifierClients({ type, campagne, message, canaux = ['email'] }) {
   const template = TEMPLATES[type] || TEMPLATES.nouvelle_campagne;
@@ -73,7 +69,8 @@ async function notifierClients({ type, campagne, message, canaux = ['email'] }) 
       let result;
       switch (canal) {
         case 'email':
-          result = await envoyerEmail(destinataires, { type, campagne, message, template });
+          // NON BLOQUANT : lancer l'envoi sans attendre
+          result = envoyerEmailNonBloquant(destinataires, { type, campagne, message, template });
           break;
         case 'sms':
           result = await envoyerSMS(destinataires, { type, campagne, message, template });
@@ -91,16 +88,16 @@ async function notifierClients({ type, campagne, message, canaux = ['email'] }) 
           result = { success: false, error: 'Canal inconnu' };
       }
 
-      // Sauvegarder la notification en base
+      // Sauvegarder la notification en base (status = pending pour email)
       await prisma.notification.create({
         data: {
           title: template.title,
           message: message || genererMessage({ type, campagne, template }),
           type,
           canal,
-          status: result.success ? 'sent' : 'failed',
+          status: canal === 'email' ? 'pending' : (result.success ? 'sent' : 'failed'),
           campagneId: campagne.id,
-          sentAt: result.success ? new Date() : null,
+          sentAt: canal === 'email' ? null : (result.success ? new Date() : null),
           metadata: {
             destinatairesCount: destinataires.length,
             result: result.success ? 'success' : result.error
@@ -119,27 +116,35 @@ async function notifierClients({ type, campagne, message, canaux = ['email'] }) 
 }
 
 // ============================================================
-// EMAIL
+// EMAIL - NON BLOQUANT (Resend)
 // ============================================================
-async function envoyerEmail(destinataires, { type, campagne, message, template }) {
+function envoyerEmailNonBloquant(destinataires, { type, campagne, message, template }) {
   const html = genererEmailHTML({ type, campagne, message, template });
 
-  const promises = destinataires.map(dest => 
-    transporter.sendMail({
-      from: `"DigiLab Solutions" <${process.env.MAIL_USER}>`,
-      to: dest.email,
-      subject: `${template.emoji} ${template.title} - ${campagne.title}`,
-      html: html.replace(/{{NOM}}/g, dest.name || 'Client')
-    }).catch(err => {
-      console.error(`[EMAIL ERROR] ${dest.email}:`, err.message);
-      return null;
-    })
-  );
+  // Lancer l'envoi en arrière-plan sans attendre
+  (async () => {
+    let sent = 0;
+    
+    for (const dest of destinataires) {
+      try {
+        await resend.emails.send({
+          from: 'DigiLab <onboarding@resend.dev>',
+          to: dest.email,
+          subject: `${template.emoji} ${template.title} - ${campagne.title}`,
+          html: html.replace(/{{NOM}}/g, dest.name || 'Client')
+        });
+        sent++;
+        console.log(`[RESEND] ✅ Email envoyé à ${dest.email}`);
+      } catch (err) {
+        console.error(`[RESEND ERROR] ${dest.email}:`, err.message);
+      }
+    }
 
-  const results = await Promise.all(promises);
-  const sent = results.filter(r => r !== null).length;
+    console.log(`[RESEND] ✅ Total: ${sent}/${destinataires.length} emails envoyés`);
+  })();
 
-  return { success: sent > 0, count: sent, total: destinataires.length };
+  // Retourner immédiatement (non-bloquant)
+  return { success: true, count: destinataires.length, total: destinataires.length, note: 'Envoi en arrière-plan' };
 }
 
 // ============================================================
@@ -148,7 +153,6 @@ async function envoyerEmail(destinataires, { type, campagne, message, template }
 async function envoyerSMS(destinataires, { type, campagne, message, template }) {
   const smsMessage = `${template.emoji} ${template.title}\n${campagne.title}\n${message || ''}\nPrix: ${campagne.prix} TND\nInscrivez-vous: digilab.tn/campagnes/${campagne.slug}`;
 
-  // TODO: Intégrer Twilio
   console.log(`[SMS] Envoi simulé à ${destinataires.length} contacts`);
   console.log(`[SMS] Message: ${smsMessage.substring(0, 100)}...`);
 
@@ -183,7 +187,7 @@ async function publierSocial({ type, campagne, message, template }) {
 }
 
 // ============================================================
-// GÉNÉRATEURS DE CONTENU
+// GÉNÉRATEURS DE CONTENU (identique)
 // ============================================================
 function genererMessage({ type, campagne, template }) {
   const messages = {
@@ -266,7 +270,7 @@ function genererEmailHTML({ type, campagne, message, template }) {
       </div>
 
       <center>
-        <a href="http://localhost:3000/campagnes/${campagne.slug}" class="cta">
+        <a href="https://digipip.vercel.app/campagnes/${campagne.slug}" class="cta">
           🚀 Voir la formation & S'inscrire
         </a>
       </center>
@@ -283,7 +287,7 @@ function genererEmailHTML({ type, campagne, message, template }) {
 }
 
 // ============================================================
-// VÉRIFIER ALERTES AUTOMATIQUES (places, dates)
+// VÉRIFIER ALERTES AUTOMATIQUES (identique)
 // ============================================================
 async function verifierAlertesAutomatiques(campagneId) {
   const campagne = await prisma.campagne.findUnique({
@@ -295,17 +299,14 @@ async function verifierAlertesAutomatiques(campagneId) {
 
   const alertes = [];
 
-  // Alerte : Places limitées (≤ 5)
   if (campagne.placesRestantes <= 5 && campagne.placesRestantes > 0) {
     alertes.push({ type: 'places_limitées', canaux: ['email', 'sms', 'push'] });
   }
 
-  // Alerte : Complet
   if (campagne.placesRestantes === 0) {
     alertes.push({ type: 'complet', canaux: ['email', 'push'] });
   }
 
-  // Alerte : Date proche (7 jours)
   if (campagne.dateScheduled) {
     const dateFormation = new Date(campagne.dateScheduled);
     const maintenant = new Date();
@@ -316,7 +317,6 @@ async function verifierAlertesAutomatiques(campagneId) {
     }
   }
 
-  // Envoyer les alertes
   for (const alerte of alertes) {
     await notifierClients({
       type: alerte.type,

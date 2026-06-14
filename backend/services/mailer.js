@@ -1,31 +1,15 @@
-const nodemailer = require('nodemailer');
+// backend/utils/mailer.js (ou services/mailer.js)
+const { Resend } = require('resend');
 
-// ============================================================
-// MÊME CONFIGURATION QUE notificationService.js
-// ============================================================
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.MAIL_USER,      // ← Même que notificationService
-    pass: process.env.MAIL_PASS       // ← Même que notificationService
-  }
-});
-
-// Vérifier la connexion
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('[SMTP ERROR]', error);
-  } else {
-    console.log('[SMTP] ✅ Serveur prêt pour envoyer des emails');
-  }
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ============================================================
 // EMAIL DE CONFIRMATION D'INSCRIPTION - NON BLOQUANT
 // ============================================================
 function sendInscriptionConfirmationEmail(userEmail, userName, campagneDetails) {
-  transporter.sendMail({
-    from: `"DigiLab Solutions" <${process.env.MAIL_USER}>`,  // ← Même expéditeur
+  // Fire-and-forget : pas de await, pas de blocage
+  resend.emails.send({
+    from: 'DigiLab <onboarding@resend.dev>',  // Domaine Resend par défaut
     to: userEmail,
     subject: `✅ Inscription confirmée - ${campagneDetails.title}`,
     html: `
@@ -91,12 +75,54 @@ function sendInscriptionConfirmationEmail(userEmail, userName, campagneDetails) 
       </html>
     `
   })
-  .then(info => {
-    console.log(`[EMAIL] ✅ Confirmation envoyée à ${userEmail} (ID: ${info.messageId})`);
+  .then(data => {
+    console.log(`[RESEND] ✅ Confirmation envoyée à ${userEmail}`);
   })
   .catch(err => {
-    console.error('[EMAIL] ❌ Erreur:', err.message);
+    console.error('[RESEND] ❌ Erreur:', err.message);
   });
 }
 
-module.exports = { sendInscriptionConfirmationEmail };
+// ============================================================
+// EMAIL DE NOTIFICATION DE CAMPAGNE (pour remplacer notificationService)
+// ============================================================
+async function sendCampagneNotification(destinataires, title, message, campagne) {
+  let sent = 0;
+  
+  for (const dest of destinataires) {
+    try {
+      await resend.emails.send({
+        from: 'DigiLab <onboarding@resend.dev>',
+        to: dest.email,
+        subject: title,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #F5A623;">${title}</h2>
+            <p>Bonjour ${dest.name || 'Client'},</p>
+            <p>${message}</p>
+            <a href="https://digipip.vercel.app/campagnes/${campagne?.slug || ''}" 
+               style="background: #F5A623; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block; margin-top: 20px;">
+              Voir la formation
+            </a>
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+            <p style="font-size: 12px; color: #999;">
+              DigiLab Solutions - Cloud Marketing<br>
+              📧 contact@digilab.tn | 📱 +216 22 044 105
+            </p>
+          </div>
+        `
+      });
+      sent++;
+      console.log(`[RESEND] ✅ Notification envoyée à ${dest.email}`);
+    } catch (err) {
+      console.error(`[RESEND ERROR] ${dest.email}:`, err.message);
+    }
+  }
+  
+  return { success: sent > 0, sent, total: destinataires.length };
+}
+
+module.exports = { 
+  sendInscriptionConfirmationEmail,
+  sendCampagneNotification
+};

@@ -1,24 +1,11 @@
 ﻿const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authMiddleware: authenticate } = require('../middleware/auth');
+const { sendCampagneNotification } = require('../utils/mailer');  // ← Importer mailer.js
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// ============================================================
-// CONFIGURATION EMAIL
-// ============================================================
-const nodemailer = require('nodemailer');
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS
-  }
-});
-
-// ============================================================
-// POST /api/notifications - Créer ET envoyer
-// ============================================================
+// POST /api/notifications - Créer ET envoyer (non-bloquant)
 router.post('/', authenticate, async (req, res) => {
   try {
     const { title, message, type, canal, campagneId, segmentId } = req.body;
@@ -27,7 +14,7 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Titre, message et canal requis' });
     }
 
-    // 1. Créer la notification en base
+    // 1. Créer la notification immédiatement
     const notification = await prisma.notification.create({
       data: {
         title,
@@ -40,73 +27,16 @@ router.post('/', authenticate, async (req, res) => {
       }
     });
 
-    // 2. ENVOYER L'EMAIL si canal = 'email'
+    // 2. RÉPONDRE IMMÉDIATEMENT au frontend
+    res.status(201).json({
+      message: 'Notification créée - Envoi en cours',
+      notification
+    });
+
+    // 3. ENVOYER L'EMAIL en arrière-plan (après la réponse)
     if (canal === 'email') {
-      try {
-        // Récupérer les contacts/clients
-        const contacts = await prisma.contact.findMany({
-          select: { email: true, name: true }
-        });
-        
-        const users = await prisma.user.findMany({
-          where: { role: 'CLIENT' },
-          select: { email: true, name: true }
-        });
-
-        const destinataires = contacts.length > 0 ? contacts : users;
-
-        // Envoyer les emails (non-bloquant)
-        const emailPromises = destinataires.map(dest => 
-          transporter.sendMail({
-            from: `"DigiLab Solutions" <${process.env.MAIL_USER}>`,
-            to: dest.email,
-            subject: title,
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #F5A623;">${title}</h2>
-                <p>${message}</p>
-                <a href="https://digipip.vercel.app/campagnes" 
-                   style="background: #F5A623; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block; margin-top: 20px;">
-                  Voir les formations
-                </a>
-              </div>
-            `
-          }).catch(err => {
-            console.error(`[EMAIL ERROR] ${dest.email}:`, err.message);
-            return null;
-          })
-        );
-
-        const results = await Promise.all(emailPromises);
-        const sent = results.filter(r => r !== null).length;
-
-        // Mettre à jour le statut
-        await prisma.notification.update({
-          where: { id: notification.id },
-          data: { 
-            status: sent > 0 ? 'sent' : 'failed',
-            sentAt: sent > 0 ? new Date() : null
-          }
-        });
-
-        res.status(201).json({
-          message: `Notification créée et envoyée à ${sent} destinataires`,
-          notification: { ...notification, status: sent > 0 ? 'sent' : 'failed' }
-        });
-
-      } catch (emailError) {
-        console.error('[EMAIL ERROR]', emailError);
-        res.status(201).json({
-          message: 'Notification créée mais email non envoyé',
-          notification
-        });
-      }
-    } else {
-      // SMS, Push, etc.
-      res.status(201).json({
-        message: 'Notification créée',
-        notification
-      });
+      // Lancer l'envoi sans bloquer
+      envoyerEmailEnArrierePlan(notification, title, message);
     }
 
   } catch (error) {
@@ -114,6 +44,47 @@ router.post('/', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
+// Fonction async qui tourne en arrière-plan
+async function envoyerEmailEnArrierePlan(notification, title, message) {
+  try {
+    // Récupérer les destinataires
+    const contacts = await prisma.contact.findMany({
+      select: { email: true, name: true }
+    });
+    
+    const users = await prisma.user.findMany({
+      where: { role: 'CLIENT' },
+      select: { email: true, name: true }
+    });
+
+    const destinataires = contacts.length > 0 ? contacts : users;
+    
+    // Récupérer la campagne si campagneId
+    const campagne = notification.campagneId ? await prisma.campagne.findUnique({
+      where: { id: notification.campagneId }
+    }) : null;
+
+    // Utiliser mailer.js pour envoyer
+    const result = await sendCampagneNotification(destinataires, title, message, campagne);
+
+    // Mettre à jour le statut en base
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: { 
+        status: result.success ? 'sent' : 'failed',
+        sentAt: result.success ? new Date() : null
+      }
+    });
+
+    console.log(`[RESEND] ✅ ${result.sent}/${result.total} emails envoyés`);
+
+  } catch (err) {
+    console.error('[RESEND BACKGROUND ERROR]', err);
+  }
+}
+
+// ... reste des routes GET (identique)
 
 // ============================================================
 // GET /api/notifications - Historique
