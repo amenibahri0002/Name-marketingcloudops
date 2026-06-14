@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
-
+const { sendCampagneNotification } = require('./emailService'); 
 // Configuration double
 const gmailTransporter = nodemailer.createTransport({
   service: 'gmail',
@@ -56,11 +56,10 @@ async function notifierClients({ type, campagne, message, canaux = ['email'] }) 
 
   // Récupérer les destinataires
   const contacts = await prisma.contact.findMany({
-    where: {status: 'ACTIVE'},
     select: { id: true, name: true, email: true, phone: true }
   });
 
-  const users = contacts.length > 0 ? contacts : await prisma.user.findMany({
+  const users = await prisma.user.findMany({
     where: { role: 'CLIENT' },
     select: { id: true, name: true, email: true, phone: true }
   });
@@ -128,33 +127,17 @@ async function notifierClients({ type, campagne, message, canaux = ['email'] }) 
 // EMAIL - ENVOI RÉEL avec Resend
 // ============================================================
 async function envoyerEmail(destinataires, { type, campagne, message, template }) {
-  const html = genererEmailHTML({ type, campagne, message, template });
-  let sent = 0;
-  let failed = 0;
-
-  // Envoyer les emails un par un
-  for (const dest of destinataires) {
-    try {
-      await sgMail.send({
-        from: 'DigiLab <camenibahri555@gmail.com>',
-        to: dest.email,
-        subject: `${template.emoji} ${template.title} - ${campagne.title}`,
-        html: html.replace(/{{NOM}}/g, dest.name || 'Client')
-      });
-      sent++;
-      console.log(`[SENDGRID] ✅ Email envoyé à ${dest.email}`);
-    } catch (err) {
-      failed++;
-      console.error(`[SENDGRID] ${dest.email}:`, err.message);
-    }
-  }
-
-  return { 
-    success: sent > 0, 
-    count: sent, 
-    failed: failed,
-    total: destinataires.length 
-  };
+  const msg = message || genererMessage({ type, campagne, template });
+  
+  // ✅ UTILISE sendCampagneNotification de emailService.js
+  const result = await sendCampagneNotification(
+    destinataires,
+    `${template.emoji} ${template.title} - ${campagne.title}`,
+    msg,
+    campagne
+  );
+  
+  return result;
 }
 
 // ============================================================

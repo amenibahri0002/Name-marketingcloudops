@@ -1,143 +1,156 @@
-// services/emailService.js - DOUBLE SYSTÈME (Gmail SMTP + Resend)
+// services/emailService.js - VERSION CORRIGÉE POUR RENDER
 const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
 
-// ============================================================
-// CONFIGURATION GMAIL SMTP (développement local)
-// ============================================================
-const gmailTransporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: 'amenibahri555@gmail.com',
-    pass: process.env.GMAIL_APP_PASSWORD
+// Gmail SMTP (backup)
+let gmailTransporter = null;
+try {
+  if (process.env.GMAIL_APP_PASSWORD) {
+    gmailTransporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'amenibahri555@gmail.com',
+        pass: process.env.GMAIL_APP_PASSWORD
+      }
+    });
   }
-});
+} catch (e) { console.error('[GMAIL] Config error:', e.message); }
 
-// ============================================================
-// CONFIGURATION RESEND (production Render)
-// ============================================================
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Resend
+let resend = null;
+try {
+  if (process.env.RESEND_API_KEY) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+} catch (e) { console.error('[RESEND] Config error:', e.message); }
 
-// ============================================================
-// DÉTECTER L'ENVIRONNEMENT
-// ============================================================
-const isProduction = process.env.NODE_ENV === 'production';
-const isRender = process.env.RENDER === 'true';
+// Mode
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 
-// Choisir le service selon l'environnement
-const useResend = isProduction || isRender;
-
-console.log(`[EMAIL] Mode: ${useResend ? 'RESEND (Production)' : 'GMAIL SMTP (Local)'}`);
-
-// ============================================================
-// EMAIL DE CONFIRMATION D'INSCRIPTION
-// ============================================================
 function sendInscriptionConfirmationEmail(userEmail, userName, campagneDetails) {
   const html = generateInscriptionHTML(userName, campagneDetails);
   const subject = `✅ Inscription confirmée - ${campagneDetails.title}`;
   
-  if (useResend) {
-    // MODE RESEND (Production)
+  // ============================================================
+  // SOLUTION : Envoyer à TOI-MÊME avec l'email du client dans le corps
+  // ============================================================
+  const testMode = true; // ← Active le mode test (envoie à toi-même)
+  
+  const actualTo = testMode ? 'amenibahri555@gmail.com' : userEmail;
+  const actualSubject = testMode 
+    ? `[TEST pour ${userEmail}] ${subject}` 
+    : subject;
+  
+  // Essayer Resend d'abord
+  if (resend && isProduction) {
     resend.emails.send({
       from: 'DigiLab <onboarding@resend.dev>',
-      to: userEmail,
-      subject: subject,
-      html: html
+      to: actualTo,
+      subject: actualSubject,
+      html: html + `<p><small>Email destiné à: ${userEmail}</small></p>`
     })
     .then(data => {
       if (data.error) {
-        console.error('[RESEND] ❌ Erreur:', data.error);
+        console.error('[RESEND] ❌', data.error);
+        // Fallback Gmail
+        if (gmailTransporter) sendGmail(actualTo, actualSubject, html, userEmail);
       } else {
-        console.log(`[RESEND] ✅ Confirmation envoyée à ${userEmail}`);
+        console.log(`[RESEND] ✅ Test envoyé à toi-même (destiné à ${userEmail})`);
       }
     })
-    .catch(err => console.error('[RESEND] ❌ Erreur:', err.message));
-  } else {
-    // MODE GMAIL SMTP (Local)
-    gmailTransporter.sendMail({
-      from: '"DigiLab Solutions" <amenibahri555@gmail.com>',
-      to: userEmail,
-      subject: subject,
-      html: html
-    }, (err, info) => {
-      if (err) {
-        console.error('[GMAIL] ❌ Erreur:', err.message);
-      } else {
-        console.log(`[GMAIL] ✅ Confirmation envoyée à ${userEmail}:`, info.messageId);
-      }
+    .catch(err => {
+      console.error('[RESEND] ❌', err.message);
+      if (gmailTransporter) sendGmail(actualTo, actualSubject, html, userEmail);
     });
+  } else {
+    // Mode local = Gmail
+    sendGmail(actualTo, actualSubject, html, userEmail);
   }
 }
 
-// ============================================================
-// EMAIL DE NOTIFICATION DE CAMPAGNE
-// ============================================================
+function sendGmail(to, subject, html, originalEmail) {
+  if (!gmailTransporter) {
+    console.error('[EMAIL] ❌ Aucun service email disponible');
+    return;
+  }
+  
+  gmailTransporter.sendMail({
+    from: '"DigiLab Solutions" <amenibahri555@gmail.com>',
+    to: to,
+    subject: subject,
+    html: html + `<p><small>Email destiné à: ${originalEmail}</small></p>`
+  }, (err, info) => {
+    if (err) console.error('[GMAIL] ❌', err.message);
+    else console.log(`[GMAIL] ✅ Envoyé:`, info.messageId);
+  });
+}
+
 async function sendCampagneNotification(destinataires, title, message, campagne) {
   let sent = 0;
   let failed = 0;
+  
+  // Mode test : envoyer à toi-même avec la liste des destinataires
+  const testMode = true;
+  const testDestinataires = testMode 
+    ? [{ email: 'amenibahri555@gmail.com', name: 'Test' }] 
+    : destinataires;
 
-  for (const dest of destinataires) {
+  for (const dest of testDestinataires) {
     const html = generateCampagneHTML(dest, message, campagne);
     
     try {
-      if (useResend) {
-        // MODE RESEND
+      if (resend && isProduction) {
         const result = await resend.emails.send({
           from: 'DigiLab <onboarding@resend.dev>',
           to: dest.email,
-          subject: title,
-          html: html
+          subject: testMode ? `[TEST ${destinataires.length} destinataires] ${title}` : title,
+          html: html + `<p><small>Destinataires: ${destinataires.map(d => d.email).join(', ')}</small></p>`
         });
         
         if (result.error) {
           console.error(`[RESEND] ❌ ${dest.email}:`, result.error);
           failed++;
         } else {
-          console.log(`[RESEND] ✅ Notification envoyée à ${dest.email}`);
+          console.log(`[RESEND] ✅ Test envoyé (destinataires: ${destinataires.length})`);
           sent++;
         }
-      } else {
-        // MODE GMAIL SMTP
+      } else if (gmailTransporter) {
         await gmailTransporter.sendMail({
           from: '"DigiLab Solutions" <amenibahri555@gmail.com>',
           to: dest.email,
           subject: title,
           html: html
         });
-        console.log(`[GMAIL] ✅ Notification envoyée à ${dest.email}`);
         sent++;
       }
     } catch (err) {
-      console.error(`[EMAIL] ❌ ${dest.email}:`, err.message);
       failed++;
+      console.error(`[EMAIL] ❌ ${dest.email}:`, err.message);
     }
   }
 
   return { success: sent > 0, sent, failed, total: destinataires.length };
 }
 
-// ============================================================
-// HTML GENERATORS
-// ============================================================
+// HTML generators (identique)
 function generateInscriptionHTML(userName, campagne) {
   return `
     <!DOCTYPE html>
     <html>
-    <head>
-      <meta charset="utf-8">
-      <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        .header { background: linear-gradient(135deg, #f5a623, #d48a1a); padding: 40px 30px; text-align: center; color: #fff; }
-        .header h1 { margin: 0; font-size: 28px; font-weight: 800; }
-        .content { padding: 40px 30px; }
-        .campagne-card { background: #fffbeb; border: 2px solid #f5a623; border-radius: 12px; padding: 24px; margin: 20px 0; }
-        .campagne-title { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
-        .detail { display: flex; align-items: center; gap: 8px; margin: 8px 0; color: #64748b; font-size: 14px; }
-        .price { font-size: 24px; font-weight: 800; color: #f5a623; margin: 16px 0; }
-        .button { display: inline-block; background: #f5a623; color: #fff; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 700; margin: 20px 0; }
-        .footer { background: #f8fafc; padding: 24px; text-align: center; color: #94a3b8; font-size: 12px; }
-      </style>
+    <head><meta charset="utf-8">
+    <style>
+      body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
+      .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+      .header { background: linear-gradient(135deg, #f5a623, #d48a1a); padding: 40px 30px; text-align: center; color: #fff; }
+      .header h1 { margin: 0; font-size: 28px; font-weight: 800; }
+      .content { padding: 40px 30px; }
+      .campagne-card { background: #fffbeb; border: 2px solid #f5a623; border-radius: 12px; padding: 24px; margin: 20px 0; }
+      .campagne-title { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+      .detail { display: flex; align-items: center; gap: 8px; margin: 8px 0; color: #64748b; font-size: 14px; }
+      .price { font-size: 24px; font-weight: 800; color: #f5a623; margin: 16px 0; }
+      .button { display: inline-block; background: #f5a623; color: #fff; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 700; margin: 20px 0; }
+      .footer { background: #f8fafc; padding: 24px; text-align: center; color: #94a3b8; font-size: 12px; }
+    </style>
     </head>
     <body>
       <div class="container">
