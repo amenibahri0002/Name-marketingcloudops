@@ -1,21 +1,22 @@
 ﻿const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authMiddleware: authenticate } = require('../middleware/auth');
-const { sendCampagneNotification } = require('../services/emailService');  // ← Importer mailer.js
-const router = express.Router();
-const prisma = new PrismaClient();
+const { sendCampagneNotification } = require('../services/emailService');
 const { sendPush } = require('../services/pushService');
 
-// POST /api/notifications - Créer ET envoyer (non-bloquant)
+const router = express.Router();
+const prisma = new PrismaClient();
+
+// POST /api/notifications
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { title, message, type, canal, campagneId, segmentId } = req.body;
+    const { title, message, type, canal, campagneId } = req.body;
 
     if (!title || !message || !canal) {
       return res.status(400).json({ error: 'Titre, message et canal requis' });
     }
 
-    // 1. Créer la notification immédiatement
+    // Créer la notification
     const notification = await prisma.notification.create({
       data: {
         title,
@@ -23,38 +24,85 @@ router.post('/', authenticate, async (req, res) => {
         type: type || 'info',
         canal,
         campagneId: campagneId ? parseInt(campagneId) : null,
-        segmentId: segmentId ? parseInt(segmentId) : null,
         status: 'pending'
       }
     });
 
-    // 2. RÉPONDRE IMMÉDIATEMENT au frontend
+    // Répondre immédiatement
     res.status(201).json({
       message: 'Notification créée - Envoi en cours',
       notification
     });
 
-    // 3. ENVOYER L'EMAIL en arrière-plan (après la réponse)
+    // Envoyer en arrière-plan (après la réponse)
     if (canal === 'email') {
-      // Lancer l'envoi sans bloquer
-      envoyerEmailEnArrierePlan(notification, title, message);
+      envoyerEmail(notification, title, message);
+    } else if (canal === 'push') {
+      envoyerPushNotif(notification, title, message);
     }
 
   } catch (error) {
-    console.error('[NOTIFICATION CREATE ERROR]', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error('[NOTIFICATION ERROR]', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
   }
 });
 
-// Fonction async qui tourne en arrière-plan
-async function envoyerPushEnArrierePlan(notification, title, message) {
+// ============================================================
+// FONCTION EMAIL (définie dans le même fichier)
+// ============================================================
+async function envoyerEmail(notification, title, message) {
+  try {
+    const contacts = await prisma.contact.findMany({
+      select: { email: true, name: true }
+    });
+    
+    const users = await prisma.user.findMany({
+      where: { role: 'CLIENT' },
+      select: { email: true, name: true }
+    });
+
+    const allDestinataires = [...contacts, ...users];
+    const uniqueDestinataires = allDestinataires.filter((dest, index, self) => 
+      index === self.findIndex(d => d.email === dest.email)
+    );
+
+    const campagne = notification.campagneId ? await prisma.campagne.findUnique({
+      where: { id: notification.campagneId }
+    }) : null;
+
+    const result = await sendCampagneNotification(uniqueDestinataires, title, message, campagne);
+
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: { 
+        status: result.success ? 'sent' : 'failed',
+        sentAt: result.success ? new Date() : null
+      }
+    });
+
+    console.log(`[EMAIL] ✅ ${result.sent}/${result.total} emails envoyés`);
+
+  } catch (err) {
+    console.error('[EMAIL ERROR]', err);
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: { status: 'failed' }
+    });
+  }
+}
+
+// ============================================================
+// FONCTION PUSH (définie dans le même fichier)
+// ============================================================
+async function envoyerPushNotif(notification, title, message) {
   try {
     const result = await sendPush({
       title: title,
       message: message,
       type: notification.type,
-      campagneId: notification.campagneId,
-      segmentId: notification.segmentId
+      campagneId: notification.campagneId
     });
 
     await prisma.notification.update({
@@ -64,8 +112,7 @@ async function envoyerPushEnArrierePlan(notification, title, message) {
         sentAt: result.success ? new Date() : null,
         metadata: {
           sent: result.sent,
-          failed: result.failed,
-          total: result.total
+          failed: result.failed
         }
       }
     });
@@ -73,92 +120,21 @@ async function envoyerPushEnArrierePlan(notification, title, message) {
     console.log(`[PUSH] ✅ ${result.sent}/${result.total} push envoyés`);
 
   } catch (err) {
-    console.error('[PUSH BACKGROUND ERROR]', err);
+    console.error('[PUSH ERROR]', err);
     await prisma.notification.update({
       where: { id: notification.id },
-      data: { status: 'failed', metadata: { error: err.message } }
+      data: { status: 'failed' }
     });
   }
 }
-// ============================================================
-// GET /api/notifications - Historique
-// ============================================================
+
+// GET /api/notifications
 router.get('/', authenticate, async (req, res) => {
   try {
-    const { page = 1, limit = 20, type, canal, status } = req.query;
-
-    const where = {};
-    if (type) where.type = type;
-    if (canal) where.canal = canal;
-    if (status) where.status = status;
-
     const notifications = await prisma.notification.findMany({
-      where,
-      include: {
-        campagne: { select: { id: true, title: true, slug: true } }
-      },
-      orderBy: { createdAt: 'desc' },
-      skip: (parseInt(page) - 1) * parseInt(limit),
-      take: parseInt(limit)
+      orderBy: { createdAt: 'desc' }
     });
-
-    const total = await prisma.notification.count({ where });
-
-    res.json({
-      notifications,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit))
-      }
-    });
-  } catch (error) {
-    console.error('[NOTIFICATIONS LIST ERROR]', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// ============================================================
-// GET /api/notifications/stats - Statistiques
-// ============================================================
-router.get('/stats', authenticate, async (req, res) => {
-  try {
-    const stats = await prisma.notification.groupBy({
-      by: ['canal', 'status'],
-      _count: { id: true }
-    });
-
-    const byType = await prisma.notification.groupBy({
-      by: ['type'],
-      _count: { id: true }
-    });
-
-    res.json({ byCanalStatus: stats, byType });
-  } catch (error) {
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// ============================================================
-// GET /api/notifications/:id - Détail
-// ============================================================
-router.get('/:id', authenticate, async (req, res) => {
-  try {
-    const notification = await prisma.notification.findUnique({
-      where: { id: parseInt(req.params.id) },
-      include: {
-        campagne: true,
-        client: true,
-        segment: true
-      }
-    });
-
-    if (!notification) {
-      return res.status(404).json({ error: 'Notification non trouvée' });
-    }
-
-    res.json(notification);
+    res.json(notifications);
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
