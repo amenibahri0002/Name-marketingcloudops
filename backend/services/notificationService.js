@@ -1,9 +1,10 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// Configuration Gmail SMTP
-const transporter = nodemailer.createTransport({
+// Configuration double
+const gmailTransporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'amenibahri555@gmail.com',
@@ -11,6 +12,8 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+const resend = new Resend(process.env.RESEND_API_KEY);
+const useResend = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 // Templates de notifications (identique)
 const TEMPLATES = {
   nouvelle_campagne: {
@@ -133,7 +136,7 @@ async function envoyerEmail(destinataires, { type, campagne, message, template }
   for (const dest of destinataires) {
     try {
       await sgMail.send({
-        from: 'DigiLab <contact@digilab.tn>',
+        from: 'DigiLab <camenibahri555@gmail.com>',
         to: dest.email,
         subject: `${template.emoji} ${template.title} - ${campagne.title}`,
         html: html.replace(/{{NOM}}/g, dest.name || 'Client')
