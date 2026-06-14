@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PrivateRoute from './components/PrivateRoute';
 import Layout from './Layout';
@@ -18,7 +18,6 @@ import Profil from './pages/Profil';
 import ReportingCloud from './pages/Reporting';
 import Monitoring from './pages/Monitoring';
 import Inscriptions from './pages/MesCampagnes';
-import { useEffect } from 'react';
 import { requestNotificationPermission } from './firebase';
 // Lazy loading pour les pages lourdes
 const Login = lazy(() => import('./pages/Login'));
