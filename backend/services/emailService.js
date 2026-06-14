@@ -1,8 +1,8 @@
-// services/emailService.js - VERSION CORRIGÉE POUR RENDER
+// services/emailService.js - VERSION FINALE AVEC DOMAINE VÉRIFIÉ
 const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
 
-// Gmail SMTP (backup)
+// Gmail SMTP (backup pour local)
 let gmailTransporter = null;
 try {
   if (process.env.GMAIL_APP_PASSWORD) {
@@ -27,100 +27,106 @@ try {
 // Mode
 const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 
+// ============================================================
+// CONFIGURATION DE L'EXPÉDITEUR
+// ============================================================
+// En production : utilise le domaine vérifié digipip.com
+// En local : utilise Gmail SMTP
+const FROM_EMAIL = isProduction ? 'contact@digipip.com' : 'amenibahri555@gmail.com';
+const FROM_NAME = 'DigiLab Solutions';
+
+console.log(`[EMAIL] Mode: ${isProduction ? 'Production (Resend)' : 'Local (Gmail)'}`);
+console.log(`[EMAIL] From: ${FROM_NAME} <${FROM_EMAIL}>`);
+
+// ============================================================
+// EMAIL DE CONFIRMATION D'INSCRIPTION
+// ============================================================
 function sendInscriptionConfirmationEmail(userEmail, userName, campagneDetails) {
   const html = generateInscriptionHTML(userName, campagneDetails);
   const subject = `✅ Inscription confirmée - ${campagneDetails.title}`;
   
-  // ============================================================
-  // SOLUTION : Envoyer à TOI-MÊME avec l'email du client dans le corps
-  // ============================================================
-  const testMode = true; // ← Active le mode test (envoie à toi-même)
-  
-  const actualTo = testMode ? 'amenibahri555@gmail.com' : userEmail;
-  const actualSubject = testMode 
-    ? `[TEST pour ${userEmail}] ${subject}` 
-    : subject;
-  
-  // Essayer Resend d'abord
-  if (resend && isProduction) {
+  if (isProduction && resend) {
+    // MODE PRODUCTION - Envoi direct au client via Resend
     resend.emails.send({
-      from: 'DigiLab <onboarding@resend.dev>',
-      to: actualTo,
-      subject: actualSubject,
-      html: html + `<p><small>Email destiné à: ${userEmail}</small></p>`
+      from: `${FROM_NAME} <${FROM_EMAIL}>`,
+      to: userEmail,  // ← Envoie directement au client !
+      subject: subject,
+      reply_to: 'amenibahri555@gmail.com',  // Si le client répond, ça va là
+      html: html
     })
     .then(data => {
       if (data.error) {
         console.error('[RESEND] ❌', data.error);
         // Fallback Gmail
-        if (gmailTransporter) sendGmail(actualTo, actualSubject, html, userEmail);
+        if (gmailTransporter) sendGmail(userEmail, subject, html);
       } else {
-        console.log(`[RESEND] ✅ Test envoyé à toi-même (destiné à ${userEmail})`);
+        console.log(`[RESEND] ✅ Confirmation envoyée à ${userEmail}`);
       }
     })
     .catch(err => {
       console.error('[RESEND] ❌', err.message);
-      if (gmailTransporter) sendGmail(actualTo, actualSubject, html, userEmail);
+      if (gmailTransporter) sendGmail(userEmail, subject, html);
     });
   } else {
-    // Mode local = Gmail
-    sendGmail(actualTo, actualSubject, html, userEmail);
+    // MODE LOCAL - Gmail SMTP
+    sendGmail(userEmail, subject, html);
   }
 }
 
-function sendGmail(to, subject, html, originalEmail) {
+function sendGmail(to, subject, html) {
   if (!gmailTransporter) {
     console.error('[EMAIL] ❌ Aucun service email disponible');
     return;
   }
   
   gmailTransporter.sendMail({
-    from: '"DigiLab Solutions" <amenibahri555@gmail.com>',
+    from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
     to: to,
     subject: subject,
-    html: html + `<p><small>Email destiné à: ${originalEmail}</small></p>`
+    html: html
   }, (err, info) => {
     if (err) console.error('[GMAIL] ❌', err.message);
-    else console.log(`[GMAIL] ✅ Envoyé:`, info.messageId);
+    else console.log(`[GMAIL] ✅ Envoyé à ${to}:`, info.messageId);
   });
 }
 
+// ============================================================
+// EMAIL DE NOTIFICATION DE CAMPAGNE
+// ============================================================
 async function sendCampagneNotification(destinataires, title, message, campagne) {
   let sent = 0;
   let failed = 0;
-  
-  // Mode test : envoyer à toi-même avec la liste des destinataires
-  const testMode = true;
-  const testDestinataires = testMode 
-    ? [{ email: 'amenibahri555@gmail.com', name: 'Test' }] 
-    : destinataires;
 
-  for (const dest of testDestinataires) {
+  for (const dest of destinataires) {
     const html = generateCampagneHTML(dest, message, campagne);
     
     try {
-      if (resend && isProduction) {
+      if (isProduction && resend) {
+        // MODE PRODUCTION - Resend
         const result = await resend.emails.send({
-          from: 'DigiLab <onboarding@resend.dev>',
+          from: `${FROM_NAME} <${FROM_EMAIL}>`,
           to: dest.email,
-          subject: testMode ? `[TEST ${destinataires.length} destinataires] ${title}` : title,
-          html: html + `<p><small>Destinataires: ${destinataires.map(d => d.email).join(', ')}</small></p>`
+          subject: title,
+          reply_to: 'amenibahri555@gmail.com',
+          html: html
         });
         
         if (result.error) {
           console.error(`[RESEND] ❌ ${dest.email}:`, result.error);
           failed++;
         } else {
-          console.log(`[RESEND] ✅ Test envoyé (destinataires: ${destinataires.length})`);
+          console.log(`[RESEND] ✅ Notification envoyée à ${dest.email}`);
           sent++;
         }
       } else if (gmailTransporter) {
+        // MODE LOCAL - Gmail
         await gmailTransporter.sendMail({
-          from: '"DigiLab Solutions" <amenibahri555@gmail.com>',
+          from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
           to: dest.email,
           subject: title,
           html: html
         });
+        console.log(`[GMAIL] ✅ Notification envoyée à ${dest.email}`);
         sent++;
       }
     } catch (err) {
