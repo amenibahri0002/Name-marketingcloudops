@@ -3,6 +3,7 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
 const prisma = new PrismaClient();
+const { sendInscriptionConfirmationEmail } = require('../services/emailService');
 
 // POST /api/inscriptions - Inscription (publique ou connectée)
 router.post('/', async (req, res) => {
@@ -25,6 +26,7 @@ router.post('/', async (req, res) => {
     const campagne = await prisma.campagne.findUnique({
       where: { id: parseInt(campagneId) }
     });
+
     if (!campagne) {
       return res.status(404).json({ error: 'Formation non trouvée' });
     }
@@ -85,7 +87,9 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // ============================================================
     // CRÉER L'INSCRIPTION
+    // ============================================================
     let inscription;
     try {
       inscription = await prisma.inscription.create({
@@ -114,7 +118,9 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // ============================================================
     // CRÉER LE PAIEMENT (optionnel)
+    // ============================================================
     if (prixTotal) {
       try {
         await prisma.paiement.create({
@@ -133,8 +139,31 @@ router.post('/', async (req, res) => {
       }
     }
 
+    // ============================================================
+    // ENVOYER L'EMAIL DE CONFIRMATION (APRÈS création de l'inscription)
+    // ============================================================
+    if (inscription.email) {
+      try {
+        await sendInscriptionConfirmationEmail(
+          inscription.email,
+          inscription.name,
+          {
+            title: campagne.title,
+            date: campagne.date,
+            dureeHeures: campagne.dureeHeures,
+            location: campagne.location,
+            format: campagne.format,
+            prix: campagne.prix
+          }
+        );
+        console.log('Email de confirmation envoyé à', inscription.email);
+      } catch (emailError) {
+        console.error('Erreur envoi email (non bloquant):', emailError.message);
+      }
+    }
+
     res.status(201).json({
-      message: 'Inscription réussie !',
+      message: 'Inscription réussie ! Un email de confirmation vous a été envoyé.',
       inscription,
       needAccount: !userId
     });
