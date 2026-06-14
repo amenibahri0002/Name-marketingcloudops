@@ -43,21 +43,20 @@ const TEMPLATES = {
 };
 
 // ============================================================
-// NOTIFIER TOUS LES CLIENTS (multi-canal) - NON BLOQUANT
+// NOTIFIER TOUS LES CLIENTS (multi-canal) - ENVOI RÉEL
 // ============================================================
 async function notifierClients({ type, campagne, message, canaux = ['email'] }) {
   const template = TEMPLATES[type] || TEMPLATES.nouvelle_campagne;
 
-  // Récupérer tous les contacts/clients
+  // Récupérer les destinataires
   const contacts = await prisma.contact.findMany({
     where: { clientId: campagne.clientId },
     select: { id: true, name: true, email: true, phone: true }
   });
 
-  // Si pas de contacts spécifiques, notifier tous les utilisateurs
   const users = contacts.length > 0 ? contacts : await prisma.user.findMany({
     where: { role: 'CLIENT' },
-    select: { id: true, name: true, email: true }
+    select: { id: true, name: true, email: true, phone: true }
   });
 
   const destinataires = contacts.length > 0 ? contacts : users;
@@ -69,8 +68,7 @@ async function notifierClients({ type, campagne, message, canaux = ['email'] }) 
       let result;
       switch (canal) {
         case 'email':
-          // NON BLOQUANT : lancer l'envoi sans attendre
-          result = envoyerEmailNonBloquant(destinataires, { type, campagne, message, template });
+          result = await envoyerEmail(destinataires, { type, campagne, message, template });
           break;
         case 'sms':
           result = await envoyerSMS(destinataires, { type, campagne, message, template });
@@ -88,19 +86,20 @@ async function notifierClients({ type, campagne, message, canaux = ['email'] }) 
           result = { success: false, error: 'Canal inconnu' };
       }
 
-      // Sauvegarder la notification en base (status = pending pour email)
+      // Sauvegarder la notification en base
       await prisma.notification.create({
         data: {
           title: template.title,
           message: message || genererMessage({ type, campagne, template }),
           type,
           canal,
-          status: canal === 'email' ? 'pending' : (result.success ? 'sent' : 'failed'),
+          status: result.success ? 'sent' : 'failed',
           campagneId: campagne.id,
-          sentAt: canal === 'email' ? null : (result.success ? new Date() : null),
+          sentAt: result.success ? new Date() : null,
           metadata: {
             destinatairesCount: destinataires.length,
-            result: result.success ? 'success' : result.error
+            sent: result.count || 0,
+            error: result.error || null
           }
         }
       });
@@ -116,78 +115,232 @@ async function notifierClients({ type, campagne, message, canaux = ['email'] }) 
 }
 
 // ============================================================
-// EMAIL - NON BLOQUANT (Resend)
+// EMAIL - ENVOI RÉEL avec Resend
 // ============================================================
-function envoyerEmailNonBloquant(destinataires, { type, campagne, message, template }) {
+async function envoyerEmail(destinataires, { type, campagne, message, template }) {
   const html = genererEmailHTML({ type, campagne, message, template });
+  let sent = 0;
+  let failed = 0;
 
-  // Lancer l'envoi en arrière-plan sans attendre
-  (async () => {
-    let sent = 0;
+  // Envoyer les emails un par un
+  for (const dest of destinataires) {
+    try {
+      await resend.emails.send({
+        from: 'DigiLab <onboarding@resend.dev>',
+        to: dest.email,
+        subject: `${template.emoji} ${template.title} - ${campagne.title}`,
+        html: html.replace(/{{NOM}}/g, dest.name || 'Client')
+      });
+      sent++;
+      console.log(`[RESEND] ✅ Email envoyé à ${dest.email}`);
+    } catch (err) {
+      failed++;
+      console.error(`[RESEND ERROR] ${dest.email}:`, err.message);
+    }
+  }
+
+  return { 
+    success: sent > 0, 
+    count: sent, 
+    failed: failed,
+    total: destinataires.length 
+  };
+}
+
+// ============================================================
+// SMS - ENVOI RÉEL (Twilio)
+// ============================================================
+async function envoyerSMS(destinataires, { type, campagne, message, template }) {
+  try {
+    // Vérifier si Twilio est configuré
+    if (!process.env.TWILIO_SID || !process.env.TWILIO_TOKEN) {
+      console.log('[SMS] Twilio non configuré - envoi simulé');
+      return { success: true, count: 0, note: 'Twilio non configuré' };
+    }
+
+    const twilio = require('twilio');
+    const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
     
+    const smsMessage = `${template.emoji} ${template.title}\n${campagne.title}\n${message || ''}\nPrix: ${campagne.prix} TND`;
+
+    let sent = 0;
     for (const dest of destinataires) {
+      if (!dest.phone) continue;
       try {
-        await resend.emails.send({
-          from: 'DigiLab <onboarding@resend.dev>',
-          to: dest.email,
-          subject: `${template.emoji} ${template.title} - ${campagne.title}`,
-          html: html.replace(/{{NOM}}/g, dest.name || 'Client')
+        await client.messages.create({
+          body: smsMessage,
+          from: process.env.TWILIO_PHONE,
+          to: dest.phone
         });
         sent++;
-        console.log(`[RESEND] ✅ Email envoyé à ${dest.email}`);
       } catch (err) {
-        console.error(`[RESEND ERROR] ${dest.email}:`, err.message);
+        console.error(`[SMS ERROR] ${dest.phone}:`, err.message);
       }
     }
 
-    console.log(`[RESEND] ✅ Total: ${sent}/${destinataires.length} emails envoyés`);
-  })();
-
-  // Retourner immédiatement (non-bloquant)
-  return { success: true, count: destinataires.length, total: destinataires.length, note: 'Envoi en arrière-plan' };
+    return { success: sent > 0, count: sent, total: destinataires.length };
+  } catch (err) {
+    console.error('[SMS ERROR]', err);
+    return { success: false, error: err.message };
+  }
 }
 
 // ============================================================
-// SMS (simulé - nécessite Twilio)
-// ============================================================
-async function envoyerSMS(destinataires, { type, campagne, message, template }) {
-  const smsMessage = `${template.emoji} ${template.title}\n${campagne.title}\n${message || ''}\nPrix: ${campagne.prix} TND\nInscrivez-vous: digilab.tn/campagnes/${campagne.slug}`;
-
-  console.log(`[SMS] Envoi simulé à ${destinataires.length} contacts`);
-  console.log(`[SMS] Message: ${smsMessage.substring(0, 100)}...`);
-
-  return { success: true, count: destinataires.length, note: 'Twilio requis pour envoi réel' };
-}
-
-// ============================================================
-// PUSH (simulé - nécessite Firebase)
+// PUSH - ENVOI RÉEL (Firebase)
 // ============================================================
 async function envoyerPush(destinataires, { type, campagne, message, template }) {
-  console.log(`[PUSH] Envoi simulé à ${destinataires.length} devices`);
+  try {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+      console.log('[PUSH] Firebase non configuré - envoi simulé');
+      return { success: true, count: 0, note: 'Firebase non configuré' };
+    }
 
-  return { success: true, count: destinataires.length, note: 'Firebase requis pour envoi réel' };
+    const admin = require('firebase-admin');
+    
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
+      });
+    }
+
+    // Récupérer les tokens FCM
+    const tokens = destinataires
+      .filter(c => c.fcmToken)
+      .map(c => c.fcmToken);
+
+    if (tokens.length === 0) {
+      return { success: false, error: 'Aucun token FCM trouvé' };
+    }
+
+    const pushMessage = {
+      notification: {
+        title: `${template.emoji} ${template.title}`,
+        body: message || genererMessage({ type, campagne, template })
+      },
+      data: {
+        campagneId: campagne.id.toString(),
+        type: type
+      },
+      tokens: tokens
+    };
+
+    const response = await admin.messaging().sendMulticast(pushMessage);
+    
+    return { 
+      success: response.successCount > 0,
+      count: response.successCount,
+      failed: response.failureCount,
+      total: tokens.length
+    };
+  } catch (err) {
+    console.error('[PUSH ERROR]', err);
+    return { success: false, error: err.message };
+  }
 }
 
 // ============================================================
-// WHATSAPP (simulé)
+// WHATSAPP - ENVOI RÉEL (WhatsApp Business API)
 // ============================================================
 async function envoyerWhatsApp(destinataires, { type, campagne, message, template }) {
-  console.log(`[WHATSAPP] Envoi simulé à ${destinataires.length} numéros`);
+  try {
+    if (!process.env.WHATSAPP_TOKEN || !process.env.WHATSAPP_PHONE_ID) {
+      console.log('[WHATSAPP] Non configuré - envoi simulé');
+      return { success: true, count: 0, note: 'WhatsApp non configuré' };
+    }
 
-  return { success: true, count: destinataires.length, note: 'WhatsApp Business API requise' };
+    const axios = require('axios');
+    let sent = 0;
+
+    for (const dest of destinataires) {
+      if (!dest.phone) continue;
+      try {
+        await axios.post(`https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_ID}/messages`, {
+          messaging_product: 'whatsapp',
+          to: dest.phone.replace('+', ''),
+          type: 'template',
+          template: {
+            name: 'digilab_notification',
+            language: { code: 'fr' },
+            components: [{
+              type: 'body',
+              parameters: [
+                { type: 'text', text: template.title },
+                { type: 'text', text: message || genererMessage({ type, campagne, template }) }
+              ]
+            }]
+          }
+        }, {
+          headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` }
+        });
+        sent++;
+      } catch (err) {
+        console.error(`[WHATSAPP ERROR] ${dest.phone}:`, err.message);
+      }
+    }
+
+    return { success: sent > 0, count: sent, total: destinataires.length };
+  } catch (err) {
+    console.error('[WHATSAPP ERROR]', err);
+    return { success: false, error: err.message };
+  }
 }
 
 // ============================================================
-// RÉSEAUX SOCIAUX (simulé)
+// RÉSEAUX SOCIAUX - ENVOI RÉEL
 // ============================================================
 async function publierSocial({ type, campagne, message, template }) {
-  console.log(`[SOCIAL] Publication simulée: ${campagne.title}`);
+  try {
+    const platforms = [];
+    
+    // Facebook
+    if (process.env.FB_ACCESS_TOKEN && process.env.FB_PAGE_ID) {
+      try {
+        const axios = require('axios');
+        await axios.post(`https://graph.facebook.com/v18.0/${process.env.FB_PAGE_ID}/feed`, {
+          message: `${template.emoji} ${template.title}\n\n${message || genererMessage({ type, campagne, template })}`,
+          access_token: process.env.FB_ACCESS_TOKEN
+        });
+        platforms.push('Facebook');
+      } catch (err) {
+        console.error('[FACEBOOK ERROR]', err.message);
+      }
+    }
 
-  return { success: true, platforms: ['Facebook', 'LinkedIn', 'Instagram'], note: 'APIs Meta/LinkedIn requises' };
+    // LinkedIn
+    if (process.env.LINKEDIN_TOKEN && process.env.LINKEDIN_PERSON_ID) {
+      try {
+        const axios = require('axios');
+        await axios.post('https://api.linkedin.com/v2/shares', {
+          content: {
+            contentEntities: [{
+              entityLocation: `https://digipip.vercel.app/campagnes/${campagne.slug}`
+            }],
+            title: template.title
+          },
+          owner: `urn:li:person:${process.env.LINKEDIN_PERSON_ID}`,
+          text: { text: message || genererMessage({ type, campagne, template }) }
+        }, {
+          headers: { Authorization: `Bearer ${process.env.LINKEDIN_TOKEN}` }
+        });
+        platforms.push('LinkedIn');
+      } catch (err) {
+        console.error('[LINKEDIN ERROR]', err.message);
+      }
+    }
+
+    return { 
+      success: platforms.length > 0, 
+      platforms,
+      count: platforms.length 
+    };
+  } catch (err) {
+    console.error('[SOCIAL ERROR]', err);
+    return { success: false, error: err.message };
+  }
 }
 
 // ============================================================
-// GÉNÉRATEURS DE CONTENU (identique)
+// GÉNÉRATEURS DE CONTENU
 // ============================================================
 function genererMessage({ type, campagne, template }) {
   const messages = {
@@ -213,9 +366,9 @@ function genererEmailHTML({ type, campagne, message, template }) {
   <meta charset="UTF-8">
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
-    .container { max-width: 600px; margin: 0 auto; background: white; }
+    .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
     .header { background: ${template.color}; padding: 40px 30px; text-align: center; }
-    .header h1 { color: white; margin: 0; font-size: 28px; }
+    .header h1 { color: white; margin: 0; font-size: 28px; font-weight: 800; }
     .content { padding: 40px 30px; }
     .badge { display: inline-block; padding: 8px 16px; background: #FFF8E7; color: #D48A1A; border-radius: 20px; font-weight: 700; font-size: 14px; margin-bottom: 20px; }
     .title { font-size: 24px; font-weight: 800; color: #0A0A0A; margin-bottom: 16px; }
@@ -287,7 +440,7 @@ function genererEmailHTML({ type, campagne, message, template }) {
 }
 
 // ============================================================
-// VÉRIFIER ALERTES AUTOMATIQUES (identique)
+// VÉRIFIER ALERTES AUTOMATIQUES
 // ============================================================
 async function verifierAlertesAutomatiques(campagneId) {
   const campagne = await prisma.campagne.findUnique({
