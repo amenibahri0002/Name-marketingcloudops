@@ -258,5 +258,27 @@ router.get('/', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur', details: error.message });
   }
 });
+// PATCH /api/inscriptions/:id/status - Changer le statut (Accepter/Refuser)
+router.patch('/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status || !['en_attente', 'accepte', 'refuse', 'paye'].includes(status)) {
+      return res.status(400).json({ error: 'Statut invalide' });
+    }
+
+    const inscription = await prisma.inscription.update({
+      where: { id: parseInt(id) },
+      data: { status }
+    });
+
+    res.json({ success: true, inscription });
+
+  } catch (err) {
+    console.error('[INSCRIPTION STATUS ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 module.exports = router;
