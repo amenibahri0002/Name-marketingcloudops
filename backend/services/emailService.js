@@ -1,4 +1,4 @@
-// services/emailService.js - VERSION FINALE AVEC DOMAINE VÉRIFIÉ
+// services/emailService.js - VERSION FINALE SANS MODE TEST
 const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
 
@@ -27,15 +27,11 @@ try {
 // Mode
 const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 
-// ============================================================
-// CONFIGURATION DE L'EXPÉDITEUR
-// ============================================================
-// En production : utilise le domaine vérifié digipip.com
-// En local : utilise Gmail SMTP
+// Configuration de l'expéditeur
 const FROM_EMAIL = isProduction ? 'contact@digipip.com' : 'amenibahri555@gmail.com';
 const FROM_NAME = 'DigiLab Solutions';
 
-console.log(`[EMAIL] Mode: ${isProduction ? 'Production (Resend)' : 'Local (Gmail)'}`);
+console.log(`[EMAIL] Mode: ${isProduction ? 'Production' : 'Local'}`);
 console.log(`[EMAIL] From: ${FROM_NAME} <${FROM_EMAIL}>`);
 
 // ============================================================
@@ -45,13 +41,13 @@ function sendInscriptionConfirmationEmail(userEmail, userName, campagneDetails) 
   const html = generateInscriptionHTML(userName, campagneDetails);
   const subject = `✅ Inscription confirmée - ${campagneDetails.title}`;
   
+  // Envoi direct au client (PAS de mode test)
   if (isProduction && resend) {
-    // MODE PRODUCTION - Envoi direct au client via Resend
     resend.emails.send({
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      to: userEmail,  // ← Envoie directement au client !
+      to: userEmail,  // ← DIRECTEMENT AU CLIENT
       subject: subject,
-      reply_to: 'amenibahri555@gmail.com',  // Si le client répond, ça va là
+      reply_to: 'amenibahri555@gmail.com',  // Si réponse, va là
       html: html
     })
     .then(data => {
@@ -68,7 +64,7 @@ function sendInscriptionConfirmationEmail(userEmail, userName, campagneDetails) 
       if (gmailTransporter) sendGmail(userEmail, subject, html);
     });
   } else {
-    // MODE LOCAL - Gmail SMTP
+    // Mode local = Gmail
     sendGmail(userEmail, subject, html);
   }
 }
@@ -102,10 +98,9 @@ async function sendCampagneNotification(destinataires, title, message, campagne)
     
     try {
       if (isProduction && resend) {
-        // MODE PRODUCTION - Resend
         const result = await resend.emails.send({
           from: `${FROM_NAME} <${FROM_EMAIL}>`,
-          to: dest.email,
+          to: dest.email,  // ← DIRECTEMENT AU CLIENT
           subject: title,
           reply_to: 'amenibahri555@gmail.com',
           html: html
@@ -119,7 +114,6 @@ async function sendCampagneNotification(destinataires, title, message, campagne)
           sent++;
         }
       } else if (gmailTransporter) {
-        // MODE LOCAL - Gmail
         await gmailTransporter.sendMail({
           from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
           to: dest.email,
