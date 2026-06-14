@@ -160,7 +160,6 @@ router.post('/', async (req, res) => {
               name: inscription.name,
               email: inscription.email,
               phone: inscription.phone || '',
-              entreprise: inscription.entreprise || '',
               clientId: clientId
             }
           });
