@@ -53,7 +53,7 @@ const clientMenu = [
   
   { section: 'Compte', items: [
     { path: '/profil', icon: '👤', label: 'Mon Profil' },
-     { path: '#notifications', icon: '🔔', label: 'Notifications', isToggle: true },
+{ path: '/notifications', icon: '🔔', label: 'Notifications' },
   ]},
 ];
 
@@ -76,6 +76,7 @@ function Layout({ children }) {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [notifs, setNotifs] = useState(NOTIFS);
+  const [pushEnabled, setPushEnabled] = useState(false);
 
   const notifRef = useRef(null);
   const profileRef = useRef(null);
@@ -107,6 +108,39 @@ function Layout({ children }) {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+   useEffect(() => {
+    setPushEnabled(Notification.permission === 'granted');
+  }, []);
+   const togglePushNotifications = async () => {
+    if (pushEnabled) {
+      // Déjà activé, rien à faire
+      return;
+    }
+     try {
+      const { requestNotificationPermission } = await import('./firebase');
+      const token = await requestNotificationPermission();
+      
+      if (token) {
+        setPushEnabled(true);
+         // Envoyer au backend
+        await fetch('https://marketingcloudops-backend.onrender.com/api/users/fcm-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ fcmToken: token })
+        });
+        
+        alert('✅ Notifications push activées !');
+      } else {
+        alert('❌ Permission refusée. Vérifiez les paramètres de votre navigateur.');
+      }
+    } catch (err) {
+      console.error('Erreur push:', err);
+      alert('Erreur lors de l\'activation des notifications');
+    }
+  };
 
   const menuGroups = userRole === 'ADMIN' 
     ? adminMenu 
@@ -240,11 +274,47 @@ function Layout({ children }) {
               <ul style={{ listStyle: 'none', padding: sidebarCollapsed ? '0 0.4rem' : '0 0.8rem' }}>
                 {group.items.map(item => (
                   <li key={item.path} style={{ marginBottom: 3 }}>
+                    {item.isToggle ? (
+                      <div 
+        onClick={togglePushNotifications}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: sidebarCollapsed ? '0.7rem' : '0.7rem 1rem',
+          borderRadius: 10,
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          color: pushEnabled ? '#10b981' : 'rgba(255,255,255,0.6)',
+          background: pushEnabled ? 'rgba(16,185,129,0.1)' : 'transparent',
+        }}
+      >
+        <span style={{ fontSize: '1.1rem', width: 24, textAlign: 'center' }}>
+          {pushEnabled ? '🔔' : '🔕'}
+        </span>
+        {!sidebarCollapsed && (
+          <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>
+            {pushEnabled ? 'Notifs activées' : item.label}
+          </span>
+        )}
+        {!sidebarCollapsed && pushEnabled && (
+          <span style={{ 
+            marginLeft: 'auto', 
+            width: 8, 
+            height: 8, 
+            borderRadius: '50%', 
+            background: '#10b981',
+            boxShadow: '0 0 6px #10b981'
+          }} />
+        )}
+      </div>
+    ) : (
                     <SidebarMenuItem 
                       item={item} 
                       isActive={location.pathname === item.path}
                       collapsed={sidebarCollapsed}
                     />
+    )}
                   </li>
                 ))}
               </ul>

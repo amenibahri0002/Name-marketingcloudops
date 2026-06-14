@@ -19,6 +19,7 @@ import ReportingCloud from './pages/Reporting';
 import Monitoring from './pages/Monitoring';
 import Inscriptions from './pages/MesCampagnes';
 import { requestNotificationPermission } from './firebase';
+import Notifications from './pages/Notifications';
 
 // Lazy loading pour les pages lourdes
 const Login = lazy(() => import('./pages/Login'));
@@ -230,6 +231,11 @@ function App() {
               <Profil />
             </PrivateRoute>
           } />
+          <Route path="/notifications" element={
+  <PrivateRoute roles={['CLIENT']}>
+    <Notifications />
+  </PrivateRoute>
+} />
 
           {/* ROUTES COMMUNES */}
           <Route path="/campagnes" element={
