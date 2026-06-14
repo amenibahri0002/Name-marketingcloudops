@@ -48,6 +48,24 @@ router.get('/', authMiddleware, requireRole(ROLES.ADMIN), async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+router.post('/fcm-token', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Non authentifié' });
+
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'techevent_secret_2026');
+
+    await prisma.user.update({
+      where: { id: decoded.userId },
+      data: { fcmToken: req.body.fcmToken }
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // POST /api/users - Créer un utilisateur (ADMIN uniquement)
 router.post('/', authMiddleware, requireRole(ROLES.ADMIN), async (req, res) => {
