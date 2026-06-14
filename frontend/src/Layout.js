@@ -53,7 +53,7 @@ const clientMenu = [
   
   { section: 'Compte', items: [
     { path: '/profil', icon: '👤', label: 'Mon Profil' },
-{ path: '/notifications', icon: '🔔', label: 'Notifications' },
+{ path: '/notifications', icon: '🔔', label: 'Notifications', isToggle : true },
   ]},
 ];
 
@@ -123,7 +123,8 @@ function Layout({ children }) {
       if (token) {
         setPushEnabled(true);
          // Envoyer au backend
-        await fetch('https://marketingcloudops-backend.onrender.com/api/users/fcm-token', {
+
+        const response = await fetch('https://marketingcloudops-backend.onrender.com/api/users/fcm-token', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -131,14 +132,14 @@ function Layout({ children }) {
           },
           body: JSON.stringify({ fcmToken: token })
         });
-        
-        alert('✅ Notifications push activées !');
+         if (response.ok) {
+        console.log('✅ Token FCM sauvegardé dans le backend');
       } else {
-        alert('❌ Permission refusée. Vérifiez les paramètres de votre navigateur.');
+        console.error('❌ Erreur sauvegarde token:', await response.text());
+      }
       }
     } catch (err) {
       console.error('Erreur push:', err);
-      alert('Erreur lors de l\'activation des notifications');
     }
   };
 
