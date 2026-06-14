@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PrivateRoute from './components/PrivateRoute';
 import Layout from './Layout';
@@ -18,7 +18,6 @@ import Profil from './pages/Profil';
 import ReportingCloud from './pages/Reporting';
 import Monitoring from './pages/Monitoring';
 import Inscriptions from './pages/MesCampagnes';
-import { requestNotificationPermission } from './firebase';
 // Lazy loading pour les pages lourdes
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -64,22 +63,7 @@ const getUserRole = () => {
 
   return '';
 };
-useEffect(() => {
-  const init = async () => {
-    const token = await requestNotificationPermission();
-    if (token && localStorage.getItem('token')) {
-   await fetch('https://marketingcloudops-backend.onrender.com/api/users/fcm-token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ fcmToken: token })
-      });
-    }
-  };
-  init();
-}, []);
+
 // ── DASHBOARD ROUTE INTELLIGENT ──
 function DashboardRoute() {
   const role = getUserRole();
