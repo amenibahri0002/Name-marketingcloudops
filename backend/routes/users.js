@@ -50,13 +50,14 @@ router.get('/', authMiddleware, requireRole(ROLES.ADMIN), async (req, res) => {
 })
 router.post('/fcm-token', authMiddleware, async (req, res) => {
   try {
-   try {
+   
     const userId = req.user.id; // ← Utilise req.user.id au lieu de decoder le token manuellement
 
     await prisma.user.update({
       where: { id: userId },
       data: { fcmToken: req.body.fcmToken }
     });
+    
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -9,26 +9,45 @@ export default function Notifications() {
     setStatus(Notification.permission);
   }, []);
 
-  const enable = async () => {
-    const fcmToken = await requestNotificationPermission();
-    if (fcmToken) {
-      setStatus('granted');
-      setToken(fcmToken);
+  const toggleNotifications = async () => {
+    if (status === 'granted') {
+      // Désactiver les notifications
+      setStatus('default');
+      setToken(null);
       
-      // Sauvegarder dans le backend
+      // Supprimer le token du backend
       await fetch('https://marketingcloudops-backend.onrender.com/api/users/fcm-token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ fcmToken })
+        body: JSON.stringify({ fcmToken: null })
       });
       
-      alert('✅ Notifications activées !');
+      alert('❌ Notifications désactivées');
     } else {
-      setStatus('denied');
-      alert('❌ Permission refusée');
+      // Activer les notifications
+      const fcmToken = await requestNotificationPermission();
+      if (fcmToken) {
+        setStatus('granted');
+        setToken(fcmToken);
+        
+        // Sauvegarder dans le backend
+        await fetch('https://marketingcloudops-backend.onrender.com/api/users/fcm-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ fcmToken })
+        });
+        
+        alert('✅ Notifications activées !');
+      } else {
+        setStatus('denied');
+        alert('❌ Permission refusée');
+      }
     }
   };
 
@@ -58,22 +77,22 @@ export default function Notifications() {
           </div>
           
           <button
-            onClick={enable}
-            disabled={status === 'granted'}
+            onClick={toggleNotifications}
             style={{
               padding: '10px 24px',
               background: status === 'granted' 
-                ? 'rgba(16,185,129,0.1)' 
+                ? 'rgba(239,68,68,0.1)'  // Rouge clair pour désactiver
                 : 'linear-gradient(135deg, #f5a623, #d48a1a)',
-              color: status === 'granted' ? '#10b981' : 'white',
-              border: 'none',
+              color: status === 'granted' ? '#ef4444' : 'white',
+              border: status === 'granted' ? '1px solid rgba(239,68,68,0.3)' : 'none',
               borderRadius: 10,
-              cursor: status === 'granted' ? 'default' : 'pointer',
+              cursor: 'pointer',
               fontWeight: 600,
-              fontSize: '0.9rem'
+              fontSize: '0.9rem',
+              transition: 'all 0.2s'
             }}
           >
-            {status === 'granted' ? '✅ Activé' : 'Activer'}
+            {status === 'granted' ? '🔕 Désactiver' : '🔔 Activer'}
           </button>
         </div>
 
