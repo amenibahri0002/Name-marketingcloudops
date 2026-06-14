@@ -140,7 +140,6 @@ model Contact {
   name       String           @db.VarChar(255)
   email      String           @unique @db.VarChar(255)
   phone      String?          @db.VarChar(50)     // ← Optionnel (?)
-  entreprise String?          @db.VarChar(255)    // ← AJOUTÉ
   clientId   Int?
   createdAt  DateTime?        @default(now()) @db.Timestamp(6)
   client     Client?          @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)

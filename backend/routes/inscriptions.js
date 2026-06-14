@@ -9,7 +9,7 @@ const { sendInscriptionConfirmationEmail } = require('../services/emailService')
 router.post('/', async (req, res) => {
   try {
     const { 
-      name, email, phone, entreprise, notes,
+      name, email, phone, notes,
       formule, paymentType, prixTotal,
       campagneId, userId, paymentData
     } = req.body;
@@ -93,7 +93,6 @@ router.post('/', async (req, res) => {
           name: finalName || 'Inconnu',
           email: finalEmail,
           phone: finalPhone || '',
-          entreprise: entreprise || null,
           notes: notes || null,
           formule: formule || 'standard',
           paymentType: paymentType || 'carte',
