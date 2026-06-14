@@ -2,7 +2,7 @@
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
-// Configuration Firebase (à récupérer dans Firebase Console)
+// Configuration Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyD7VHpmGCkQoLGfSCFAn4iXJyoiA987N1g",
   authDomain: "digipip-c0d46.firebaseapp.com",
@@ -13,7 +13,6 @@ const firebaseConfig = {
   measurementId: "G-N0ES6X84W3"
 };
 
-
 // Initialiser Firebase
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
@@ -23,31 +22,26 @@ const messaging = getMessaging(app);
 // ============================================================
 export async function requestNotificationPermission() {
   try {
-    // Vérifier si les notifications sont supportées
     if (!('Notification' in window)) {
       console.log('Ce navigateur ne supporte pas les notifications');
       return null;
     }
 
-    // Demander la permission
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
       console.log('Permission de notification refusée');
       return null;
     }
 
-    // Récupérer le token FCM
     const token = await getToken(messaging, {
-      vapidKey: process.env.REACT_APP_FIREBASE_VAPID_KEY
+      vapidKey: "BCjzqK4FtbHdMZ3qbgfJWvQtdoLhguDuh88kexG7YtifLxTEkzbL-91LqjvkbRxU_D55NhjY95fWGXxVaEUNPW0"
     });
 
     if (token) {
       console.log('FCM Token:', token);
       return token;
-    } else {
-      console.log('Pas de token disponible');
-      return null;
     }
+    return null;
   } catch (err) {
     console.error('Erreur permission notification:', err);
     return null;

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PrivateRoute from './components/PrivateRoute';
 import Layout from './Layout';
@@ -18,6 +18,8 @@ import Profil from './pages/Profil';
 import ReportingCloud from './pages/Reporting';
 import Monitoring from './pages/Monitoring';
 import Inscriptions from './pages/MesCampagnes';
+import { requestNotificationPermission } from './firebase';
+
 // Lazy loading pour les pages lourdes
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -32,6 +34,7 @@ const PipelineStatus = lazy(() => import('./pages/PipelineStatus'));
 const CampagneAdminDetail = lazy(() => import('./pages/CampagneAdminDetail'));
 const Register = lazy(() => import('./pages/Register'));
 const CloudOperations = lazy(() => import('./pages/CloudOperations'));
+
 const Loading = () => (
   <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#080c14', fontFamily: "'Inter',sans-serif" }}>
     <div style={{ textAlign: 'center' }}>
@@ -92,13 +95,36 @@ function ClientLayout({ children }) {
 }
 
 function App() {
+  // ── NOTIFICATIONS PUSH ──
+  useEffect(() => {
+    const initNotifications = async () => {
+      if (!localStorage.getItem('token')) return;
+      
+      try {
+        const token = await requestNotificationPermission();
+        if (token) {
+          await fetch('https://marketingcloudops-backend.onrender.com/api/users/fcm-token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ fcmToken: token })
+          });
+        }
+      } catch (err) {
+        console.log('Notifications non supportées');
+      }
+    };
+    
+    initNotifications();
+  }, []);
+
   return (
     <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
       <Suspense fallback={<Loading />}>
         <Routes>
-          {/* ═══════════════════════════════════════════
-              ROUTES PUBLIQUES (sans authentification)
-          ═══════════════════════════════════════════ */}
+          {/* ROUTES PUBLIQUES */}
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -106,14 +132,10 @@ function App() {
           <Route path="/campagnes-public" element={<PublicCampagnes />} />
           <Route path="/campagnes/:idOrSlug" element={<CampagneDetail />} />
 
-          {/* ═══════════════════════════════════════════
-              DASHBOARD REDIRECTION (selon role)
-          ═══════════════════════════════════════════ */}
+          {/* DASHBOARD */}
           <Route path="/dashboard" element={<DashboardRoute />} />
 
-          {/* ═══════════════════════════════════════════
-              ROUTES ADMIN (Layout global)
-          ═══════════════════════════════════════════ */}
+          {/* ROUTES ADMIN */}
           <Route path="/admin/dashboard" element={
             <PrivateRoute roles={['ADMIN']}>
               <AdminDashboard />
@@ -145,9 +167,7 @@ function App() {
             </PrivateRoute>
           } />
 
-          {/* ═══════════════════════════════════════════
-              ROUTES MARKETING (Layout global)
-          ═══════════════════════════════════════════ */}
+          {/* ROUTES MARKETING */}
           <Route path="/marketing/dashboard" element={
             <PrivateRoute roles={['RESPONSABLE_MARKETING']}>
               <Dashboard />
@@ -169,9 +189,7 @@ function App() {
             </PrivateRoute>
           } />
 
-          {/* ═══════════════════════════════════════════
-              ROUTES CLIENT (SidebarClient noir)
-          ═══════════════════════════════════════════ */}
+          {/* ROUTES CLIENT */}
           <Route path="/client/Accueil" element={
             <PrivateRoute roles={['CLIENT']}>
               <Layout><HomePage /></Layout>
@@ -194,7 +212,7 @@ function App() {
           } />
           <Route path="/MesCampagnes" element={
             <PrivateRoute roles={['CLIENT']}>
-             <Inscriptions />
+              <Inscriptions />
             </PrivateRoute>
           } />
           <Route path="/Certificats" element={
@@ -204,7 +222,7 @@ function App() {
           } />
           <Route path="/Paiements" element={
             <PrivateRoute roles={['CLIENT']}>
-              <Paiements/>
+              <Paiements />
             </PrivateRoute>
           } />
           <Route path="/Profil" element={
@@ -213,9 +231,7 @@ function App() {
             </PrivateRoute>
           } />
 
-          {/* ═══════════════════════════════════════════
-              ROUTES COMMUNES (multi-roles)
-          ═══════════════════════════════════════════ */}
+          {/* ROUTES COMMUNES */}
           <Route path="/campagnes" element={
             <Layout><Campagnes /></Layout>
           } />
@@ -235,9 +251,7 @@ function App() {
             </PrivateRoute>
           } />
 
-          {/* ═══════════════════════════════════════════
-              ROUTES ADMIN SUPPLEMENTAIRES
-          ═══════════════════════════════════════════ */}
+          {/* ROUTES ADMIN SUPPLEMENTAIRES */}
           <Route path="/reporting" element={
             <PrivateRoute roles={['ADMIN']}>
               <Reporting />
@@ -248,7 +262,6 @@ function App() {
               <Monitoring />
             </PrivateRoute>
           } />
-
           <Route path="/users" element={
             <PrivateRoute roles={['ADMIN']}>
               <Layout><UsersPage /></Layout>
@@ -270,11 +283,8 @@ function App() {
             </PrivateRoute>
           } />
 
-          {/* ═══════════════════════════════════════════
-              404 - NOT FOUND
-          ═══════════════════════════════════════════ */}
+          {/* 404 */}
           <Route path="*" element={<NotFound />} />
-
         </Routes>
       </Suspense>
     </BrowserRouter>
