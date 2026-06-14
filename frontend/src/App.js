@@ -233,7 +233,7 @@ function App() {
           } />
           <Route path="/notifications" element={
   <PrivateRoute roles={['CLIENT']}>
-    <Notifications />
+    <Layout><Notifications /></Layout>
   </PrivateRoute>
 } />
 
