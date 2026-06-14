@@ -1,10 +1,9 @@
 ﻿const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authMiddleware: authenticate } = require('../middleware/auth');
-const { sendCampagneNotification } = require('../utils/mailer');  // ← Importer mailer.js
+const { sendCampagneNotification } = require('../services/emailService');  // ← Importer mailer.js
 const router = express.Router();
 const prisma = new PrismaClient();
-
 // POST /api/notifications - Créer ET envoyer (non-bloquant)
 router.post('/', authenticate, async (req, res) => {
   try {
@@ -77,14 +76,12 @@ async function envoyerEmailEnArrierePlan(notification, title, message) {
       }
     });
 
-    console.log(`[RESEND] ✅ ${result.sent}/${result.total} emails envoyés`);
+    console.log(`[EMAIL] ✅ ${result.sent}/${result.total} emails envoyés`);
 
   } catch (err) {
-    console.error('[RESEND BACKGROUND ERROR]', err);
+    console.error('[EMAIL BACKGROUND ERROR]', err);
   }
 }
-
-// ... reste des routes GET (identique)
 
 // ============================================================
 // GET /api/notifications - Historique
