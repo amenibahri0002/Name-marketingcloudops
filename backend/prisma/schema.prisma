@@ -104,6 +104,7 @@ model Paiement {
   user          User?        @relation(fields: [userId], references: [id])
   createdAt     DateTime?    @default(now()) @db.Timestamp(6)
   updatedAt     DateTime?    @default(now()) @updatedAt @db.Timestamp(6)
+  reference     String?      @db.VarChar(255)
 }
 
 // ============================================================
@@ -135,16 +136,16 @@ model Client {
 // CONTACT
 // ============================================================
 model Contact {
-  id        Int              @id @default(autoincrement())
-  name      String           @db.VarChar(255)
-  email     String           @unique @db.VarChar(255)
-  phone     String           @db.VarChar(50)
-  clientId  Int?
-  createdAt DateTime?        @default(now()) @db.Timestamp(6)
-  client    Client?          @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  segments  ContactSegment[]
+  id         Int              @id @default(autoincrement())
+  name       String           @db.VarChar(255)
+  email      String           @unique @db.VarChar(255)
+  phone      String?          @db.VarChar(50)     // ← Optionnel (?)
+  entreprise String?          @db.VarChar(255)    // ← AJOUTÉ
+  clientId   Int?
+  createdAt  DateTime?        @default(now()) @db.Timestamp(6)
+  client     Client?          @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  segments   ContactSegment[]
 }
-
 // ============================================================
 // USER
 // ============================================================

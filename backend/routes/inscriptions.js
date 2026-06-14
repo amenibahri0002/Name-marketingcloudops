@@ -3,7 +3,7 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
 const prisma = new PrismaClient();
-const { sendInscriptionConfirmationEmail } = require('../services/mailer');
+const { sendInscriptionConfirmationEmail } = require('../services/emailService');
 
 // POST /api/inscriptions - Inscription (publique ou connectée)
 router.post('/', async (req, res) => {
@@ -54,18 +54,14 @@ router.post('/', async (req, res) => {
 
     // Validation email
     if (!finalEmail || finalEmail.trim() === '') {
-      return res.status(400).json({ 
-        error: 'Email requis' 
-      });
+      return res.status(400).json({ error: 'Email requis' });
     }
 
     // Vérifier si déjà inscrit
     const existing = await prisma.inscription.findFirst({
       where: { 
-        AND: [
-          { email: finalEmail },
-          { campagneId: parseInt(campagneId) }
-        ]
+        email: finalEmail,
+        campagneId: parseInt(campagneId)
       }
     });
     
@@ -125,14 +121,12 @@ router.post('/', async (req, res) => {
       try {
         await prisma.paiement.create({
           data: {
-            inscription: {
-              connect: { id: inscription.id }
-            },
+            inscription: { connect: { id: inscription.id } },
             montant: Math.round(parseFloat(prixTotal)),
             mode: paymentType || 'carte',
             status: paymentType === 'carte' ? 'paye' : 'en_attente',
             reference: `INV-${Date.now()}-${inscription.id}`,
-            userId: userId ? parseInt(userId) : null
+            user: userId ? { connect: { id: parseInt(userId) } } : undefined
           }
         });
         console.log('Paiement créé');
@@ -142,33 +136,67 @@ router.post('/', async (req, res) => {
     }
 
     // ============================================================
-    // ENVOYER L'EMAIL DE CONFIRMATION (APRÈS création de l'inscription)
+    // ✅ CRÉER UN CONTACT AUTOMATIQUEMENT (SI NOUVEAU)
     // ============================================================
-// ============================================================
-// ENVOYER EMAIL - NON BLOQUANT (fire-and-forget)
-// ============================================================
-if (inscription.email) {
-  // PAS DE await ! On lance et on répond immédiatement
-  sendInscriptionConfirmationEmail(
-    inscription.email,
-    inscription.name,
-    {
-      title: campagne.title,
-      date: campagne.date,
-      dureeHeures: campagne.dureeHeures,
-      location: campagne.location,
-      format: campagne.format,
-      prix: campagne.prix
-    }
-  );
-}
+    if (inscription.email) {
+      try {
+        const existingContact = await prisma.contact.findUnique({
+          where: { email: inscription.email }
+        });
 
-// RÉPONDRE IMMÉDIATEMENT
-res.status(201).json({
-  message: 'Inscription réussie ! Un email de confirmation vous a été envoyé.',
-  inscription,
-  needAccount: !userId
-});
+        if (!existingContact) {
+          // Récupérer le clientId si userId existe
+          let clientId = null;
+          if (userId) {
+            const user = await prisma.user.findUnique({
+              where: { id: parseInt(userId) },
+              select: { clientId: true }
+            });
+            clientId = user?.clientId || null;
+          }
+
+          await prisma.contact.create({
+            data: {
+              name: inscription.name,
+              email: inscription.email,
+              phone: inscription.phone || '',
+              entreprise: inscription.entreprise || '',
+              clientId: clientId
+            }
+          });
+          console.log(`[CONTACT] ✅ Nouveau contact créé: ${inscription.email}`);
+        } else {
+          console.log(`[CONTACT] ℹ️ Contact déjà existant: ${inscription.email}`);
+        }
+      } catch (contactError) {
+        console.error('[CONTACT] ❌ Erreur création (non bloquant):', contactError.message);
+      }
+    }
+
+    // ============================================================
+    // ENVOYER EMAIL - NON BLOQUANT (fire-and-forget)
+    // ============================================================
+    if (inscription.email) {
+      sendInscriptionConfirmationEmail(
+        inscription.email,
+        inscription.name,
+        {
+          title: campagne.title,
+          date: campagne.date,
+          dureeHeures: campagne.dureeHeures,
+          location: campagne.location,
+          format: campagne.format,
+          prix: campagne.prix
+        }
+      );
+    }
+
+    // RÉPONDRE IMMÉDIATEMENT
+    res.status(201).json({
+      message: 'Inscription réussie ! Un email de confirmation vous a été envoyé.',
+      inscription,
+      needAccount: !userId
+    });
 
   } catch (error) {
     console.error('[INSCRIPTION ERROR]', error);

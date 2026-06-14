@@ -77,6 +77,19 @@ async function main() {
     }
   });
 
+  // Créer l'utilisateur "amen bh" (toi)
+  await prisma.user.upsert({
+    where: { email: 'bhameni24@gmail.com' },
+    update: {},
+    create: {
+      name: 'amen bh',
+      email: 'bhameni24@gmail.com',
+      password: clientHash,
+      role: 'CLIENT',
+      clientId: digilab.id
+    }
+  });
+
   console.log('✅ Utilisateurs créés');
 
   // ============================================================
@@ -204,14 +217,14 @@ async function main() {
   console.log('✅ 4 formations créées');
 
   // ============================================================
-  // 5. EXEMPLE D'INSCRIPTION (optionnel)
+  // 5. INSCRIPTION EXEMPLE (avec vrai email)
   // ============================================================
   try {
     await prisma.inscription.create({
       data: {
-        name: "Jean Test",
-        email: "jean.test@example.com",
-        phone: "+216 99 999 999",
+        name: "amen bh",
+        email: "bhameni24@gmail.com",
+        phone: "+216 22 105 279",
         campagneId: 1
       }
     });
@@ -221,15 +234,14 @@ async function main() {
   }
 
   // ============================================================
-  // 6. CONTACTS (pour campagnes marketing) - CORRIGÉ
+  // 6. CONTACTS (VRAIS CONTACTS - sans @example.com)
   // ============================================================
   const contacts = [
-    { name: "Mohamed Ali", email: "mohamed@example.com", phone: "+216 20 111 222", clientId: digilab.id },
-    { name: "Sarra Ben", email: "sarra@example.com", phone: "+216 21 333 444", clientId: digilab.id },
-    { name: "Karim H.", email: "karim@example.com", phone: "+216 22 555 666", clientId: ahmedClient.id }
+    { name: "DigiLab Solutions", email: "amenibahri555@gmail.com", phone: "+216 22 044 105", clientId: digilab.id },
+    { name: "Ahmed", email: "ahmed@gmail.com", phone: "+216 99 999 999", clientId: ahmedClient.id },
+    { name: "amen bh", email: "bhameni24@gmail.com", phone: "+216 22 105 279", clientId: digilab.id }
   ];
 
-  // Utiliser createMany avec skipDuplicates (si supporté) ou create avec try/catch
   for (const contact of contacts) {
     try {
       await prisma.contact.create({
@@ -268,15 +280,16 @@ async function main() {
   console.log('');
   console.log('🎉 SEED TERMINÉ !');
   console.log('   Clients    : 2');
-  console.log('   Users      : 3 (Admin, Marketing, Client)');
+  console.log('   Users      : 4 (Admin, Marketing, Client, Amen)');
   console.log('   Formations : 4');
-  console.log('   Contacts   : 3');
+  console.log('   Contacts   : 3 (vrais emails)');
   console.log('   Segments   : 1');
   console.log('');
   console.log('🔑 Logins :');
   console.log('   admin@digilab.tn        / admin123');
   console.log('   bahriameni412@gmail.com / marketing123');
   console.log('   ahmed@gmail.com         / 123456');
+  console.log('   bhameni24@gmail.com     / 123456');
 }
 
 main()

@@ -1,14 +1,17 @@
-// services/notificationService.js
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
-// ============================================================
-// RESEND (API HTTP - pas SMTP bloqué)
-// ============================================================
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Configuration Gmail SMTP
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'amenibahri555@gmail.com',
+    pass: process.env.GMAIL_APP_PASSWORD
+  }
+});
 
-// Templates de notifications
+// Templates de notifications (identique)
 const TEMPLATES = {
   nouvelle_campagne: {
     title: '🎉 Nouvelle formation disponible !',
@@ -50,7 +53,7 @@ async function notifierClients({ type, campagne, message, canaux = ['email'] }) 
 
   // Récupérer les destinataires
   const contacts = await prisma.contact.findMany({
-    where: { clientId: campagne.clientId },
+    where: {status: 'ACTIVE'},
     select: { id: true, name: true, email: true, phone: true }
   });
 
@@ -59,8 +62,12 @@ async function notifierClients({ type, campagne, message, canaux = ['email'] }) 
     select: { id: true, name: true, email: true, phone: true }
   });
 
-  const destinataires = contacts.length > 0 ? contacts : users;
+ const allDestinataires = [...contacts, ...users];
+  const uniqueDestinataires = allDestinataires.filter((dest, index, self) => 
+    index === self.findIndex(d => d.email === dest.email)
+  );
 
+  console.log(`[NOTIFY] ${uniqueDestinataires.length} destinataires trouvés`);
   const results = [];
 
   for (const canal of canaux) {
@@ -125,17 +132,17 @@ async function envoyerEmail(destinataires, { type, campagne, message, template }
   // Envoyer les emails un par un
   for (const dest of destinataires) {
     try {
-      await resend.emails.send({
-        from: 'DigiLab <onboarding@resend.dev>',
+      await sgMail.send({
+        from: 'DigiLab <contact@digilab.tn>',
         to: dest.email,
         subject: `${template.emoji} ${template.title} - ${campagne.title}`,
         html: html.replace(/{{NOM}}/g, dest.name || 'Client')
       });
       sent++;
-      console.log(`[RESEND] ✅ Email envoyé à ${dest.email}`);
+      console.log(`[SENDGRID] ✅ Email envoyé à ${dest.email}`);
     } catch (err) {
       failed++;
-      console.error(`[RESEND ERROR] ${dest.email}:`, err.message);
+      console.error(`[SENDGRID] ${dest.email}:`, err.message);
     }
   }
 
