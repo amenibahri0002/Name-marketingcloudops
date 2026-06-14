@@ -125,7 +125,9 @@ router.post('/', async (req, res) => {
       try {
         await prisma.paiement.create({
           data: {
-            inscriptionId: inscription.id,
+            inscription: {
+              connect: { id: inscription.id }
+            },
             montant: Math.round(parseFloat(prixTotal)),
             mode: paymentType || 'carte',
             status: paymentType === 'carte' ? 'paye' : 'en_attente',

@@ -1,16 +1,17 @@
 const nodemailer = require('nodemailer');
 
+// ============================================================
+// MÊME CONFIGURATION QUE notificationService.js
+// ============================================================
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: process.env.SMTP_PORT || 587,
-  secure: false,
+  service: 'gmail',
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
+    user: process.env.MAIL_USER,      // ← Même que notificationService
+    pass: process.env.MAIL_PASS       // ← Même que notificationService
   }
 });
 
-// Vérifier la connexion SMTP au démarrage
+// Vérifier la connexion
 transporter.verify((error, success) => {
   if (error) {
     console.error('[SMTP ERROR]', error);
@@ -23,9 +24,8 @@ transporter.verify((error, success) => {
 // EMAIL DE CONFIRMATION D'INSCRIPTION - NON BLOQUANT
 // ============================================================
 function sendInscriptionConfirmationEmail(userEmail, userName, campagneDetails) {
-  // Fire-and-forget : on lance l'envoi sans attendre
   transporter.sendMail({
-    from: '"DigiLab Solutions" <contact@digilab.tn>',
+    from: `"DigiLab Solutions" <${process.env.MAIL_USER}>`,  // ← Même expéditeur
     to: userEmail,
     subject: `✅ Inscription confirmée - ${campagneDetails.title}`,
     html: `
@@ -85,7 +85,6 @@ function sendInscriptionConfirmationEmail(userEmail, userName, campagneDetails) 
           <div class="footer">
             <p>DigiLab Solutions - Cloud Marketing</p>
             <p>📧 contact@digilab.tn | 📱 +216 22 044 105</p>
-            <p style="margin-top: 8px;">Si vous n'êtes pas à l'origine de cette inscription, ignorez cet email.</p>
           </div>
         </div>
       </body>
@@ -100,78 +99,4 @@ function sendInscriptionConfirmationEmail(userEmail, userName, campagneDetails) 
   });
 }
 
-// ============================================================
-// EMAIL DE RAPPEL AVANT LA FORMATION
-// ============================================================
-function sendRappelEmail(userEmail, userName, campagneDetails, daysBefore) {
-  transporter.sendMail({
-    from: '"DigiLab Solutions" <contact@digilab.tn>',
-    to: userEmail,
-    subject: `⏰ Rappel - ${campagneDetails.title} dans ${daysBefore} jours`,
-    html: `
-      <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; background: #fff; border-radius: 16px;">
-        <h2 style="color: #f5a623;">⏰ Rappel important</h2>
-        <p>Bonjour <strong>${userName}</strong>,</p>
-        <p>Votre formation <strong>${campagneDetails.title}</strong> commence dans <strong>${daysBefore} jours</strong> !</p>
-        <div style="background: #fffbeb; border-left: 4px solid #f5a623; padding: 16px; margin: 20px 0; border-radius: 8px;">
-          <p style="margin: 0;"><strong>📅 Date :</strong> ${campagneDetails.date || 'À définir'}</p>
-          <p style="margin: 8px 0 0;"><strong>📍 Lieu :</strong> ${campagneDetails.location || 'Sfax'}</p>
-        </div>
-        <p>N'oubliez pas d'apporter votre ordinateur portable et votre bonne humeur ! 🚀</p>
-      </div>
-    `
-  })
-  .then(info => {
-    console.log(`[EMAIL] ✅ Rappel envoyé à ${userEmail}`);
-  })
-  .catch(err => {
-    console.error('[EMAIL] ❌ Erreur rappel:', err.message);
-  });
-}
-
-// ============================================================
-// EMAIL DE NOTIFICATION (EXISTANT)
-// ============================================================
-async function sendEmail(notification) {
-  try {
-    const clients = await getClientsFromSegment(notification.segmentId);
-    
-    const promises = clients.map(client => 
-      transporter.sendMail({
-        from: '"DigiLab Solutions" <contact@digilab.tn>',
-        to: client.email,
-        subject: notification.title,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #F5A623;">${notification.title}</h2>
-            <p>${notification.message}</p>
-            ${notification.campagne ? `
-              <a href="https://digilab.tn/campagnes/${notification.campagne.slug}" 
-                 style="background: #F5A623; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block; margin-top: 20px;">
-                Voir la formation
-              </a>
-            ` : ''}
-          </div>
-        `
-      })
-    );
-
-    await Promise.all(promises);
-    return { success: true, count: clients.length };
-  } catch (error) {
-    console.error('Erreur email:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-// Helper pour récupérer les clients d'un segment
-async function getClientsFromSegment(segmentId) {
-  // TODO: Implémenter selon ta logique de segments
-  return [];
-}
-
-module.exports = { 
-  sendEmail,
-  sendInscriptionConfirmationEmail,
-  sendRappelEmail
-};
+module.exports = { sendInscriptionConfirmationEmail };
