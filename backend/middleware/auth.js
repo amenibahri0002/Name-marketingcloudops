@@ -11,13 +11,18 @@ function authMiddleware(req, res, next) {
   
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
+    req.user = {
+      id: decoded.userId,  // ← Ajouter id
+      userId: decoded.userId,
+      email: decoded.email,
+      role: decoded.role,
+      clientId: decoded.clientId
+    };
     next();
   } catch (err) {
     return res.status(403).json({ message: 'Token invalide' });
   }
 }
-
 function requireRole(...roles) {
   return function(req, res, next) {
     if (!req.user) return res.status(401).json({ message: 'Non authentifié' });

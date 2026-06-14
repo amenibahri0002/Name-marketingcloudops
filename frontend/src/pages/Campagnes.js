@@ -227,11 +227,11 @@ const FormationCard = ({ campagne, index, viewMode }) => {
 // ============================================================
 // STATISTIQUES EN TEMPS RÉEL
 // ============================================================
-const StatsBar = ({ formations, inscriptions, contacts }) => {
-  const totalHeures = formations.reduce((acc, f) => acc + (f.dureeHeures || 0), 0);
-  const totalPlaces = formations.reduce((acc, f) => acc + (f.placesRestantes || 0), 0);
-  const totalInscrits = inscriptions?.length || 0;
-  const totalContacts = contacts?.length || 0;
+const StatsBar = ({ formations = [], inscriptions = [], contacts = [] }) => {
+  const totalHeures = formations.reduce((acc, c) => acc + (c.dureeHeures || 0), 0);
+  const totalPlaces = formations.reduce((acc, c) => acc + (c.placesRestantes || 0), 0);
+  const totalInscrits = inscriptions.length || 0;
+  const totalContacts = contacts.length || 0;
 
   const stats = [
     { label: 'Formations', value: formations.length, icon: BookOpen, color: COLORS.primary },
@@ -467,7 +467,7 @@ export default function Campagnes() {
 
       {/* Contenu */}
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '40px 20px' }}>
-        <StatsBar campagnes={campagnes} inscriptions={inscriptions} contacts={contacts} />
+        <StatsBar formations={campagnes} inscriptions={inscriptions} contacts={contacts} />
         <FilterBar filtre={filtre} setFiltre={setFiltre} searchTerm={searchTerm} setSearchTerm={setSearchTerm} viewMode={viewMode} setViewMode={setViewMode} sortBy={sortBy} setSortBy={setSortBy} />
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', color: COLORS.gray, fontSize: '0.9rem' }}>

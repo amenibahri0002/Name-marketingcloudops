@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Phone, Building, MapPin, Camera, Save, ArrowLeft, Award, BookOpen, CreditCard, Edit3, CheckCircle, Lock, Bell, Shield, Loader2 } from 'lucide-react';
+import { Calendar, User, Mail, Phone, Building, MapPin, Camera, Save, ArrowLeft, Award, BookOpen, CreditCard, Edit3, CheckCircle, Lock, Bell, Shield, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../Layout';
 import api from '../api';

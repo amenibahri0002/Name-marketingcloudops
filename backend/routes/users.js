@@ -3,13 +3,41 @@ const bcrypt  = require('bcryptjs')
 const { PrismaClient } = require('@prisma/client')
 const { authMiddleware, requireRole, ROLES } = require('../middleware/auth')
 
-
 const router = express.Router()
 const prisma = new PrismaClient()
 
-router.use(authMiddleware)
+// GET /api/users/me - Profil de l'utilisateur connecté (TOUS les rôles)
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        client: true,
+        inscription: {
+          include: {
+            campagne: true
+          }
+        },
+        paiements: true
+      }
+    })
 
-router.get('/', requireRole(ROLES.ADMIN), async (req, res) => {
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' })
+    }
+
+    const { password, ...userWithoutPassword } = user
+    res.json(userWithoutPassword)
+  } catch (err) {
+    console.error('[USERS ME ERROR]', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// GET /api/users - Liste tous les utilisateurs (ADMIN uniquement)
+router.get('/', authMiddleware, requireRole(ROLES.ADMIN), async (req, res) => {
   try {
     const users = await prisma.user.findMany({
       select: { id:true, name:true, email:true, role:true, clientId:true, createdAt:true },
@@ -21,7 +49,8 @@ router.get('/', requireRole(ROLES.ADMIN), async (req, res) => {
   }
 })
 
-router.post('/', requireRole(ROLES.ADMIN), async (req, res) => {
+// POST /api/users - Créer un utilisateur (ADMIN uniquement)
+router.post('/', authMiddleware, requireRole(ROLES.ADMIN), async (req, res) => {
   try {
     const { name, email, password, role, clientId } = req.body
 
@@ -45,7 +74,8 @@ router.post('/', requireRole(ROLES.ADMIN), async (req, res) => {
   }
 })
 
-router.patch('/:id', requireRole(ROLES.ADMIN), async (req, res) => {
+// PATCH /api/users/:id - Modifier un utilisateur (ADMIN uniquement)
+router.patch('/:id', authMiddleware, requireRole(ROLES.ADMIN), async (req, res) => {
   try {
     const { role } = req.body
     const validRoles = Object.values(ROLES)
@@ -63,7 +93,8 @@ router.patch('/:id', requireRole(ROLES.ADMIN), async (req, res) => {
   }
 })
 
-router.delete('/:id', requireRole(ROLES.ADMIN), async (req, res) => {
+// DELETE /api/users/:id - Supprimer un utilisateur (ADMIN uniquement)
+router.delete('/:id', authMiddleware, requireRole(ROLES.ADMIN), async (req, res) => {
   try {
     await prisma.user.delete({ where: { id: parseInt(req.params.id) } })
     res.json({ message: 'Utilisateur supprime' })

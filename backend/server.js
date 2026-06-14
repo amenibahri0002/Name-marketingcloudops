@@ -72,7 +72,7 @@ const statsRoutes = require('./routes/stats')
 app.use('/api/stats', authenticate, statsRoutes)
 
 const usersRoutes = require('./routes/users')
-app.use('/api/users', authenticate, usersRoutes)
+app.use('/api/users', usersRoutes)
 
 const alertesRoutes = require('./routes/alertes')
 app.use('/api/alertes', authenticate, alertesRoutes)
