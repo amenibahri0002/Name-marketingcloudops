@@ -18,10 +18,9 @@ import Profil from './pages/Profil';
 import ReportingCloud from './pages/Reporting';
 import Monitoring from './pages/Monitoring';
 import Inscriptions from './pages/MesCampagnes';
-import { requestNotificationPermission } from './firebase';
 import Notifications from './pages/Notifications';
 
-// Lazy loading pour les pages lourdes
+// Lazy loading
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Clients = lazy(() => import('./pages/Clients'));
@@ -46,7 +45,6 @@ const Loading = () => (
   </div>
 );
 
-// ── UTILS ──
 const getUserRole = () => {
   const token = localStorage.getItem('token');
   const userStr = localStorage.getItem('user');
@@ -68,7 +66,6 @@ const getUserRole = () => {
   return '';
 };
 
-// ── DASHBOARD ROUTE INTELLIGENT ──
 function DashboardRoute() {
   const role = getUserRole();
 
@@ -78,7 +75,6 @@ function DashboardRoute() {
   return <Navigate to="/login" replace />;
 }
 
-// ── CLIENT LAYOUT (SidebarClient noir) ──
 function ClientLayout({ children }) {
   const userRole = getUserRole();
   const showSidebar = userRole === 'CLIENT';
@@ -96,31 +92,6 @@ function ClientLayout({ children }) {
 }
 
 function App() {
-  // ── NOTIFICATIONS PUSH ──
-  useEffect(() => {
-    const initNotifications = async () => {
-      if (!localStorage.getItem('token')) return;
-      
-      try {
-        const token = await requestNotificationPermission();
-        if (token) {
-          await fetch('https://marketingcloudops-backend.onrender.com/api/users/fcm-token', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({ fcmToken: token })
-          });
-        }
-      } catch (err) {
-        console.log('Notifications non supportées');
-      }
-    };
-    
-    initNotifications();
-  }, []);
-
   return (
     <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
       <Suspense fallback={<Loading />}>
@@ -232,10 +203,10 @@ function App() {
             </PrivateRoute>
           } />
           <Route path="/notifications" element={
-  <PrivateRoute roles={['CLIENT']}>
-    <Layout><Notifications /></Layout>
-  </PrivateRoute>
-} />
+            <PrivateRoute roles={['CLIENT']}>
+              <Layout><Notifications /></Layout>
+            </PrivateRoute>
+          } />
 
           {/* ROUTES COMMUNES */}
           <Route path="/campagnes" element={

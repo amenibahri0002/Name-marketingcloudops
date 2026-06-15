@@ -53,7 +53,7 @@ const clientMenu = [
   
   { section: 'Compte', items: [
     { path: '/profil', icon: '👤', label: 'Mon Profil' },
-{ path: '/notifications', icon: '🔔', label: 'Notifications', isToggle : true },
+{ path: '/notifications', icon: '🔔', label: 'Notifications'},
   ]},
 ];
 
@@ -111,19 +111,39 @@ function Layout({ children }) {
    useEffect(() => {
     setPushEnabled(Notification.permission === 'granted');
   }, []);
-   const togglePushNotifications = async () => {
+
+  const togglePushNotifications = async () => {
+  try {
+    const { requestNotificationPermission } = await import('./firebase');
+    
     if (pushEnabled) {
-      // Déjà activé, rien à faire
-      return;
-    }
-     try {
-      const { requestNotificationPermission } = await import('./firebase');
+      // ========== DÉSACTIVATION ==========
+      console.log('Désactivation des notifications...');
+      
+      const response = await fetch('https://marketingcloudops-backend.onrender.com/api/users/fcm-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ fcmToken: null })
+      });
+      
+      if (response.ok) {
+        setPushEnabled(false);
+        console.log('✅ Notifications désactivées');
+      } else {
+        console.error('❌ Erreur désactivation:', await response.text());
+      }
+      
+    } else {
+      // ========== ACTIVATION ==========
+      console.log('Activation des notifications...');
+      
       const token = await requestNotificationPermission();
+      console.log('FCM token:', token ? 'Présent' : 'Manquant');
       
       if (token) {
-        setPushEnabled(true);
-         // Envoyer au backend
-
         const response = await fetch('https://marketingcloudops-backend.onrender.com/api/users/fcm-token', {
           method: 'POST',
           headers: {
@@ -132,17 +152,25 @@ function Layout({ children }) {
           },
           body: JSON.stringify({ fcmToken: token })
         });
-         if (response.ok) {
-        console.log('✅ Token FCM sauvegardé dans le backend');
+        
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (response.ok) {
+          setPushEnabled(true);
+          console.log('✅ Notifications activées');
+        } else {
+          console.error('❌ Erreur activation:', data);
+        }
       } else {
-        console.error('❌ Erreur sauvegarde token:', await response.text());
+        console.log('❌ Permission refusée ou pas de token FCM');
       }
-      }
-    } catch (err) {
-      console.error('Erreur push:', err);
     }
-  };
-
+  } catch (err) {
+    console.error('❌ Erreur push:', err);
+  }
+};
   const menuGroups = userRole === 'ADMIN' 
     ? adminMenu 
     : userRole === 'RESPONSABLE_MARKETING' 
@@ -271,58 +299,22 @@ function Layout({ children }) {
                   )}
                   {group.section}
                 </div>
-              )}
-              <ul style={{ listStyle: 'none', padding: sidebarCollapsed ? '0 0.4rem' : '0 0.8rem' }}>
-                {group.items.map(item => (
-                  <li key={item.path} style={{ marginBottom: 3 }}>
-                    {item.isToggle ? (
-                      <div 
-        onClick={togglePushNotifications}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: sidebarCollapsed ? '0.7rem' : '0.7rem 1rem',
-          borderRadius: 10,
-          cursor: 'pointer',
-          transition: 'all 0.2s',
-          color: pushEnabled ? '#10b981' : 'rgba(255,255,255,0.6)',
-          background: pushEnabled ? 'rgba(16,185,129,0.1)' : 'transparent',
-        }}
-      >
-        <span style={{ fontSize: '1.1rem', width: 24, textAlign: 'center' }}>
-          {pushEnabled ? '🔔' : '🔕'}
-        </span>
-        {!sidebarCollapsed && (
-          <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>
-            {pushEnabled ? 'Notifs activées' : item.label}
-          </span>
-        )}
-        {!sidebarCollapsed && pushEnabled && (
-          <span style={{ 
-            marginLeft: 'auto', 
-            width: 8, 
-            height: 8, 
-            borderRadius: '50%', 
-            background: '#10b981',
-            boxShadow: '0 0 6px #10b981'
-          }} />
-        )}
-      </div>
-    ) : (
-                    <SidebarMenuItem 
-                      item={item} 
-                      isActive={location.pathname === item.path}
-                      collapsed={sidebarCollapsed}
-                    />
-    )}
+               )}
+                            <ul style={{ listStyle: 'none', padding: sidebarCollapsed ? '0 0.4rem' : '0 0.8rem' }}>
+              {group.items.map(item => (
+                <li key={item.path} style={{ marginBottom: 3}}>
+                  <SidebarMenuItem
+                  item={item}
+                  isActive={location.pathname === item.path}
+                  collapsed={sidebarCollapsed}
+                  />
                   </li>
-                ))}
+              ))}
               </ul>
             </div>
           ))}
         </div>
-
+        
         {/* CLOUD STATUS */}
         <div style={{ padding: sidebarCollapsed ? '0.8rem 0.4rem' : '0.8rem 1.2rem', borderTop: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{
