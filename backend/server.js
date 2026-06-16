@@ -1,33 +1,39 @@
-require('dotenv').config({ override: true })
-const express = require('express')
-const cors = require('cors')
-const { PrismaClient } = require('@prisma/client')
-const client = require('prom-client')
-const { authMiddleware: authenticate } = require('./middleware/auth')
-const { helmetMiddleware, globalLimiter } = require('./middleware/security')
-const compression = require('compression')
-require('dotenv').config();
-const { verifierAlertesAutomatiques } = require('./services/notificationService');
-// ============================================================
-// 1. CRÉER APP D'ABORD
-// ============================================================
-const app = express()
+require('dotenv').config({ override: true });
+
+const express = require('express');
+const cors = require('cors');
+const { PrismaClient } = require('@prisma/client');
 const path = require('path');
-app.set('trust proxy', 1)
-const dbUrl = process.env.DATABASE_URL;
-const jwtSecret = process.env.JWT_SECRET;
-const twilioSid = process.env.TWILIO_SID;
-const prisma = new PrismaClient()
-
-console.log('SERVER STARTING...')
+const compression = require('compression');
+const fs = require('fs');
 
 // ============================================================
-// 2. MIDDLEWARES (avant les routes)
+// 1. IMPORTS DES SERVICES ET MIDDLEWARES
+// ============================================================
+const { authMiddleware: authenticate } = require('./middleware/auth');
+const { helmetMiddleware, globalLimiter } = require('./middleware/security');
+const { verifierAlertesAutomatiques } = require('./services/notificationService');
+const metricsMiddleware = require('./middleware/metrics');
+const { activeUsers, inscriptionsTotal, campagnesTotal } = require('./services/metrics');
+
+// ============================================================
+// 2. CRÉER APP ET PRISMA
+// ============================================================
+const app = express();
+const prisma = new PrismaClient();
+
+app.set('trust proxy', 1);
+
+console.log('SERVER STARTING...');
+
+// ============================================================
+// 3. MIDDLEWARES GLOBAUX (avant les routes)
 // ============================================================
 app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:3001',
+    'http://localhost:8080',  // ← AJOUTER CECI (frontend Docker)
     'https://digipip.vercel.app',
     'https://marketingcloudops-frontend.vercel.app'
   ],
@@ -36,99 +42,77 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
-app.use(helmetMiddleware)
-app.use(globalLimiter)
-app.use(compression())
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(helmetMiddleware);
+app.use(globalLimiter);
+app.use(compression());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// MÉTRIQUES PROMETHEUS (capture des requêtes)
+app.use(metricsMiddleware);
+
 // ============================================================
-// 3. ROUTES (après app et middlewares)
+// 4. ROUTES API (sans authentification ou avec)
 // ============================================================
-app.use('/api/chat', require('./routes/chat'));
+
+// Routes publiques (pas d'authentification)
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/campagnes', require('./routes/campagnes'));
 app.use('/api/Formations', require('./routes/Formations'));
-const cloudRoutes = require('./routes/cloud');
 app.use('/api/cloud', require('./routes/cloud'));
-const authRoutes = require('./routes/auth')
-app.use('/api/auth', authRoutes)
-const notificationRoutes = require('./routes/notifications');
-app.use('/api/notifications', authenticate, notificationRoutes);
-const clientRoutes = require('./routes/clients')
-app.use('/api/clients', authenticate, clientRoutes)
+app.use('/api/devops', require('./routes/devops'));
+app.use('/api/chat', require('./routes/chat'));
 
-const campagnesRoutes = require('./routes/campagnes')
-app.use('/api/campagnes', campagnesRoutes)
+// Routes protégées (authentification requise)
+app.use('/api/notifications', authenticate, require('./routes/notifications'));
+app.use('/api/clients', authenticate, require('./routes/clients'));
+app.use('/api/contacts', authenticate, require('./routes/contacts'));
+app.use('/api/emails', authenticate, require('./routes/emails'));
+app.use('/api/segments', authenticate, require('./routes/segments'));
+app.use('/api/stats', authenticate, require('./routes/stats'));
+app.use('/api/users', authenticate, require('./routes/users'));
+app.use('/api/alertes', authenticate, require('./routes/alertes'));
+app.use('/api/sms', authenticate, require('./routes/sms'));
+app.use('/api/analytics', authenticate, require('./routes/analytics'));
+app.use('/api/export', authenticate, require('./routes/export'));
+app.use('/api/certificats', authenticate, require('./routes/certificats'));
 
-const contactsRoutes = require('./routes/contacts')
-app.use('/api/contacts', authenticate, contactsRoutes)
+// Routes inscriptions (publiques pour inscription, protégées pour admin)
+app.use('/api/inscriptions', require('./routes/inscriptions'));
 
-const emailsRoutes = require('./routes/emails')
-app.use('/api/emails', authenticate, emailsRoutes)
-
-const segmentsRoutes = require('./routes/segments')
-app.use('/api/segments', authenticate, segmentsRoutes)
-
-const statsRoutes = require('./routes/stats')
-app.use('/api/stats', authenticate, statsRoutes)
-
-const usersRoutes = require('./routes/users')
-app.use('/api/users', usersRoutes)
-
-const alertesRoutes = require('./routes/alertes')
-app.use('/api/alertes', authenticate, alertesRoutes)
-
-const notifRoutes = require('./routes/notifications')
-app.use('/api/notifications', authenticate, notifRoutes)
-
-const smsRoutes = require('./routes/sms')
-app.use('/api/sms', authenticate, smsRoutes)
-
-const analyticsRoutes = require('./routes/analytics')
-app.use('/api/analytics', authenticate, analyticsRoutes)
-
-const chatRoutes = require('./routes/chat');
-app.use('/api/chat', chatRoutes);
-
-const devopsRouter = require('./routes/devops')
-app.use('/api/devops', devopsRouter)
-
-const exportRoutes = require('./routes/export')
-app.use('/api/export', authenticate, exportRoutes)
-app.use('/api/certificats', require('./routes/certificats'));
-// ============================================================
-// 4. ROUTES INSCRIPTIONS (NOUVEAU)
-// ============================================================
-const inscriptionRoutes = require('./routes/inscriptions')
-app.use('/api/inscriptions', inscriptionRoutes)
+// Paiements
+app.use('/api/paiements', require('./routes/paiements'));
 
 // ============================================================
-// 5. MÉTRIQUES & HEALTH CHECK
+// 5. MÉTRIQUES PROMETHEUS (endpoint /metrics)
 // ============================================================
-client.collectDefaultMetrics({ timeout: 5000 })
+app.use('/metrics', require('./routes/metrics'));
 
+// ============================================================
+// 6. HEALTH CHECK
+// ============================================================
 app.get('/api/health', (req, res) => res.json({ 
   status: 'ok', 
   timestamp: new Date(),
-  service: 'MarketingCloudOps Backend'
-}))
+  service: 'DigiPip Backend'
+}));
 
-app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', client.register.contentType)
-  res.end(await client.register.metrics())
-})
-
-app.get('/', (req, res) => res.send('MarketingCloudOps API OK'))
+app.get('/', (req, res) => res.send('DigiPip API OK'));
 
 // ============================================================
-// 6. DÉMARRAGE
+// 7. CRÉATION DOSSIER UPLOADS
 // ============================================================
-app.use('/api/paiements', require('./routes/paiements'));
-const PORT = process.env.PORT || 5000
-app.listen(PORT, '0.0.0.0', () => {
-  console.log('✅ Backend sur http://localhost:' + PORT)
-})
-const fs = require('fs');
 const uploadDir = path.join(__dirname, 'uploads', 'campagnes');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
+
+// ============================================================
+// 8. DÉMARRAGE
+// ============================================================
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('✅ Backend sur http://localhost:' + PORT);
+  console.log('📊 Metrics Prometheus: http://localhost:' + PORT + '/metrics');
+});

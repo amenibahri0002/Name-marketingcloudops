@@ -2,6 +2,7 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
 const prisma = new PrismaClient();
+const { sendInscriptionConfirmationEmail } = require('../services/emailService');
 
 // GET /api/inscriptions - Liste toutes les inscriptions
 router.get('/', async (req, res) => {
@@ -43,10 +44,31 @@ router.get('/mes-inscriptions', async (req, res) => {
 });
 
 // POST /api/inscriptions - Créer une inscription
+// ✅ VÉRIFICATION "DÉJÀ INSCRIT" AJOUTÉE ICI
 router.post('/', async (req, res) => {
   try {
     const { name, email, phone, campagneId, userId, formule, paymentType, prixTotal } = req.body;
 
+    // ✅ VÉRIFIER SI DÉJÀ INSCRIT
+    const existingInscription = await prisma.inscription.findFirst({
+      where: {
+        campagneId: parseInt(campagneId),
+        OR: [
+          { userId: userId ? parseInt(userId) : undefined },
+          { email: email }
+        ]
+      }
+    });
+
+    if (existingInscription) {
+      return res.status(409).json({
+        error: 'Déjà inscrit',
+        message: 'Vous êtes déjà inscrit à cette formation',
+        inscription: existingInscription
+      });
+    }
+
+    // Créer l'inscription
     const inscription = await prisma.inscription.create({
       data: {
         name,
@@ -61,13 +83,16 @@ router.post('/', async (req, res) => {
       }
     });
 
-    res.status(201).json(inscription);
+    res.status(201).json({
+      success: true,
+      inscription
+    });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ AJOUTER CETTE ROUTE :
 // PATCH /api/inscriptions/:id/status - Changer le statut (Accepter/Refuser)
 router.patch('/:id/status', async (req, res) => {
   try {

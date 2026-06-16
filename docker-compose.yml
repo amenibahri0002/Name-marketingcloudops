@@ -1,5 +1,6 @@
-services:
+version: '3.8'
 
+services:
   backend:
     build: ./backend
     container_name: backend
@@ -45,3 +46,4 @@ services:
 
 networks:
   monitoring:
+    driver: bridge
