@@ -19,7 +19,7 @@ import ReportingCloud from './pages/Reporting';
 import Monitoring from './pages/Monitoring';
 import Inscriptions from './pages/MesCampagnes';
 import Notifications from './pages/Notifications';
-import AnalyticsMarketing from './pages/AnalyticsMarketing';
+import Analytics from './pages/Analytics';
 
 // Lazy loading
 const Login = lazy(() => import('./pages/Login'));
