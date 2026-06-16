@@ -3,14 +3,14 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-const authenticate = (req, res, next) => {
+const authMiddleware = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Non autorise' });
   next();
 };
 
 // ─── KPIs ─────────────────────────────────────────────
-router.get('/kpis', authenticate, async (req, res) => {
+router.get('/kpis', authMiddleware, async (req, res) => {
   try {
     const campagnes = await prisma.campagne.findMany();
     const inscription = await prisma.inscription.findMany();
@@ -50,7 +50,7 @@ router.get('/kpis', authenticate, async (req, res) => {
 });
 
 // ─── Evolution ────────────────────────────────────────
-router.get('/evolution', authenticate, async (req, res) => {
+router.get('/evolution', authMiddleware, async (req, res) => {
   try {
     const days = parseInt(req.query.days) || 30;
     const data = [];
@@ -75,7 +75,7 @@ router.get('/evolution', authenticate, async (req, res) => {
 });
 
 // ─── Performance ──────────────────────────────────────
-router.get('/performance', authenticate, async (req, res) => {
+router.get('/performance', authMiddleware, async (req, res) => {
   try {
     const campagnes = await prisma.campagne.findMany({
       include: { inscription: true }
@@ -105,7 +105,7 @@ router.get('/performance', authenticate, async (req, res) => {
 });
 
 // ─── Canaux ───────────────────────────────────────────
-router.get('/canaux', authenticate, async (req, res) => {
+router.get('/canaux', authMiddleware, async (req, res) => {
   try {
     const notifications = await prisma.notification.findMany();
 
@@ -130,7 +130,7 @@ router.get('/canaux', authenticate, async (req, res) => {
 });
 
 // ─── Segments ─────────────────────────────────────────
-router.get('/segments', authenticate, async (req, res) => {
+router.get('/segments', authMiddleware, async (req, res) => {
   try {
     const users = await prisma.user.findMany({
       where: { role: 'CLIENT' },
@@ -162,7 +162,7 @@ router.get('/segments', authenticate, async (req, res) => {
 });
 
 // ─── Inscriptions ─────────────────────────────────────
-router.get('/inscription', authenticate, async (req, res) => {
+router.get('/inscription', authMiddleware, async (req, res) => {
   try {
     const days = parseInt(req.query.days) || 30;
     const data = [];
@@ -187,7 +187,7 @@ router.get('/inscription', authenticate, async (req, res) => {
 });
 
 // ─── Top Campagnes ────────────────────────────────────
-router.get('/top-campagnes', authenticate, async (req, res) => {
+router.get('/top-campagnes', authMiddleware, async (req, res) => {
   try {
     const campagnes = await prisma.campagne.findMany({
       include: { inscription: true }
@@ -219,12 +219,12 @@ router.get('/top-campagnes', authenticate, async (req, res) => {
 });
 
 // ─── Rapports ─────────────────────────────────────────
-router.get('/rapports', authenticate, async (req, res) => {
+router.get('/rapports', authMiddleware, async (req, res) => {
   res.json([]);
 });
 
 // ─── Monitoring ───────────────────────────────────────
-router.get('/monitoring', authenticate, async (req, res) => {
+router.get('/monitoring', authMiddleware, async (req, res) => {
   res.json({
     apiStatus: 'Operationnel',
     apiLatency: '45ms',
@@ -242,7 +242,7 @@ router.get('/monitoring', authenticate, async (req, res) => {
 });
 
 // ─── Export PDF ───────────────────────────────────────
-router.get('/export/pdf', authenticate, async (req, res) => {
+router.get('/export/pdf', authMiddleware, async (req, res) => {
   res.status(501).json({ message: 'Export PDF en developpement' });
 });
 
