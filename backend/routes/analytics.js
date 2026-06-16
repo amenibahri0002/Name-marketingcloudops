@@ -13,19 +13,19 @@ const authenticate = (req, res, next) => {
 router.get('/kpis', authenticate, async (req, res) => {
   try {
     const campagnes = await prisma.campagne.findMany();
-    const inscriptions = await prisma.inscription.findMany();
+    const inscription = await prisma.inscription.findMany();
     const users = await prisma.user.findMany({ where: { role: 'CLIENT' } });
     const notifications = await prisma.notification.findMany();
 
     const campagnesPubliees = campagnes.filter(c => c.published).length;
-    const inscritsConfirmes = inscriptions.filter(i => i.status === 'CONFIRMEE').length;
+    const inscritsConfirmes = inscription.filter(i => i.status === 'CONFIRMEE').length;
     const placesTotal = campagnes.reduce((sum, c) => sum + (c.placesTotal || 0), 0);
 
     res.json({
       campagnesActives: campagnes.length,
       campagnesChange: 12,
       campagnesPubliees,
-      inscriptionsTotal: inscriptions.length,
+      inscriptionsTotal: inscription.length,
       inscriptionsChange: 8,
       tauxConversion: campagnes.length ? Math.round((inscritsConfirmes / campagnes.length) * 100) : 0,
       revenus: inscritsConfirmes * 500, // estimation
@@ -62,7 +62,7 @@ router.get('/evolution', authenticate, async (req, res) => {
 
       data.push({
         date: dateStr,
-        inscriptions: Math.floor(Math.random() * 10),
+        inscription: Math.floor(Math.random() * 10),
         campagnesCrees: Math.floor(Math.random() * 3),
         revenus: Math.floor(Math.random() * 5000),
         nouveauxClients: Math.floor(Math.random() * 5)
@@ -78,7 +78,7 @@ router.get('/evolution', authenticate, async (req, res) => {
 router.get('/performance', authenticate, async (req, res) => {
   try {
     const campagnes = await prisma.campagne.findMany({
-      include: { inscriptions: true }
+      include: { inscription: true }
     });
 
     res.json(campagnes.map(c => {
@@ -142,14 +142,14 @@ router.get('/segments', authenticate, async (req, res) => {
       const type = u.type || 'Particulier';
       if (!segments[type]) segments[type] = { name: type, clients: 0, inscriptions: 0 };
       segments[type].clients += 1;
-      segments[type].inscriptions += u.inscription?.length || 0;
+      segments[type].inscription += u.inscription?.length || 0;
     });
 
     res.json(Object.values(segments).map(s => ({
       name: s.name,
       value: s.clients,
       clients: s.clients,
-      inscriptions: s.inscriptions,
+      inscription: s.inscription,
       revenuTotal: s.clients * 850,
       revenuMoyen: 850,
       canalPrefere: 'Email',
@@ -162,7 +162,7 @@ router.get('/segments', authenticate, async (req, res) => {
 });
 
 // ─── Inscriptions ─────────────────────────────────────
-router.get('/inscriptions', authenticate, async (req, res) => {
+router.get('/inscription', authenticate, async (req, res) => {
   try {
     const days = parseInt(req.query.days) || 30;
     const data = [];
@@ -207,7 +207,7 @@ router.get('/top-campagnes', authenticate, async (req, res) => {
         slug: c.slug,
         dateScheduled: c.dateScheduled,
         location: c.location,
-        inscriptions: inscrits,
+        inscription: inscrits,
         revenus: confirmes * 500,
         tauxRemplissage: c.placesTotal ? Math.round((inscrits / c.placesTotal) * 100) : 0
       };
