@@ -56,30 +56,34 @@ model Campagne {
   iconName        String?        @default("Sparkles") @db.VarChar(50)
   couleur         String?        @default("#F5A623") @db.VarChar(20)
   prerequis       String?        @db.Text
-  tools           String[]
-  tags            String[]
-  inclus          String[]
+  tools           String[]       @default([])
+  tags            String[]       @default([])
+  inclus          String[]       @default([])
   clientId        Int?
   client          Client?        @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   createdAt       DateTime?      @default(now()) @db.Timestamp(6)
   sentAt          DateTime?      @db.Timestamp(6)
   updatedAt       DateTime?      @default(now()) @updatedAt @db.Timestamp(6)
   stats           CampagneStats?
-  inscription   Inscription[]
+  inscription     Inscription[]
   notifications   Notification[]
   alertes         Alerte[]
+  feedbacks       Feedback[]     // ← AJOUTÉ : relation inverse
 }
 
+// ============================================================
+// INSCRIPTION
+// ============================================================
 model Inscription {
   id          Int        @id @default(autoincrement())
   name        String     @db.VarChar(255)
   email       String     @db.VarChar(255)
   phone       String     @db.VarChar(50)
-  entreprise  String?    @db.VarChar(255) // ← NOUVEAU
-  notes       String?    @db.Text // ← NOUVEAU
-  formule     String     @default("standard") @db.VarChar(50) // ← NOUVEAU
-  paymentType String     @default("carte") @db.VarChar(50) // ← NOUVEAU
-  prixTotal   Int? // ← NOUVEAU
+  entreprise  String?    @db.VarChar(255)
+  notes       String?    @db.Text
+  formule     String     @default("standard") @db.VarChar(50)
+  paymentType String     @default("carte") @db.VarChar(50)
+  prixTotal   Int?
   status      String     @default("en_attente") @db.VarChar(50)
   campagneId  Int?
   campagne    Campagne?  @relation(fields: [campagneId], references: [id])
@@ -87,12 +91,14 @@ model Inscription {
   user        User?      @relation(fields: [userId], references: [id])
   createdAt   DateTime?  @default(now()) @db.Timestamp(6)
   clientId    Int?
-  client      Client?   @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  paiements   Paiement[] // ← NOUVEAU
-  paymentData   Json?
+  client      Client?    @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  paiements   Paiement[]
+  paymentData Json?
 }
 
-// Ajouter le modèle Paiement
+// ============================================================
+// PAIEMENT
+// ============================================================
 model Paiement {
   id            Int          @id @default(autoincrement())
   montant       Int?
@@ -108,27 +114,27 @@ model Paiement {
 }
 
 // ============================================================
-// CLIENT (avec relations inverses)
+// CLIENT
 // ============================================================
 model Client {
   id            Int            @id @default(autoincrement())
   name          String         @db.VarChar(255)
   email         String         @unique @db.VarChar(255)
   phone         String?        @db.VarChar(50)
-  password      String?        @db.VarChar(255)  
-  type          String?        @default("particulier") @db.VarChar(50) // particulier, entreprise, agence...
+  password      String?        @db.VarChar(255)
+  type          String?        @default("particulier") @db.VarChar(50)
   fcmToken      String?
   sector        String?        @db.VarChar(255)
   status        String?        @default("active") @db.VarChar(50)
-  role          String?        @default("CLIENT") @db.VarChar(50)  // ← AJOUTÉ
+  role          String?        @default("CLIENT") @db.VarChar(50)
   createdAt     DateTime?      @default(now()) @db.Timestamp(6)
   updatedAt     DateTime?      @updatedAt
   campagnes     Campagne[]
   contacts      Contact[]
   segments      Segment[]
   users         User[]
-  notifications Notification[] // ← AJOUTÉ : relation inverse
-  alertes       Alerte[] // ← AJOUTÉ : relation inverse
+  notifications Notification[] // ← CORRIGÉ : relation avec champ opposé
+  alertes       Alerte[]
   inscription   Inscription[]
 }
 
@@ -139,12 +145,13 @@ model Contact {
   id         Int              @id @default(autoincrement())
   name       String           @db.VarChar(255)
   email      String           @unique @db.VarChar(255)
-  phone      String?          @db.VarChar(50)     // ← Optionnel (?)
+  phone      String?          @db.VarChar(50)
   clientId   Int?
   createdAt  DateTime?        @default(now()) @db.Timestamp(6)
   client     Client?          @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   segments   ContactSegment[]
 }
+
 // ============================================================
 // USER
 // ============================================================
@@ -153,21 +160,23 @@ model User {
   name             String             @db.VarChar(255)
   email            String             @unique @db.VarChar(255)
   password         String             @db.VarChar(255)
-  role             String?            @default("CLIENT")  // ADMIN, CLIENT, RESPONSABLE_MARKETING
+  role             String?            @default("CLIENT")
   fcmToken         String?
   createdAt        DateTime?          @default(now()) @db.Timestamp(6)
-  updatedAt        DateTime?           @updatedAt
+  updatedAt        DateTime?          @updatedAt
   clientId         Int?
   status           String             @default("active") @db.VarChar(50)
   lastLogin        DateTime?
   PushSubscription PushSubscription[]
   client           Client?            @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  inscription   Inscription[]
+  inscription      Inscription[]
   paiements        Paiement[]
+  notifications    Notification[]     // ← AJOUTÉ : relation inverse
+  feedbacks        Feedback[]         // ← AJOUTÉ : relation inverse
 }
 
 // ============================================================
-// SEGMENT (avec relation inverse)
+// SEGMENT
 // ============================================================
 model Segment {
   id            Int              @id @default(autoincrement())
@@ -177,7 +186,7 @@ model Segment {
   createdAt     DateTime?        @default(now()) @db.Timestamp(6)
   contacts      ContactSegment[]
   client        Client?          @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  notifications Notification[] // ← AJOUTÉ : relation inverse
+  notifications Notification[]   // ← CORRIGÉ : relation avec champ opposé
 }
 
 // ============================================================
@@ -223,25 +232,47 @@ model PushSubscription {
 // NOTIFICATION (corrigé)
 // ============================================================
 model Notification {
-  id         Int       @id @default(autoincrement())
-  title      String    @db.VarChar(255)
-  message    String    @db.Text
-  type       String    @db.VarChar(50)
-  canal      String    @db.VarChar(50)
-  status     String    @default("pending") @db.VarChar(50)
-  campagneId Int?
-  campagne   Campagne? @relation(fields: [campagneId], references: [id])
-  clientId   Int?
-  client     Client?   @relation(fields: [clientId], references: [id])
-  segmentId  Int?
-  segment    Segment?  @relation(fields: [segmentId], references: [id])
-  createdAt  DateTime  @default(now()) @db.Timestamp(6)
-  sentAt     DateTime? @db.Timestamp(6)
-  metadata   Json?
+  id          Int       @id @default(autoincrement())
+  title       String
+  message     String
+  type        String
+  canal       String
+  userId      Int?      // ← Optionnel (?)
+  user        User?     @relation(fields: [userId], references: [id])
+  clientId    Int?
+  client      Client?   @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  segmentId   Int?
+  segment     Segment?  @relation(fields: [segmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  campagneId  Int?
+  campagne    Campagne? @relation(fields: [campagneId], references: [id])
+  isRead      Boolean   @default(false)
+  data        Json?
+  sentAt      DateTime? @default(now())  // ← Optionnel (?)
+  createdAt   DateTime  @default(now())
+  
+  @@index([userId, isRead])
+  @@index([createdAt])
 }
 
 // ============================================================
-// ALERTE (corrigé)
+// FEEDBACK
+// ============================================================
+model Feedback {
+  id          Int       @id @default(autoincrement())
+  rating      Int
+  comment     String?
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id])
+  campagneId  Int
+  campagne    Campagne  @relation(fields: [campagneId], references: [id])
+  createdAt   DateTime  @default(now())
+  
+  @@unique([userId, campagneId])
+  @@index([campagneId])
+}
+
+// ============================================================
+// ALERTE
 // ============================================================
 model Alerte {
   id         Int       @id @default(autoincrement())

@@ -1,145 +1,88 @@
-﻿// backend/routes/notifications.js - CORRIGÉ
-const express = require('express');
+﻿const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-const { authMiddleware: authenticate } = require('../middleware/auth');
-const { sendCampagneNotification } = require('../services/emailService');
-const { sendPush } = require('../services/pushService');
+const { authMiddleware } = require('../middleware/auth');
+const { notifierNouvelleCampagne, notifierClient, notifierAuLogin, marquerCommeLues } = require('../services/notificationService');
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// POST /api/notifications
-router.post('/', authenticate, async (req, res) => {
+// GET /api/notifications/mes-notifications
+router.get('/mes-notifications', authMiddleware, async (req, res) => {
   try {
-    const { title, message, type, canal, campagneId } = req.body;
-
-    if (!title || !message || !canal) {
-      return res.status(400).json({ error: 'Titre, message et canal requis' });
-    }
-
-    // 1. Créer la notification
-    const notification = await prisma.notification.create({
-      data: {
-        title,
-        message,
-        type: type || 'info',
-        canal,
-        campagneId: campagneId ? parseInt(campagneId) : null,
-        status: 'pending'
-      }
-    });
-
-    // 2. RÉPONDRE immédiatement (UNE SEULE FOIS)
-    res.status(201).json({
-      message: 'Notification créée - Envoi en cours',
-      notification
-    });
-
-    // 3. ENVOYER en arrière-plan (après la réponse, avec setTimeout)
-    setTimeout(async () => {
-      try {
-        let result;
-        
-        if (canal === 'email') {
-          result = await envoyerEmail(notification, title, message);
-        } else if (canal === 'push') {
-          result = await envoyerPushNotif(notification, title, message);
-        } else {
-          result = { success: false, error: `${canal} non configuré` };
+    const notifications = await prisma.notification.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        campagne: {
+          select: { id: true, title: true, image: true, prix: true }
         }
-
-        // Mettre à jour le statut
-        await prisma.notification.update({
-          where: { id: notification.id },
-          data: { 
-            status: result.success ? 'sent' : 'failed',
-            sentAt: result.success ? new Date() : null,
-            metadata: result
-          }
-        });
-
-        console.log(`[${canal.toUpperCase()}] ✅ ${result.sent || 0}/${result.total || 0} envoyés`);
-
-      } catch (err) {
-        console.error(`[NOTIFICATION SEND ERROR]`, err);
-        await prisma.notification.update({
-          where: { id: notification.id },
-          data: { status: 'failed', metadata: { error: err.message } }
-        });
       }
-    }, 100);
+    });
 
-  } catch (error) {
-    console.error('[NOTIFICATION CREATE ERROR]', error);
-    // ✅ Vérifier si on a déjà répondu avant d'envoyer une erreur
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
+    const unreadCount = notifications.filter(n => !n.isRead).length;
+
+    res.json({ notifications, unreadCount, total: notifications.length });
+
+  } catch (err) {
+    console.error('[GET NOTIFICATIONS ERROR]', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ CORRECTION : Fonctions définies DANS le fichier
-async function envoyerEmail(notification, title, message) {
+// PATCH /api/notifications/:id/read
+router.patch('/:id/read', authMiddleware, async (req, res) => {
   try {
-    const contacts = await prisma.contact.findMany({
-      select: { email: true, name: true }
-    });
-    
-    const users = await prisma.user.findMany({
-      where: { role: 'CLIENT' },
-      select: { email: true, name: true }
+    const notification = await prisma.notification.updateMany({
+      where: { id: parseInt(req.params.id), userId: req.user.id },
+      data: { isRead: true }
     });
 
-    const allDestinataires = [...contacts, ...users];
-    const uniqueDestinataires = allDestinataires.filter((dest, index, self) => 
-      index === self.findIndex(d => d.email === dest.email)
-    );
-
-    const campagne = notification.campagneId ? await prisma.campagne.findUnique({
-      where: { id: notification.campagneId }
-    }) : null;
-
-    const result = await sendCampagneNotification(uniqueDestinataires, title, message, campagne);
-
-    return {
-      success: result.success,
-      sent: result.sent,
-      failed: result.failed,
-      total: result.total
-    };
+    res.json({ success: true, updated: notification.count });
 
   } catch (err) {
-    console.error('[EMAIL ERROR]', err);
-    return { success: false, error: err.message };
+    res.status(500).json({ error: err.message });
   }
-}
+});
 
-async function envoyerPushNotif(notification, title, message) {
+// PATCH /api/notifications/read-all
+router.patch('/read-all', authMiddleware, async (req, res) => {
   try {
-    const result = await sendPush({
-      title: title,
-      message: message,
-      type: notification.type,
-      campagneId: notification.campagneId
+    await prisma.notification.updateMany({
+      where: { userId: req.user.id, isRead: false },
+      data: { isRead: true }
     });
 
-    return result;
+    res.json({ success: true });
 
   } catch (err) {
-    console.error('[PUSH ERROR]', err);
-    return { success: false, error: err.message };
+    res.status(500).json({ error: err.message });
   }
-}
+});
 
-// GET /api/notifications
-router.get('/', authenticate, async (req, res) => {
+// POST /api/notifications/send (ADMIN/MARKETING)
+router.post('/send', authMiddleware, async (req, res) => {
   try {
-    const notifications = await prisma.notification.findMany({
-      orderBy: { createdAt: 'desc' }
-    });
-    res.json(notifications);
-  } catch (error) {
-    res.status(500).json({ error: 'Erreur serveur' });
+    if (!['ADMIN', 'RESPONSABLE_MARKETING'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+
+    const { title, message, userId, campagneId, type = 'system' } = req.body;
+    const result = await notifierClient(parseInt(userId), title, message, type, { campagneId });
+    res.json(result);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/notifications/check-login
+router.get('/check-login', authMiddleware, async (req, res) => {
+  try {
+    const result = await notifierAuLogin(req.user.id);
+    res.json(result);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
