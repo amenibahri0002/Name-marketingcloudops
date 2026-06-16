@@ -77,6 +77,7 @@ app.use('/api/sms', authenticate, require('./routes/sms'));
 app.use('/api/analytics', authenticate, require('./routes/analytics'));
 app.use('/api/export', authenticate, require('./routes/export'));
 app.use('/api/certificats', authenticate, require('./routes/certificats'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // Routes inscriptions (publiques pour inscription, protégées pour admin)
 app.use('/api/inscriptions', require('./routes/inscriptions'));
@@ -88,7 +89,6 @@ app.use('/api/paiements', require('./routes/paiements'));
 // 5. MÉTRIQUES PROMETHEUS (endpoint /metrics)
 // ============================================================
 app.use('/metrics', require('./routes/metrics'));
-app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/feedbacks', require('./routes/feedbacks'));
 // ============================================================
 // 6. HEALTH CHECK

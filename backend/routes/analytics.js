@@ -134,7 +134,7 @@ router.get('/segments', authenticate, async (req, res) => {
   try {
     const users = await prisma.user.findMany({
       where: { role: 'CLIENT' },
-      include: { inscriptions: true }
+      include: { inscription: true }
     });
 
     const segments = {};
@@ -190,7 +190,7 @@ router.get('/inscriptions', authenticate, async (req, res) => {
 router.get('/top-campagnes', authenticate, async (req, res) => {
   try {
     const campagnes = await prisma.campagne.findMany({
-      include: { inscriptions: true }
+      include: { inscription: true }
     });
 
     const sorted = campagnes.sort((a, b) => (b.inscriptions?.length || 0) - (a.inscriptions?.length || 0));
