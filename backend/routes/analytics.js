@@ -82,8 +82,8 @@ router.get('/performance', authenticate, async (req, res) => {
     });
 
     res.json(campagnes.map(c => {
-      const inscrits = c.inscriptions?.length || 0;
-      const confirmes = c.inscriptions?.filter(i => i.status === 'CONFIRMEE').length || 0;
+      const inscrits = c.inscription?.length || 0;
+      const confirmes = c.inscription?.filter(i => i.status === 'CONFIRMEE').length || 0;
 
       return {
         id: c.id,
@@ -142,7 +142,7 @@ router.get('/segments', authenticate, async (req, res) => {
       const type = u.type || 'Particulier';
       if (!segments[type]) segments[type] = { name: type, clients: 0, inscriptions: 0 };
       segments[type].clients += 1;
-      segments[type].inscriptions += u.inscriptions?.length || 0;
+      segments[type].inscriptions += u.inscription?.length || 0;
     });
 
     res.json(Object.values(segments).map(s => ({
@@ -193,11 +193,11 @@ router.get('/top-campagnes', authenticate, async (req, res) => {
       include: { inscription: true }
     });
 
-    const sorted = campagnes.sort((a, b) => (b.inscriptions?.length || 0) - (a.inscriptions?.length || 0));
+    const sorted = campagnes.sort((a, b) => (b.inscription?.length || 0) - (a.inscription?.length || 0));
 
     res.json(sorted.slice(0, 10).map(c => {
-      const inscrits = c.inscriptions?.length || 0;
-      const confirmes = c.inscriptions?.filter(i => i.status === 'CONFIRMEE').length || 0;
+      const inscrits = c.inscription?.length || 0;
+      const confirmes = c.inscription?.filter(i => i.status === 'CONFIRMEE').length || 0;
 
       return {
         id: c.id,
