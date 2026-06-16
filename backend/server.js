@@ -65,7 +65,6 @@ app.use('/api/devops', require('./routes/devops'));
 app.use('/api/chat', require('./routes/chat'));
 
 // Routes protégées (authentification requise)
-app.use('/api/notifications', authenticate, require('./routes/notifications'));
 app.use('/api/clients', authenticate, require('./routes/clients'));
 app.use('/api/contacts', authenticate, require('./routes/contacts'));
 app.use('/api/emails', authenticate, require('./routes/emails'));
