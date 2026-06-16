@@ -2,12 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { authMiddleware } = require('../middleware/auth');
 
-const authMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Non autorise' });
-  next();
-};
 
 // ─── KPIs ─────────────────────────────────────────────
 router.get('/kpis', authMiddleware, async (req, res) => {
