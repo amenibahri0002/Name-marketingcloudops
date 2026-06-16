@@ -19,8 +19,7 @@ import ReportingCloud from './pages/Reporting';
 import Monitoring from './pages/Monitoring';
 import Inscriptions from './pages/MesCampagnes';
 import Notifications from './pages/Notifications';
-import Analytics from './pages/Analytics';
-
+import AnalyticsMarketing from './pages/Analytics';
 // Lazy loading
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -28,7 +27,6 @@ const Clients = lazy(() => import('./pages/Clients'));
 const Segments = lazy(() => import('./pages/Segments'));
 const Reporting = lazy(() => import('./pages/Reporting'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
-import Analytics from './pages/Analytics';
 const AccessDenied = lazy(() => import('./pages/AccessDenied'));
 const DevOpsCentral = lazy(() => import('./pages/DevOpsCentral'));
 const PipelineStatus = lazy(() => import('./pages/PipelineStatus'));
@@ -156,11 +154,6 @@ function App() {
               <Layout><AnalyticsMarketing /></Layout>
             </PrivateRoute>
           } />
-          <Route path="/feedbacks" element={
-  <PrivateRoute roles={['RESPONSABLE_MARKETING']}>
-    <Layout><div style={{ padding: 40 }}>Feedbacks Clients (à implémenter)</div></Layout>
-  </PrivateRoute>
-} />
           <Route path="/Clients" element={
             <PrivateRoute roles={['RESPONSABLE_MARKETING']}>
               <Layout><Clients /></Layout>
