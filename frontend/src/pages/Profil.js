@@ -161,7 +161,7 @@ export default function Profil() {
               {/* Stats */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
                 {[
-                  { icon: BookOpen, label: 'Inscriptions', value: inscriptions, color: THEME.gold, bg: THEME.goldLight },
+                  { icon: BookOpen, label: 'inscriptions', value: inscriptions, color: THEME.gold, bg: THEME.goldLight },
                   { icon: Award, label: 'Certificats', value: certificats, color: THEME.success, bg: '#d1fae5' },
                   { icon: CreditCard, label: 'Paiements', value: paiementsCount, color: THEME.blue, bg: THEME.blueLight },
                 ].map((stat, i) => {

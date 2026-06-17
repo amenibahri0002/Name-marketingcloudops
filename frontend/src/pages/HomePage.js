@@ -416,7 +416,7 @@ function Modal({ camp, onClose }) {
           {done ? (
             <div style={{ textAlign: 'center', padding: '16px 0' }}>
               <div style={{ fontSize: 52, marginBottom: 16 }}>🎉</div>
-              <h3 style={{ color: '#10b981', margin: '0 0 8px', fontSize: 20 }}>Inscription réussie !</h3>
+              <h3 style={{ color: '#10b981', margin: '0 0 8px', fontSize: 20 }}>inscription réussie !</h3>
               <p style={{ fontSize: 14, color: T.textLt, marginBottom: 16 }}>Vous êtes inscrit à la campagne <strong>{camp.title}</strong>.</p>
               <button onClick={onClose} style={{ marginTop: 16, background: T.gold, color: '#111', border: 'none', padding: '12px 32px', borderRadius: 10, fontWeight: 700, cursor: 'pointer', fontFamily: T.font }}>Fermer</button>
             </div>
@@ -460,7 +460,7 @@ function Modal({ camp, onClose }) {
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={onClose} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: 'none', color: T.textLt, cursor: 'pointer', fontFamily: T.font }}>Annuler</button>
                 <button onClick={submit} disabled={loading} style={{ flex: 2, padding: 12, borderRadius: 10, border: 'none', background: T.gold, color: '#111', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, fontFamily: T.font }}>
-                  {loading ? 'Inscription...' : "✓ S'inscrire à la campagne"}
+                  {loading ? 'inscription...' : "✓ S'inscrire à la campagne"}
                 </button>
               </div>
             </div>

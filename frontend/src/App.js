@@ -17,9 +17,11 @@ import Paiements from './pages/Paiements';
 import Profil from './pages/Profil';
 import ReportingCloud from './pages/Reporting';
 import Monitoring from './pages/Monitoring';
-import Inscriptions from './pages/MesCampagnes';
+import MesInscriptions from './pages/MesCampagnes';
 import Notifications from './pages/Notifications';
 import AnalyticsMarketing from './pages/Analytics';
+import Feedbacks from './pages/Feedbacks';
+import FeedbacksCampagne from './pages/FeedbacksCampagne';
 // Lazy loading
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -132,9 +134,9 @@ function App() {
               <Layout><Clients /></Layout>
             </PrivateRoute>
           } />
-          <Route path="/admin/inscriptions" element={
+          <Route path="/admin/inscription" element={
             <PrivateRoute roles={['ADMIN']}>
-              <Layout><div style={{ padding: 40 }}>Inscriptions (a implementer)</div></Layout>
+              <Layout><div style={{ padding: 40 }}>inscription (a implementer)</div></Layout>
             </PrivateRoute>
           } />
 
@@ -151,7 +153,7 @@ function App() {
           } />
           <Route path="/analytics" element={
             <PrivateRoute roles={['RESPONSABLE_MARKETING']}>
-              <Layout><AnalyticsMarketing /></Layout>
+              <AnalyticsMarketing />
             </PrivateRoute>
           } />
           <Route path="/Clients" element={
@@ -159,7 +161,16 @@ function App() {
               <Layout><Clients /></Layout>
             </PrivateRoute>
           } />
-
+          <Route path="/FeedbacksCampagne/:campagneId" element={
+            <PrivateRoute roles={['RESPONSABLE_MARKETING']}>
+              <FeedbacksCampagne />
+            </PrivateRoute>
+          } />
+          <Route path="/FeedbacksCampagne" element={
+            <PrivateRoute roles={['RESPONSABLE_MARKETING']}>
+              <FeedbacksCampagne />
+            </PrivateRoute>
+          } />
           {/* ROUTES CLIENT */}
           <Route path="/client/Accueil" element={
             <PrivateRoute roles={['CLIENT']}>
@@ -183,7 +194,7 @@ function App() {
           } />
           <Route path="/MesCampagnes" element={
             <PrivateRoute roles={['CLIENT']}>
-              <Inscriptions />
+              <MesCampagnes />
             </PrivateRoute>
           } />
           <Route path="/Certificats" element={

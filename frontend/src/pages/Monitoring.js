@@ -69,7 +69,7 @@ function Monitoring() {
   const [error, setError] = useState(null);
   const [data, setData] = useState({
     users: [], campagnes: [], inscriptions: [], notifications: [],
-    metrics: { totalUsers: 0, activeUsers: 0, totalCampagnes: 0, publishedCampagnes: 0, totalInscriptions: 0, pendingInscriptions: 0, totalRevenue: 0, avgSatisfaction: 94.2, cloudUptime: 99.97, responseTime: 245, errorRate: 0.12, activeAlerts: 0 }
+    metrics: { totalUsers: 0, activeUsers: 0, totalCampagnes: 0, publishedCampagnes: 0, totalinscriptions: 0, pendinginscriptions: 0, totalRevenue: 0, avgSatisfaction: 94.2, cloudUptime: 99.97, responseTime: 245, errorRate: 0.12, activeAlerts: 0 }
   });
   const [timeRange, setTimeRange] = useState('24h');
   const [refreshing, setRefreshing] = useState(false);
@@ -92,12 +92,12 @@ function Monitoring() {
 
       const activeUsers = users.filter(u => u.status === 'active').length;
       const publishedCampagnes = campagnes.filter(c => c.published).length;
-      const pendingInscriptions = inscriptions.filter(i => i.status === 'en_attente' || i.status === 'PENDING').length;
+      const pendinginscriptions = inscriptions.filter(i => i.status === 'en_attente' || i.status === 'PENDING').length;
       const totalRevenue = campagnes.reduce((acc, c) => { const inscrits = c.placesTotal - c.placesRestantes; return acc + (inscrits * (c.prix || 0)); }, 0);
       const activeAlerts = campagnes.filter(c => c.placesRestantes <= 5 && c.placesRestantes > 0).length;
 
       setData({ users, campagnes, inscriptions, notifications,
-        metrics: { totalUsers: users.length, activeUsers, totalCampagnes: campagnes.length, publishedCampagnes, totalInscriptions: inscriptions.length, pendingInscriptions, totalRevenue, avgSatisfaction: 94.2, cloudUptime: 99.97, responseTime: 245, errorRate: 0.12, activeAlerts }
+        metrics: { totalUsers: users.length, activeUsers, totalCampagnes: campagnes.length, publishedCampagnes, totalinscriptions: inscriptions.length, pendinginscriptions, totalRevenue, avgSatisfaction: 94.2, cloudUptime: 99.97, responseTime: 245, errorRate: 0.12, activeAlerts }
       });
     } catch (err) { console.error('Erreur monitoring:', err); setError('Erreur lors du chargement des données'); }
     finally { setLoading(false); setRefreshing(false); }
@@ -156,7 +156,7 @@ function Monitoring() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
             <KPICard title="Utilisateurs Actifs" value={data.metrics.activeUsers} subtitle={data.metrics.totalUsers + ' total'} trend="+12" icon="👥" color={C.blue} delay={0} />
             <KPICard title="Campagnes Publiées" value={data.metrics.publishedCampagnes} subtitle={data.metrics.totalCampagnes + ' total'} trend="+8" icon="📢" color={C.green} delay={100} />
-            <KPICard title="Inscriptions" value={data.metrics.totalInscriptions} subtitle={data.metrics.pendingInscriptions + ' en attente'} trend="+15" icon="📝" color={C.gold} delay={200} />
+            <KPICard title="inscriptions" value={data.metrics.totalinscriptions} subtitle={data.metrics.pendinginscriptions + ' en attente'} trend="+15" icon="📝" color={C.gold} delay={200} />
             <KPICard title="Revenus" value={data.metrics.totalRevenue.toLocaleString() + ' TND'} subtitle="MRR: 70,500 TND" trend="+8.5" icon="💰" color={C.green} delay={300} />
           </div>
 
@@ -210,11 +210,11 @@ function Monitoring() {
             </Card>
           </div>
 
-          {/* Inscriptions + Notifications */}
+          {/* inscriptions + Notifications */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
             <Card style={{ padding: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.text }}>📝 Flux d'Inscriptions</h2>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.text }}>📝 Flux d'inscriptions</h2>
                 <span style={{ fontSize: 12, color: C.muted }}>{data.inscriptions.length} total</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

@@ -152,7 +152,7 @@ export default function ResponsableDashboard() {
   const [campagnes, setCampagnes] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [clients, setClients] = useState([]);
-  const [inscriptions, setInscriptions] = useState([]);
+  const [inscriptions, setinscriptions] = useState([]);
   const [canauxStats, setCanauxStats] = useState([]);
   const [evolution, setEvolution] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
@@ -201,7 +201,7 @@ const fetchAllData = async () => {
 
     // Traiter les inscriptions
     const inscriptionsData = Array.isArray(inscRes?.data) ? inscRes.data : [];
-    setInscriptions(inscriptionsData);
+    setinscriptions(inscriptionsData);
 
     // Traiter les clients
     const clientsData = Array.isArray(clientsRes?.data) ? clientsRes.data : [];
@@ -212,20 +212,20 @@ const fetchAllData = async () => {
     setNotifications(notifsData);
 
     // === CALCULER LES KPIs DYNAMIQUEMENT ===
-    const totalInscriptions = inscriptionsData.length;
+    const totalinscriptions = inscriptionsData.length;
     const totalRevenus = inscriptionsData.reduce((sum, i) => sum + (i.prixTotal || 0), 0);
     const totalClients = clientsData.length;
     const campagnesActives = campagnesData.length;
     const campagnesPubliees = campagnesData.filter(c => c.published).length;
     
     const placesTotal = campagnesData.reduce((sum, c) => sum + (c.placesTotal || 0), 0);
-    const tauxRemplissage = placesTotal ? Math.round((totalInscriptions / placesTotal) * 100) : 0;
-    const tauxConversion = totalClients ? Math.round((totalInscriptions / totalClients) * 100) : 0;
+    const tauxRemplissage = placesTotal ? Math.round((totalinscriptions / placesTotal) * 100) : 0;
+    const tauxConversion = totalClients ? Math.round((totalinscriptions / totalClients) * 100) : 0;
 
     setKpis({
       campagnesActives: campagnesActives,
       campagnesPubliees: campagnesPubliees,
-      inscriptionsTotal: totalInscriptions,
+      inscriptionsTotal: totalinscriptions,
       tauxRemplissage: tauxRemplissage,
       notificationsSent: notifsData.length,
       totalClients: totalClients,
@@ -286,14 +286,14 @@ const fetchAllData = async () => {
       const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
       
       // Compter les inscriptions de ce jour
-      const dayInscriptions = inscriptionsData.filter(i => {
+      const dayinscriptions = inscriptionsData.filter(i => {
         const iDate = new Date(i.createdAt);
         return iDate.toDateString() === date.toDateString();
       }).length;
       
       evoData.push({
         date: dateStr,
-        inscriptions: dayInscriptions,
+        inscriptions: dayinscriptions,
         campagnes: campagnesData.filter(c => {
           const cDate = new Date(c.createdAt);
           return cDate.toDateString() === date.toDateString();
@@ -364,7 +364,7 @@ const fetchAllData = async () => {
   const safeCampagnes = Array.isArray(campagnes) ? campagnes : [];
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
   const safeClients = Array.isArray(clients) ? clients : [];
-  const safeInscriptions = Array.isArray(inscriptions) ? inscriptions : [];
+  const safeinscriptions = Array.isArray(inscriptions) ? inscriptions : [];
   const safeCanaux = Array.isArray(canauxStats) ? canauxStats : [];
   const safeEvolution = Array.isArray(evolution) ? evolution : [];
   const safeActivities = Array.isArray(recentActivities) ? recentActivities : [];
@@ -457,7 +457,7 @@ const fetchAllData = async () => {
                   onClick={() => setActiveTab('campagnes')}
                 />
                 <KPICard
-                  title="Inscriptions"
+                  title="inscriptions"
                   value={kpis.inscriptionsTotal || 0}
                   change={8}
                   changeType="up"
@@ -856,7 +856,7 @@ const fetchAllData = async () => {
                   <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '14px' }}>
                     <thead>
                       <tr>
-                        {['Client', 'Email', 'Type', 'Inscriptions', 'Date d\'inscription', 'Statut'].map((h, i) => (
+                        {['Client', 'Email', 'Type', 'inscriptions', 'Date d\'inscription', 'Statut'].map((h, i) => (
                           <th key={h} style={{
                             textAlign: i < 2 ? 'left' : 'center',
                             padding: '16px 12px', color: THEME.textMuted, fontWeight: '700',

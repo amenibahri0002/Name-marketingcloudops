@@ -30,12 +30,12 @@ const STATUS_CONFIG = {
 function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ 
-    totalUsers: 0, totalClients: 0, totalCampagnes: 0, totalInscriptions: 0, 
-    activeUsers: 0, inactiveUsers: 0, publishedCampagnes: 0, pendingInscriptions: 0 
+    totalUsers: 0, totalClients: 0, totalCampagnes: 0, totalinscriptions: 0, 
+    activeUsers: 0, inactiveUsers: 0, publishedCampagnes: 0, pendinginscriptions: 0 
   });
   const [users, setUsers] = useState([]);
   const [campagnes, setCampagnes] = useState([]);
-  const [inscriptions, setInscriptions] = useState([]);
+  const [inscriptions, setinscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState('7j');
@@ -68,33 +68,33 @@ function AdminDashboard() {
       }
 
       try {
-        const inscriptionsRes = await api.get('/api/inscriptions');
+        const inscriptiosnRes = await api.get('/api/inscriptions');
         inscriptionsData = inscriptionsRes.data || [];
       } catch (err) {
         console.warn('Erreur chargement inscriptions (route non disponible):', err.message);
         fetchErrors.push('inscriptions');
-        // Inscriptions non disponible — on continue avec tableau vide
+        // inscription non disponible — on continue avec tableau vide
       }
 
       const activeUsers = usersData.filter(u => u.status === 'active').length;
       const inactiveUsers = usersData.filter(u => u.status === 'inactive').length;
       const publishedCampagnes = campagnesData.filter(c => c.published).length;
-      const pendingInscriptions = inscriptionsData.filter(i => i.status === 'en_attente' || i.status === 'PENDING').length;
+      const pendinginscriptions = inscriptionsData.filter(i => i.status === 'en_attente' || i.status === 'PENDING').length;
 
       setStats({ 
         totalUsers: usersData.length, 
         totalClients: usersData.filter(u => u.role === 'CLIENT').length, 
         totalCampagnes: campagnesData.length, 
-        totalInscriptions: inscriptionsData.length, 
+        totalinscriptions: inscriptionsData.length, 
         activeUsers, 
         inactiveUsers, 
         publishedCampagnes, 
-        pendingInscriptions 
+        pendinginscriptions 
       });
 
       setUsers(usersData); 
       setCampagnes(campagnesData); 
-      setInscriptions(inscriptionsData);
+      setinscriptions(inscriptionsData);
 
       // Afficher un message si certaines données sont manquantes
       if (fetchErrors.length > 0 && fetchErrors.length < 3) {
@@ -127,7 +127,7 @@ function AdminDashboard() {
     { label: 'Brouillons', value: stats.totalCampagnes - stats.publishedCampagnes, color: '#6B7280', icon: '📝' }
   ].filter(i => i.value > 0);
 
-  const inscriptionStatus = [
+  const inscriptionsStatus = [
     { label: 'En attente', value: inscriptions.filter(i => i.status === 'en_attente' || i.status === 'PENDING').length, color: '#F59E0B', icon: '⏳' }, 
     { label: 'Acceptées', value: inscriptions.filter(i => i.status === 'acceptee' || i.status === 'ACCEPTED').length, color: '#10B981', icon: '✅' }, 
     { label: 'Refusées', value: inscriptions.filter(i => i.status === 'refusee' || i.status === 'REJECTED').length, color: '#EF4444', icon: '❌' }
@@ -276,7 +276,7 @@ function AdminDashboard() {
       switch(type) {
         case 'user': return { icon: '👤', bg: '#DBEAFE', color: '#2563EB' };
         case 'campagne': return { icon: '📢', bg: '#FEF3C7', color: '#D97706' };
-        case 'inscription': return { icon: '📝', bg: '#ECFDF5', color: '#10B981' };
+        case 'inscriptions': return { icon: '📝', bg: '#ECFDF5', color: '#10B981' };
         default: return { icon: '📌', bg: '#F3F4F6', color: '#6B7280' };
       }
     };
@@ -392,7 +392,7 @@ function AdminDashboard() {
                         {item.published ? '✅ Publiée' : '📝 Brouillon'}
                       </span>
                     )}
-                    {type === 'inscription' && statusConfig && (
+                    {type === 'inscriptions' && statusConfig && (
                       <span style={{ 
                         padding: '2px 8px', 
                         borderRadius: 10, 
@@ -639,9 +639,9 @@ function AdminDashboard() {
               onClick={() => navigate('/admin/campagnes')}
             />
             <StatCard 
-              title="Inscriptions" 
-              value={stats.totalInscriptions} 
-              subtitle={`${stats.pendingInscriptions} en attente`} 
+              title="inscriptions" 
+              value={stats.totalinscriptions} 
+              subtitle={`${stats.pendinginscriptions} en attente`} 
               icon="📝" 
               color="#10B981" 
               trend={-3} 
@@ -667,7 +667,7 @@ function AdminDashboard() {
           }}>
             <MiniBarChart data={roleDistribution} title="Répartition des rôles" />
             <MiniBarChart data={campagneStatus} title="Statut des campagnes" />
-            <MiniBarChart data={inscriptionStatus} title="Statut des inscriptions" />
+            <MiniBarChart data={inscriptionsStatus} title="Statut des inscriptions" />
           </div>
 
           {/* Activity Grid */}
@@ -689,7 +689,7 @@ function AdminDashboard() {
               viewAllLink="/admin/campagnes"
             />
             <RecentActivity 
-              title="📝 Inscriptions récentes" 
+              title="📝 inscriptions récentes" 
               items={inscriptions} 
               type="inscription" 
               viewAllLink="/admin/inscriptions"

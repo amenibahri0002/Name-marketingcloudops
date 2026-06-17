@@ -5,7 +5,7 @@ import axios from 'axios';
 const isDocker = window.location.hostname === 'localhost' && window.location.port === '8080';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://marketingcloudops-backend.onrender.com',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
   timeout: 30000, // 30 secondes
   headers: {
     'Content-Type': 'application/json'

@@ -6,10 +6,12 @@ import {
   Sparkles, Zap, Palette, TrendingUp, BookOpen, Award,
   CheckCircle, AlertCircle, Phone, Mail, User, Loader2,
   CreditCard, Building, Banknote, FileText, Shield, Crown, Star, Gem,
-  ChevronRight, ChevronDown, ChevronUp, Lock, Wallet
+  ChevronRight, ChevronDown, ChevronUp, Lock, Wallet,
+  MessageSquare
 } from 'lucide-react';
 import Layout from '../Layout';
 import api from '../api';
+import FeedbackForm from '../components/FeedbackForm';
 
 const THEME = {
   bg: '#f8fafc', card: '#ffffff', text: '#1e293b', textLight: '#64748b',
@@ -21,38 +23,10 @@ const THEME = {
 const ICON_MAP = { Sparkles, Zap, Palette, TrendingUp, BookOpen, Award };
 
 const PAYMENT_TYPES = [
-  { 
-    id: 'carte', 
-    label: 'Carte Bancaire', 
-    icon: CreditCard, 
-    description: 'Paiement sécurisé par carte',
-    color: '#3b82f6',
-    fields: ['cardNumber', 'cardHolder', 'expiryDate', 'cvv']
-  },
-  { 
-    id: 'virement', 
-    label: 'Virement Bancaire', 
-    icon: Building, 
-    description: 'Virement sur notre compte',
-    color: '#10b981',
-    fields: ['bankName', 'accountNumber', 'rib']
-  },
-  { 
-    id: 'd17', 
-    label: 'D17 - Paiement différé', 
-    icon: FileText, 
-    description: 'Paiement sous 17 jours',
-    color: '#f59e0b',
-    fields: ['bankName', 'accountNumber']
-  },
-  { 
-    id: 'especes', 
-    label: 'Espèces', 
-    icon: Banknote, 
-    description: 'Paiement sur place',
-    color: '#8b5cf6',
-    fields: []
-  },
+  { id: 'carte', label: 'Carte Bancaire', icon: CreditCard, description: 'Paiement sécurisé par carte', color: '#3b82f6', fields: ['cardNumber', 'cardHolder', 'expiryDate', 'cvv'] },
+  { id: 'virement', label: 'Virement Bancaire', icon: Building, description: 'Virement sur notre compte', color: '#10b981', fields: ['bankName', 'accountNumber', 'rib'] },
+  { id: 'd17', label: 'D17 - Paiement différé', icon: FileText, description: 'Paiement sous 17 jours', color: '#f59e0b', fields: ['bankName', 'accountNumber'] },
+  { id: 'especes', label: 'Espèces', icon: Banknote, description: 'Paiement sur place', color: '#8b5cf6', fields: [] },
 ];
 
 const FORMULES = [
@@ -75,6 +49,7 @@ const InscriptionForm = ({ campagne, onSuccess }) => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [expandedFormule, setExpandedFormule] = useState(null);
+  const isImmediate = ['carte', 'virement', 'd17'].includes(formData.paymentType);
 
   const selectedFormule = FORMULES.find(f => f.id === formData.formule);
   const selectedPayment = PAYMENT_TYPES.find(p => p.id === formData.paymentType);
@@ -85,7 +60,6 @@ const InscriptionForm = ({ campagne, onSuccess }) => {
   const tva = totalHT * 0.19;
   const totalTTC = totalHT + tva;
 
-  // Pré-remplir les champs depuis localStorage
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     if (user.name || user.email) {
@@ -187,7 +161,9 @@ const InscriptionForm = ({ campagne, onSuccess }) => {
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}>
           <CheckCircle size={64} style={{ color: THEME.success, marginBottom: '20px' }} />
         </motion.div>
-        <h3 style={{ color: '#065f46', fontSize: '1.5rem', fontWeight: '800', marginBottom: '12px' }}>Inscription confirmée !</h3>
+        <h3 style={{ color: '#065f46', fontSize: '1.5rem', fontWeight: '800', marginBottom: '12px' }}>
+          {isImmediate ? 'Paiement effectué !' : 'Inscription confirmée !'}
+        </h3>
         <p style={{ color: '#059669', fontSize: '1.1rem', marginBottom: '8px' }}>Vous êtes inscrit à : <strong>{campagne.title}</strong></p>
         <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', marginTop: '20px', textAlign: 'left' }}>
           <p style={{ color: THEME.text, fontWeight: '600', marginBottom: '8px' }}>Récapitulatif :</p>
@@ -443,44 +419,24 @@ const InscriptionForm = ({ campagne, onSuccess }) => {
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: THEME.text }}>Numéro de carte *</label>
-                    <input 
-                      type="text" 
-                      placeholder="1234 5678 9012 3456"
-                      value={paymentData.cardNumber}
-                      onChange={(e) => setPaymentData({...paymentData, cardNumber: e.target.value})}
-                      style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }}
-                    />
+                    <input type="text" placeholder="1234 5678 9012 3456" value={paymentData.cardNumber} onChange={(e) => setPaymentData({...paymentData, cardNumber: e.target.value})}
+                      style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }} />
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: THEME.text }}>Titulaire de la carte *</label>
-                    <input 
-                      type="text" 
-                      placeholder="NOM Prénom"
-                      value={paymentData.cardHolder}
-                      onChange={(e) => setPaymentData({...paymentData, cardHolder: e.target.value})}
-                      style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }}
-                    />
+                    <input type="text" placeholder="NOM Prénom" value={paymentData.cardHolder} onChange={(e) => setPaymentData({...paymentData, cardHolder: e.target.value})}
+                      style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }} />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
                       <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: THEME.text }}>Date d'expiration *</label>
-                      <input 
-                        type="text" 
-                        placeholder="MM/AA"
-                        value={paymentData.expiryDate}
-                        onChange={(e) => setPaymentData({...paymentData, expiryDate: e.target.value})}
-                        style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }}
-                      />
+                      <input type="text" placeholder="MM/AA" value={paymentData.expiryDate} onChange={(e) => setPaymentData({...paymentData, expiryDate: e.target.value})}
+                        style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }} />
                     </div>
                     <div>
                       <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: THEME.text }}>CVV *</label>
-                      <input 
-                        type="text" 
-                        placeholder="123"
-                        value={paymentData.cvv}
-                        onChange={(e) => setPaymentData({...paymentData, cvv: e.target.value})}
-                        style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }}
-                      />
+                      <input type="text" placeholder="123" value={paymentData.cvv} onChange={(e) => setPaymentData({...paymentData, cvv: e.target.value})}
+                        style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }} />
                     </div>
                   </div>
                 </div>
@@ -496,30 +452,18 @@ const InscriptionForm = ({ campagne, onSuccess }) => {
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: THEME.text }}>Votre banque *</label>
-                    <input 
-                      type="text" 
-                      value={paymentData.bankName}
-                      onChange={(e) => setPaymentData({...paymentData, bankName: e.target.value})}
-                      style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }}
-                    />
+                    <input type="text" value={paymentData.bankName} onChange={(e) => setPaymentData({...paymentData, bankName: e.target.value})}
+                      style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }} />
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: THEME.text }}>Numéro de compte *</label>
-                    <input 
-                      type="text" 
-                      value={paymentData.accountNumber}
-                      onChange={(e) => setPaymentData({...paymentData, accountNumber: e.target.value})}
-                      style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }}
-                    />
+                    <input type="text" value={paymentData.accountNumber} onChange={(e) => setPaymentData({...paymentData, accountNumber: e.target.value})}
+                      style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }} />
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: THEME.text }}>RIB *</label>
-                    <input 
-                      type="text" 
-                      value={paymentData.rib}
-                      onChange={(e) => setPaymentData({...paymentData, rib: e.target.value})}
-                      style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }}
-                    />
+                    <input type="text" value={paymentData.rib} onChange={(e) => setPaymentData({...paymentData, rib: e.target.value})}
+                      style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }} />
                   </div>
                 </div>
               )}
@@ -531,21 +475,13 @@ const InscriptionForm = ({ campagne, onSuccess }) => {
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: THEME.text }}>Votre banque *</label>
-                    <input 
-                      type="text" 
-                      value={paymentData.bankName}
-                      onChange={(e) => setPaymentData({...paymentData, bankName: e.target.value})}
-                      style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }}
-                    />
+                    <input type="text" value={paymentData.bankName} onChange={(e) => setPaymentData({...paymentData, bankName: e.target.value})}
+                      style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }} />
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: THEME.text }}>Numéro de compte *</label>
-                    <input 
-                      type="text" 
-                      value={paymentData.accountNumber}
-                      onChange={(e) => setPaymentData({...paymentData, accountNumber: e.target.value})}
-                      style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }}
-                    />
+                    <input type="text" value={paymentData.accountNumber} onChange={(e) => setPaymentData({...paymentData, accountNumber: e.target.value})}
+                      style={{ width: '100%', padding: '14px', border: '2px solid ' + THEME.border, borderRadius: '12px', fontSize: '15px' }} />
                   </div>
                 </div>
               )}
@@ -589,8 +525,22 @@ export default function CampagneDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [inscriptionsCount, setInscriptionsCount] = useState(0);
+  const [hasPaid, setHasPaid] = useState(false);
+  const [isInscrit, setIsInscrit] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
-  useEffect(() => { fetchCampagne(); }, [idOrSlug]);
+  // ✅ Fonction pour vérifier si la campagne est terminée
+  const isCampagneTerminee = () => {
+    if (!campagne?.dateScheduled) return false;
+    const now = new Date();
+    const campagneDate = new Date(campagne.dateScheduled);
+    return campagneDate < now;
+  };
+
+  useEffect(() => {
+    fetchCampagne();
+    checkPaymentStatus();
+  }, [idOrSlug]);
 
   const fetchCampagne = async () => {
     try {
@@ -607,9 +557,31 @@ export default function CampagneDetail() {
     } finally { setLoading(false); }
   };
 
+  const checkPaymentStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const res = await api.get('/api/inscriptions/mes-inscriptions');
+
+      // Vérifier si déjà payé
+      const paidInscription = res.data.find(i => 
+        (i.campagneId === parseInt(idOrSlug) || i.campagne?.slug === idOrSlug) &&
+        i.status === 'paye'
+      );
+      if (paidInscription) setHasPaid(true);
+
+      // Vérifier si inscrit (même si pas payé)
+      const anyInscription = res.data.find(i => 
+        i.campagneId === parseInt(idOrSlug) || i.campagne?.slug === idOrSlug
+      );
+      if (anyInscription) setIsInscrit(true);
+    } catch (e) { /* ignore */ }
+  };
+
   const handleInscriptionSuccess = () => {
     setInscriptionsCount(prev => prev + 1);
     setCampagne(prev => ({ ...prev, placesRestantes: Math.max(0, prev.placesRestantes - 1) }));
+    setHasPaid(true);
   };
 
   if (loading) return (
@@ -658,7 +630,16 @@ export default function CampagneDetail() {
                 <IconComponent size={32} color="#fff" />
               </div>
               <div>
-                <span style={{ background: THEME.gold, color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600' }}>{campagne.format || 'Formation'}</span>
+                <span style={{ 
+                  background: isCampagneTerminee() ? '#ef4444' : THEME.gold, 
+                  color: '#fff', 
+                  padding: '4px 12px', 
+                  borderRadius: '20px', 
+                  fontSize: '0.75rem', 
+                  fontWeight: '600' 
+                }}>
+                  {isCampagneTerminee() ? 'Terminée' : (campagne.format || 'Formation')}
+                </span>               
                 <h1 style={{ fontSize: '1.8rem', fontWeight: '800', marginTop: '8px', color: '#fff' }}>{campagne.title}</h1>
               </div>
             </div>
@@ -674,6 +655,21 @@ export default function CampagneDetail() {
                 {remise > 0 && (
                   <div style={{ position: 'absolute', top: '16px', left: '16px', background: THEME.danger, color: '#fff', padding: '6px 16px', borderRadius: '20px', fontWeight: '700' }}>-{remise}%</div>
                 )}
+                {/* ✅ Overlay "Terminée" sur l'image */}
+                {isCampagneTerminee() && (
+                  <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.7)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <div style={{
+                      background: '#ef4444', color: 'white', padding: '16px 32px',
+                      borderRadius: '12px', fontWeight: 800, fontSize: '1.5rem'
+                    }}>
+                      FORMATION TERMINÉE
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={{ background: THEME.card, padding: '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid ' + THEME.border }}>
@@ -685,7 +681,7 @@ export default function CampagneDetail() {
                 <h2 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '16px' }}>Informations pratiques</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                   {[
-                    { icon: Calendar, label: 'Date', value: campagne.dateScheduled || campagne.date || 'Non précisée' },
+                    { icon: Calendar, label: 'Date', value: campagne.dateScheduled ? new Date(campagne.dateScheduled).toLocaleDateString('fr-FR') : 'Non précisée' },
                     { icon: Clock, label: 'Durée', value: (campagne.dureeHeures || campagne.duree || 'Non précisée') + 'h' },
                     { icon: MapPin, label: 'Lieu', value: campagne.location || 'Non précisé' },
                     { icon: Users, label: 'Places', value: (campagne.placesRestantes || 0) + ' / ' + (campagne.placesTotal || 0) + ' restantes' },
@@ -766,10 +762,86 @@ export default function CampagneDetail() {
                 )}
               </div>
 
-              <InscriptionForm campagne={campagne} onSuccess={handleInscriptionSuccess} />
+              {/* ✅ PRIORITÉ 1: Déjà payé */}
+              {hasPaid ? (
+                <div style={{ 
+                  background: '#d1fae5', 
+                  border: '2px solid #10b981', 
+                  padding: '24px', 
+                  borderRadius: '16px', 
+                  textAlign: 'center' 
+                }}>
+                  <CheckCircle size={48} style={{ color: '#10b981', marginBottom: '12px' }} />
+                  <p style={{ color: '#065f46', fontWeight: 700, fontSize: '1.2rem', marginBottom: '8px' }}>
+                    Vous avez déjà payé cette formation
+                  </p>
+                  <p style={{ color: '#059669', fontSize: '0.95rem', marginTop: '8px' }}>
+                    Votre inscription est confirmée
+                  </p>
+                  {/* Bouton Donner mon avis si formation terminée */}
+                  {isCampagneTerminee() && (
+                    <button 
+                      onClick={() => setShowFeedback(true)}
+                      style={{
+                        marginTop: '16px', padding: '12px 24px', background: THEME.gold,
+                        color: 'white', border: 'none', borderRadius: '10px',
+                        fontWeight: 700, cursor: 'pointer', display: 'flex',
+                        alignItems: 'center', gap: '8px', margin: '16px auto 0'
+                      }}
+                    >
+                      <MessageSquare size={18} /> Donner mon avis
+                    </button>
+                  )}
+                </div>
+              ) : isCampagneTerminee() ? (
+                /* ✅ PRIORITÉ 2: Formation terminée */
+                <div style={{ 
+                  background: '#fee2e2', 
+                  border: '2px solid #ef4444', 
+                  padding: '24px', 
+                  borderRadius: '16px', 
+                  textAlign: 'center' 
+                }}>
+                  <p style={{ color: '#991b1b', fontWeight: 700, fontSize: '1.2rem', marginBottom: '8px' }}>
+                    Cette formation est terminée
+                  </p>
+                  <p style={{ color: '#991b1b', fontSize: '0.95rem' }}>
+                    Les inscriptions sont closes
+                  </p>
+                  {/* Bouton Donner mon avis si inscrit */}
+                  {isInscrit && (
+                    <button 
+                      onClick={() => setShowFeedback(true)}
+                      style={{
+                        marginTop: '16px', padding: '12px 24px', background: THEME.gold,
+                        color: 'white', border: 'none', borderRadius: '10px',
+                        fontWeight: 700, cursor: 'pointer'
+                      }}
+                    >
+                      <MessageSquare size={18} /> Donner mon avis
+                    </button>
+                  )}
+                </div>
+              ) : (
+                /* ✅ PRIORITÉ 3: Formulaire d'inscription */
+                <InscriptionForm campagne={campagne} onSuccess={handleInscriptionSuccess} />
+              )}
             </div>
           </div>
         </div>
+
+        {/* Modal Feedback */}
+        {showFeedback && (
+          <FeedbackForm
+            campagneId={campagne.id}
+            campagneTitle={campagne.title}
+            onClose={() => setShowFeedback(false)}
+            onSuccess={() => {
+              setShowFeedback(false);
+              alert('Merci pour votre avis !');
+            }}
+          />
+        )}
       </div>
     </Layout>
   );

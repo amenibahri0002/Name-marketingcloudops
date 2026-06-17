@@ -28,7 +28,7 @@ const TABS = [
   { id: 'performance', label: 'Performance', icon: '🎯' },
   { id: 'canaux', label: 'Canaux', icon: '📡' },
   { id: 'segments', label: 'Segments', icon: '👥' },
-  { id: 'inscriptions', label: 'Inscriptions', icon: '📝' },
+  { id: 'inscriptions', label: 'inscriptions', icon: '📝' },
   { id: 'top', label: 'Top Campagnes', icon: '🏆' },
 ];
 
@@ -59,7 +59,7 @@ const AnalyticsMarketing = () => {
   const [performance, setPerformance] = useState([]);
   const [canaux, setCanaux] = useState([]);
   const [segments, setSegments] = useState([]);
-  const [inscriptionsData, setInscriptionsData] = useState([]);
+  const [inscriptionsData, setinscriptionsData] = useState([]);
   const [topCampagnes, setTopCampagnes] = useState([]);
 
   const fetchData = useCallback(async () => {
@@ -81,7 +81,7 @@ const AnalyticsMarketing = () => {
       if (results[2].status === 'fulfilled') setPerformance(results[2].value.data);
       if (results[3].status === 'fulfilled') setCanaux(results[3].value.data);
       if (results[4].status === 'fulfilled') setSegments(results[4].value.data);
-      if (results[5].status === 'fulfilled') setInscriptionsData(results[5].value.data);
+      if (results[5].status === 'fulfilled') setinscriptionsData(results[5].value.data);
       if (results[6].status === 'fulfilled') setTopCampagnes(results[6].value.data);
 
       const failed = results.filter(r => r.status === 'rejected');
@@ -106,7 +106,7 @@ const AnalyticsMarketing = () => {
     if (!kpis) return null;
     const cards = [
       { title: 'Campagnes Actives', value: kpis.campagnesActives, change: kpis.campagnesChange, icon: '🚀', color: THEME.gold, bg: THEME.goldLight },
-      { title: 'Inscriptions', value: kpis.inscriptionsTotal, change: kpis.inscriptionsChange, icon: '👥', color: THEME.info, bg: THEME.infoLight },
+      { title: 'inscriptions', value: kpis.inscriptionsTotal, change: kpis.inscriptionsChange, icon: '👥', color: THEME.info, bg: THEME.infoLight },
       { title: 'Revenus (TND)', value: kpis.revenus?.toLocaleString(), change: kpis.revenusChange, icon: '💰', color: THEME.success, bg: THEME.successLight },
       { title: 'Taux Conversion', value: `${kpis.tauxConversion}%`, change: null, icon: '📈', color: THEME.warning, bg: THEME.warningLight },
       { title: 'Nouveaux Clients', value: kpis.nouveauxClients, change: kpis.clientsChange, icon: '✨', color: '#8b5cf6', bg: '#ede9fe' },
@@ -167,7 +167,7 @@ const AnalyticsMarketing = () => {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32 }}>
         <div style={{ background: THEME.card, borderRadius: 16, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          <h3 style={{ margin: '0 0 20px', fontSize: 16, fontWeight: 600, color: THEME.text }}>📈 Inscriptions</h3>
+          <h3 style={{ margin: '0 0 20px', fontSize: 16, fontWeight: 600, color: THEME.text }}>📈 inscriptions</h3>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 200 }}>
             {evolution.map((d, i) => (
               <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
@@ -378,7 +378,7 @@ const AnalyticsMarketing = () => {
     );
   };
 
-  const renderInscriptions = () => {
+  const renderinscriptions = () => {
     if (!inscriptionsData.length) return (
       <div style={{ textAlign: 'center', padding: 60, color: THEME.textLight }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>📝</div>
@@ -390,7 +390,7 @@ const AnalyticsMarketing = () => {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32 }}>
         <div style={{ background: THEME.card, borderRadius: 16, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          <h3 style={{ margin: '0 0 20px', fontSize: 16, fontWeight: 600, color: THEME.text }}>📝 Evolution des Inscriptions</h3>
+          <h3 style={{ margin: '0 0 20px', fontSize: 16, fontWeight: 600, color: THEME.text }}>📝 Evolution des inscriptions</h3>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 200 }}>
             {inscriptionsData.map((d, i) => (
               <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
@@ -453,7 +453,7 @@ const AnalyticsMarketing = () => {
               <tr style={{ borderBottom: `2px solid ${THEME.border}` }}>
                 <th style={{ textAlign: 'left', padding: '12px 16px', color: THEME.textLight, fontWeight: 600, fontSize: 12, textTransform: 'uppercase' }}>#</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', color: THEME.textLight, fontWeight: 600, fontSize: 12, textTransform: 'uppercase' }}>Campagne</th>
-                <th style={{ textAlign: 'center', padding: '12px 16px', color: THEME.textLight, fontWeight: 600, fontSize: 12, textTransform: 'uppercase' }}>Inscriptions</th>
+                <th style={{ textAlign: 'center', padding: '12px 16px', color: THEME.textLight, fontWeight: 600, fontSize: 12, textTransform: 'uppercase' }}>inscriptions</th>
                 <th style={{ textAlign: 'center', padding: '12px 16px', color: THEME.textLight, fontWeight: 600, fontSize: 12, textTransform: 'uppercase' }}>Remplissage</th>
                 <th style={{ textAlign: 'right', padding: '12px 16px', color: THEME.textLight, fontWeight: 600, fontSize: 12, textTransform: 'uppercase' }}>Revenus</th>
               </tr>
@@ -560,7 +560,7 @@ const AnalyticsMarketing = () => {
       case 'performance': return renderPerformance();
       case 'canaux': return renderCanaux();
       case 'segments': return renderSegments();
-      case 'inscriptions': return renderInscriptions();
+      case 'inscriptions': return renderinscriptions();
       case 'top': return renderTopCampagnes();
       default: return null;
     }

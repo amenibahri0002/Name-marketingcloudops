@@ -225,7 +225,7 @@ function ClientDetailModal({ client, onClose, campagnes }) {
                           bg={p.status === 'active' ? T.greenDim : T.redDim}
                           border={p.status === 'active' ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'} />
                         <span style={{ fontSize: 11, color: T.muted }}>
-                          {fmtDate(p.dateInscription)}
+                          {fmtDate(p.dateinscription)}
                         </span>
                       </div>
                     );
@@ -588,11 +588,11 @@ export default function Clients() {
   });
 
   const totalParticipants = clients.reduce((a, c) => a + (c.participants?.length || 0), 0);
-const totalInscriptions = clients.reduce((a, c) => a + (c.inscriptionsCount || 0), 0);
+const totalinscriptions = clients.reduce((a, c) => a + (c.inscriptionsCount || 0), 0);
 const stats = [
   { label: 'Utilisateurs', value: clients.length, color: T.gold, dim: T.goldDim, icon: '👤' },
   { label: 'Participants', value: totalParticipants, color: T.blue, dim: T.blueDim, icon: '👥' },
-  { label: 'Inscriptions', value: totalInscriptions, color: T.purple, dim: T.purpleDim, icon: '📢' },
+  { label: 'inscriptions', value: totalinscriptions, color: T.purple, dim: T.purpleDim, icon: '📢' },
 ];
 
   return (

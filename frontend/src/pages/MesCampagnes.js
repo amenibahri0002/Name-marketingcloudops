@@ -34,7 +34,6 @@ export default function MesInscriptions() {
   const token = localStorage.getItem('token');
   if (!token) return <Navigate to="/login" replace />;
 
-
   useEffect(() => {
     fetchData();
   }, []);
@@ -47,7 +46,7 @@ export default function MesInscriptions() {
         ...ins.campagne,
         inscriptionId: ins.id,
         inscriptionDate: ins.createdAt,
-        inscriptionStatus: ins.status,
+        inscriptiontatus: ins.status,
         status: ins.status === 'terminee' ? 'terminee' : 'en_cours',
         progress: ins.progress || Math.floor(Math.random() * 100),
       }));
@@ -110,6 +109,17 @@ export default function MesInscriptions() {
             {isTerminee ? <CheckCircle size={14} /> : <Clock size={14} />}
             {isTerminee ? 'Terminée' : 'En cours'}
           </div>
+          
+          {/* Badge "Inscrit" */}
+          <div style={{
+            position: 'absolute', top: 12, right: 12,
+            background: THEME.success, color: '#fff',
+            padding: '6px 14px', borderRadius: 20, fontSize: '0.85rem', fontWeight: 700,
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            <CheckCircle size={14} />
+            Inscrit
+          </div>
         </div>
 
         <div style={{ padding: 24 }}>
@@ -159,6 +169,30 @@ export default function MesInscriptions() {
             </div>
           </div>
 
+          {/* Statut de l'inscription */}
+          <div style={{ 
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '10px 14px', borderRadius: 8,
+            background: formation.inscriptionStatus === 'paye' ? THEME.successLight : 
+                        formation.inscriptionStatus === 'en_attente' ? THEME.blueLight : '#f1f5f9',
+            marginBottom: 16
+          }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: formation.inscriptionStatus === 'paye' ? THEME.success : 
+                         formation.inscriptionStatus === 'en_attente' ? THEME.blue : THEME.textLight
+            }} />
+            <span style={{ 
+              fontSize: '0.85rem', fontWeight: 600,
+              color: formation.inscriptionStatus === 'paye' ? THEME.success : 
+                     formation.inscriptionStatus === 'en_attente' ? THEME.blue : THEME.textLight
+            }}>
+              {formation.inscriptionStatus === 'paye' ? '✅ Payée' : 
+               formation.inscriptionStatus === 'en_attente' ? '⏳ En attente de paiement' : 
+               formation.inscriptionStatus}
+            </span>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, borderTop: `1px solid ${THEME.border}` }}>
             <div style={{ fontSize: '1.4rem', fontWeight: 800, color: THEME.gold }}>{formation.prix} TND</div>
             <button style={{
@@ -167,7 +201,7 @@ export default function MesInscriptions() {
               fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.3s',
             }} onMouseEnter={e => { e.target.style.background = THEME.goldDark; e.target.style.transform = 'scale(1.05)'; }}
             onMouseLeave={e => { e.target.style.background = THEME.gold; e.target.style.transform = 'scale(1)'; }}>
-              Continuer <ChevronRight size={14} />
+              Voir détails <ChevronRight size={14} />
             </button>
           </div>
         </div>
@@ -194,7 +228,7 @@ export default function MesInscriptions() {
 
             <div style={{ marginBottom: 30 }}>
               <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: THEME.text, marginBottom: 12, textAlign: 'center' }}>
-                Mes <span style={{ color: THEME.gold }}>Inscriptions</span>
+                Mes <span style={{ color: THEME.gold }}>inscriptions</span>
               </h1>
               <p style={{ fontSize: '1.1rem', color: THEME.textLight, maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
                 Suivez votre progression et accédez à vos formations

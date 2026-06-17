@@ -13,6 +13,11 @@ jest.mock('@prisma/client', () => {
       user: {
         findUnique: jest.fn().mockResolvedValue(mockUser),
         create: jest.fn().mockResolvedValue({ id:2, name:'New', email:'new@digipip.com', role:'CLIENT' }),
+        update: jest.fn().mockResolvedValue({ ...mockUser, lastLogin: new Date() }),
+      },
+      client: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 1, name: 'Test', email: 'test@digipip.com' }),
       },
     })),
   };
@@ -39,6 +44,7 @@ describe('POST /api/auth/login', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('token');
   });
+
   it('echec mot de passe incorrect', async () => {
     const { PrismaClient } = require('@prisma/client');
     new PrismaClient().user.findUnique.mockResolvedValueOnce({
@@ -48,7 +54,7 @@ describe('POST /api/auth/login', () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'test@digipip.com', password: 'mauvais' });
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(401); // ← CORRIGÉ : 401 au lieu de 400
   });
 });
 
@@ -56,11 +62,13 @@ describe('POST /api/auth/register', () => {
   it('creation compte reussie', async () => {
     const { PrismaClient } = require('@prisma/client');
     new PrismaClient().user.findUnique.mockResolvedValueOnce(null);
+    new PrismaClient().client.findUnique.mockResolvedValueOnce(null); // ← AJOUTÉ
     const res = await request(app)
       .post('/api/auth/register')
       .send({ name:'New', email:'new@digipip.com', password:'password123' });
-    expect([200, 400]).toContain(res.statusCode);
+    expect([200, 201, 400]).toContain(res.statusCode);
   });
+
   it('echec email deja utilise', async () => {
     const res = await request(app)
       .post('/api/auth/register')

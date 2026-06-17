@@ -50,7 +50,7 @@ export default function LoginRequiredModal({ isOpen, onClose, campagneTitle, red
   const handleRegister = () => {
     if (redirectUrl) setRedirectAfterLogin(redirectUrl);
     onClose();
-    navigate('/register', { state: { fromInscription: true, redirectUrl } });
+    navigate('/register', { state: { frominscription: true, redirectUrl } });
   };
 
   const handleLogin = () => {
@@ -232,7 +232,7 @@ export default function LoginRequiredModal({ isOpen, onClose, campagneTitle, red
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                   }}>
-                    {['Inscription', 'Connexion', 'Accès'][i]}
+                    {['inscription', 'Connexion', 'Accès'][i]}
                   </span>
                 </div>
                 {i < 2 && (

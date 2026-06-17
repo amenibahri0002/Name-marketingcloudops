@@ -635,9 +635,9 @@ const DetailsModal = ({ show, onClose, campagne }) => {
 const ReservationsModal = ({ show, onClose, campagne, onUpdate }) => {
   if (!show) return null;
 
-  const inscriptions = campagne?.inscriptions || [];
-  const enAttente = inscriptions.filter(r => r.status === 'en_attente');
-  const acceptes = inscriptions.filter(r => r.status === 'accepte');
+  const inscription = campagne?.inscription || [];
+  const enAttente = inscription.filter(r => r.status === 'en_attente');
+  const acceptes = inscription.filter(r => r.status === 'accepte');
 
   const handleStatusChange = async (inscriptionId, newStatus) => {
     try {
@@ -695,14 +695,14 @@ const ReservationsModal = ({ show, onClose, campagne, onUpdate }) => {
           </div>
         </div>
 
-        {inscriptions.length === 0 ? (
+        {inscription.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '50px', color: textGray }}>
             <Inbox size={48} style={{ marginBottom: 16, opacity: 0.4 }} />
             <p>Aucune inscription pour le moment</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {inscriptions.map(inscription => (
+            {inscription.map(inscription => (
               <div key={inscription.id} style={{
                 background: gray, borderRadius: 14, padding: '18px',
                 border: '1px solid #E5E5E5', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
@@ -970,7 +970,7 @@ export default function GestionCampagnesMarketing() {
             const statusStyle = STATUS_CONFIG[campagne.status] || STATUS_CONFIG['DRAFT'];
             const inscrits = (campagne.placesTotal || 0) - (campagne.placesRestantes || 0);
             const tauxRemplissage = campagne.placesTotal ? Math.round((inscrits / campagne.placesTotal) * 100) : 0;
-            const reservationsCount = campagne.inscriptions?.length || 0;
+            const reservationsCount = campagne.inscription?.length || 0;
 
             if (viewMode === 'list') {
               return (
@@ -1113,6 +1113,10 @@ export default function GestionCampagnesMarketing() {
                     <ActionButton icon={Edit} label="Modifier" onClick={() => { setSelectedCampagne(campagne); setShowEdit(true); }} small />
                     <ActionButton icon={campagne.published ? EyeOff : Eye} label={campagne.published ? 'Dépublier' : 'Publier'} onClick={() => togglePublish(campagne)} small color={campagne.published ? '#9CA3AF' : green} />
                     <ActionButton icon={Send} label="Diffuser" onClick={() => { setSelectedCampagne(campagne); setShowNotification(true); }} small color={blue} />
+
+                     {/* ✅ NOUVEAU BOUTON : Voir les avis */}
+                    <ActionButton icon={MessageSquare} label="Avis" onClick={() => navigate(`/FeedbacksCampagne/${campagne.id}`)} small color={purple} />
+
                     {reservationsCount > 0 && (
                       <ActionButton icon={Inbox} label={`${reservationsCount} rés.`} onClick={() => { setSelectedCampagne(campagne); setShowReservations(true); }} small color={purple} />
                     )}

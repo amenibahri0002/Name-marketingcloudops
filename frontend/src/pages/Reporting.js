@@ -233,7 +233,7 @@ export default function Reporting() {
                   <div style={{ fontSize: 28, fontWeight: 800, color: C.text }}>{data.users.length}</div>
                   <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>Utilisateurs inscrits</div>
                   <div style={{ marginTop: 12, padding: '8px 12px', background: C.surface, borderRadius: 8, border: '1px solid ' + C.border }}>
-                    <div style={{ fontSize: 11, color: C.muted }}>Inscriptions: {data.inscriptions.length}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>inscriptions: {data.inscriptions.length}</div>
                   </div>
                 </div>
                 <div style={{ padding: 20, background: C.surface2, borderRadius: 12 }}>

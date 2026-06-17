@@ -161,7 +161,7 @@ function DashboardSection() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         <KPICard title="Clients Actifs" value={data.stats.clientsActive} subtitle={data.stats.clientsTotal + ' total'} trend="+12" icon="👥" color={C.blue} delay={0} />
-        <KPICard title="Formations" value={data.stats.formations} subtitle="Inscriptions totales" trend="+12" icon="🎓" color={C.green} delay={100} />
+        <KPICard title="Formations" value={data.stats.formations} subtitle="inscriptions totales" trend="+12" icon="🎓" color={C.green} delay={100} />
         <KPICard title="Satisfaction" value="94.2%" subtitle="Score moyen" trend="+2.3" icon="⭐" color={C.gold} delay={200} />
         <KPICard title="Revenus" value={data.stats.revenue.toLocaleString() + ' TND'} subtitle="MRR: 70,500 TND" trend="+8.5" icon="💰" color={C.green} delay={300} />
       </div>

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Logo from './components/Logo';
 import SidebarMenuItem from './components/SidebarMenuItem';
-
 const gold = '#f5a623';
 const dark = '#16120d';
 
@@ -32,6 +31,7 @@ const marketingMenu = [
   { section: 'Gestion', items: [
     { path: '/clients', icon: '🏢', label: 'Clients' },
     { path: '/segments', icon: '🎯', label: 'Segments' },
+    {path : '/FeedbacksCampagne', icon: '💬', label: 'Feedbacks'},
   ]},
   { section: 'Analytics', items: [
     { path: '/analytics', icon: '📉', label: 'KPIs' },
@@ -44,7 +44,7 @@ const clientMenu = [
   ]},
   { section: 'Mes Campagnes', items: [
     { path: '/campagnes', icon: '📢', label: 'Mes Campagnes' },
-    { path: '/MesCampagnes', icon: '📊', label: 'Mes Inscriptions' },
+    { path: '/MesCampagnes', icon: '📊', label: 'Mes inscription' },
   ]},
   { section: 'Mes Données', items: [
     { path: '/Paiements', icon: '💰', label: 'Mes Paiements' },

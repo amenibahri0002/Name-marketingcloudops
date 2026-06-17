@@ -50,28 +50,28 @@ export default function Paiements() {
   const totalPaye = paiements.filter(p => p.status === 'paye').reduce((sum, p) => sum + (p.total || 0), 0);
   const totalEnAttente = paiements.filter(p => p.status === 'en_attente').reduce((sum, p) => sum + (p.total || 0), 0);
 
-  const telechargerFacture = async (paiementId) => {
-    try {
-      const res = await api.get(`/api/paiements/${paiementId}/facture`);
-      // Si le backend retourne un blob PDF
-      if (res.headers['content-type']?.includes('pdf')) {
-        const url = window.URL.createObjectURL(new Blob([res.data]));
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Facture_${paiementId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-      } else {
-        // Placeholder: afficher un message
-        alert('Facture #' + paiementId + ' - Montant: ' + res.data.montant + ' TND');
-      }
-    } catch (err) {
-      alert('Erreur lors du téléchargement de la facture');
-    }
-  };
-
+ const telechargerFacture = async (paiementId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.get(`/api/paiements/${paiementId}/facture`, {
+      responseType: 'blob', // Important pour recevoir un fichier binaire
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    
+    // Créer un URL pour le blob
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Facture_${paiementId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Erreur téléchargement facture:', err);
+    alert('Erreur lors du téléchargement de la facture');
+  }
+};
   return (
     <Layout>
       <div style={{ background: THEME.bg, minHeight: '100vh', color: THEME.text, fontFamily: 'Inter, system-ui, sans-serif', padding: '30px' }}>

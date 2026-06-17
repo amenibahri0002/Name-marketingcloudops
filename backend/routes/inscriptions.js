@@ -1,8 +1,7 @@
-const express = require('express');
+﻿const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
 const prisma = new PrismaClient();
-const { sendInscriptionConfirmationEmail } = require('../services/emailService');
 
 // GET /api/inscriptions - Liste toutes les inscriptions
 router.get('/', async (req, res) => {
@@ -20,7 +19,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/inscriptions/mes-inscriptions - Pour le client connecté
+// GET /api/inscriptions/mes-inscriptions
 router.get('/mes-inscriptions', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
@@ -31,9 +30,7 @@ router.get('/mes-inscriptions', async (req, res) => {
 
     const inscriptions = await prisma.inscription.findMany({
       where: { userId: decoded.userId },
-      include: {
-        campagne: true
-      },
+      include: { campagne: true },
       orderBy: { createdAt: 'desc' }
     });
 
@@ -43,30 +40,10 @@ router.get('/mes-inscriptions', async (req, res) => {
   }
 });
 
-// POST /api/inscriptions - Créer une inscription
-// ✅ VÉRIFICATION "DÉJÀ INSCRIT" AJOUTÉE ICI
+// POST /api/inscriptions - Créer une inscription + paiement automatique
 router.post('/', async (req, res) => {
   try {
     const { name, email, phone, campagneId, userId, formule, paymentType, prixTotal } = req.body;
-
-    // ✅ VÉRIFIER SI DÉJÀ INSCRIT
-    const existingInscription = await prisma.inscription.findFirst({
-      where: {
-        campagneId: parseInt(campagneId),
-        OR: [
-          { userId: userId ? parseInt(userId) : undefined },
-          { email: email }
-        ]
-      }
-    });
-
-    if (existingInscription) {
-      return res.status(409).json({
-        error: 'Déjà inscrit',
-        message: 'Vous êtes déjà inscrit à cette formation',
-        inscription: existingInscription
-      });
-    }
 
     // Créer l'inscription
     const inscription = await prisma.inscription.create({
@@ -83,17 +60,45 @@ router.post('/', async (req, res) => {
       }
     });
 
+    // ✅ Créer un paiement automatique selon le type
+    const isImmediatePayment = ['carte', 'virement', 'd17'].includes(paymentType);
+    
+    const paiement = await prisma.paiement.create({
+      data: {
+        montant: prixTotal ? parseFloat(prixTotal) : 0,
+        mode: paymentType || 'carte',
+        status: isImmediatePayment ? 'paye' : 'en_attente', // ← carte/virement/d17 = paye, especes = en_attente
+        reference: (isImmediatePayment ? 'PAY-' : 'ATT-') + Date.now(),
+        userId: userId ? parseInt(userId) : null,
+        inscriptionId: inscription.id
+      }
+    });
+
+    // Si paiement immédiat, mettre à jour l'inscription
+    if (isImmediatePayment) {
+      await prisma.inscription.update({
+        where: { id: inscription.id },
+        data: { status: 'paye' }
+      });
+    }
+
     res.status(201).json({
       success: true,
-      inscription
+      inscription: {
+        ...inscription,
+        status: isImmediatePayment ? 'paye' : 'en_attente'
+      },
+      paiement,
+      message: isImmediatePayment ? 'Paiement effectué avec succès !' : 'Inscription enregistrée. Paiement en attente.'
     });
 
   } catch (err) {
+    console.error('[INSCRIPTION ERROR]', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// PATCH /api/inscriptions/:id/status - Changer le statut (Accepter/Refuser)
+// PATCH /api/inscriptions/:id/status
 router.patch('/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
@@ -111,7 +116,6 @@ router.patch('/:id/status', async (req, res) => {
     res.json({ success: true, inscription });
 
   } catch (err) {
-    console.error('[INSCRIPTION STATUS ERROR]', err);
     res.status(500).json({ error: err.message });
   }
 });

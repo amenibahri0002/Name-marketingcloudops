@@ -1,5 +1,5 @@
 require('dotenv').config({ override: true });
-
+const { authMiddleware} = require('./middleware/auth');
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
@@ -10,11 +10,10 @@ const fs = require('fs');
 // ============================================================
 // 1. IMPORTS DES SERVICES ET MIDDLEWARES
 // ============================================================
-const { authMiddleware: authenticate } = require('./middleware/auth');
 const { helmetMiddleware, globalLimiter } = require('./middleware/security');
 const { verifierAlertesAutomatiques } = require('./services/notificationService');
 const metricsMiddleware = require('./middleware/metrics');
-const { activeUsers, inscriptionsTotal, campagnesTotal } = require('./services/metrics');
+const { activeUsers, inscriptionTotal, campagnesTotal } = require('./services/metrics');
 
 // ============================================================
 // 2. CRÉER APP ET PRISMA
@@ -65,30 +64,30 @@ app.use('/api/devops', require('./routes/devops'));
 app.use('/api/chat', require('./routes/chat'));
 
 // Routes protégées (authentification requise)
-app.use('/api/clients', authenticate, require('./routes/clients'));
-app.use('/api/contacts', authenticate, require('./routes/contacts'));
-app.use('/api/emails', authenticate, require('./routes/emails'));
-app.use('/api/segments', authenticate, require('./routes/segments'));
-app.use('/api/stats', authenticate, require('./routes/stats'));
-app.use('/api/users', authenticate, require('./routes/users'));
-app.use('/api/alertes', authenticate, require('./routes/alertes'));
-app.use('/api/sms', authenticate, require('./routes/sms'));
-app.use('/api/analytics', authenticate, require('./routes/analytics'));
-app.use('/api/export', authenticate, require('./routes/export'));
-app.use('/api/certificats', authenticate, require('./routes/certificats'));
+app.use('/api/clients', authMiddleware, require('./routes/clients'));
+app.use('/api/contacts', authMiddleware, require('./routes/contacts'));
+app.use('/api/emails', authMiddleware, require('./routes/emails'));
+app.use('/api/segments', authMiddleware, require('./routes/segments'));
+app.use('/api/stats', authMiddleware, require('./routes/stats'));
+app.use('/api/users', authMiddleware, require('./routes/users'));
+app.use('/api/alertes', authMiddleware, require('./routes/alertes'));
+app.use('/api/sms', authMiddleware, require('./routes/sms'));
+app.use('/api/analytics', authMiddleware, require('./routes/analytics'));
+app.use('/api/export', authMiddleware, require('./routes/export'));
+app.use('/api/certificats', authMiddleware, require('./routes/certificats'));
 app.use('/api/notifications', require('./routes/notifications'));
-
+app.use('/api/paiements', require('./routes/paiements'));
+app.use('/api/feedbacks', authMiddleware, require('./routes/feedbacks'));
 // Routes inscriptions (publiques pour inscription, protégées pour admin)
 app.use('/api/inscriptions', require('./routes/inscriptions'));
 
-// Paiements
-app.use('/api/paiements', require('./routes/paiements'));
 
 // ============================================================
 // 5. MÉTRIQUES PROMETHEUS (endpoint /metrics)
 // ============================================================
 app.use('/metrics', require('./routes/metrics'));
 app.use('/api/feedbacks', require('./routes/feedbacks'));
+app.use('/api/notifications', require('./routes/notifications'));
 // ============================================================
 // 6. HEALTH CHECK
 // ============================================================

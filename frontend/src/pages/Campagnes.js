@@ -237,7 +237,7 @@ const StatsBar = ({ formations = [], inscriptions = [], contacts = [] }) => {
     { label: 'Formations', value: formations.length, icon: BookOpen, color: COLORS.primary },
     { label: 'Heures de cours', value: totalHeures + 'H', icon: Clock, color: COLORS.blue },
     { label: 'Places disponibles', value: totalPlaces, icon: Users, color: COLORS.green },
-    { label: 'Inscriptions', value: totalInscrits, icon: CheckCircle, color: COLORS.purple },
+    { label: 'inscriptions', value: totalInscrits, icon: CheckCircle, color: COLORS.purple },
     { label: 'Contacts', value: totalContacts, icon: Globe, color: COLORS.red },
   ];
 
@@ -363,7 +363,7 @@ const FilterBar = ({ filtre, setFiltre, searchTerm, setSearchTerm, viewMode, set
 // ============================================================
 export default function Campagnes() {
   const [campagnes, setCampagnes] = useState([]);
-  const [inscriptions, setInscriptions] = useState([]);
+  const [inscriptions, setinscriptions] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -384,7 +384,7 @@ export default function Campagnes() {
         ]);
 
         setCampagnes(campagnesRes.data);
-        setInscriptions(inscriptionsRes.data);
+        setinscriptions(inscriptionsRes.data);
         setContacts(contactsRes.data);
       } catch (err) {
         console.error('Erreur chargement données:', err);

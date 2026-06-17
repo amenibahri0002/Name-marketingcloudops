@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-export default function InscriptionForm({ campagneId, campagneTitle }) {
+export default function inscriptionForm({ campagneId, campagneTitle }) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -37,7 +37,7 @@ export default function InscriptionForm({ campagneId, campagneTitle }) {
   if (success) {
     return (
       <div style={{ padding: '20px', background: '#d1fae5', borderRadius: '10px', textAlign: 'center' }}>
-        <h3 style={{ color: '#065f46' }}>✅ Inscription réussie !</h3>
+        <h3 style={{ color: '#065f46' }}>✅ inscription réussie !</h3>
         <p>Vous êtes inscrit à : {campagneTitle}</p>
         <p>Un email de confirmation vous sera envoyé.</p>
       </div>
@@ -132,7 +132,7 @@ export default function InscriptionForm({ campagneId, campagneTitle }) {
             opacity: loading ? 0.7 : 1
           }}
         >
-          {loading ? 'Inscription en cours...' : 'Confirmer l\'inscription'}
+          {loading ? 'inscription en cours...' : 'Confirmer l\'inscription'}
         </button>
       </form>
     </div>
