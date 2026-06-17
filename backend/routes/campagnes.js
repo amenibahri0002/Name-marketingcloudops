@@ -220,4 +220,33 @@ router.delete('/:id', authenticate, async (req, res) => {
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
+
+// ============================================================
+// PUT /:id/publish - Publier / Dépublier une campagne
+// ============================================================
+router.put('/:id/publish', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { published, isPublic } = req.body;
+
+    const campagne = await prisma.campagne.update({
+      where: { id: Number(id) },
+      data: { 
+        published: published !== undefined ? published : undefined,
+        isPublic: isPublic !== undefined ? isPublic : undefined
+      },
+      include: { client: { select: { name: true } } }
+    });
+
+    res.json({
+      success: true,
+      message: published ? 'Campagne publiée avec succès !' : 'Campagne dépubliée avec succès !',
+      campagne
+    });
+  } catch (e) { 
+    console.error('[PUBLISH ERROR]', e);
+    res.status(500).json({ message: e.message }); 
+  }
+});
+
 module.exports = router;
