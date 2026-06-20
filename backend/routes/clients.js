@@ -1,218 +1,138 @@
-// backend/routes/clients.js - CORRIGÉ
-const express = require('express')
-const router = express.Router()
-const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient()
+const express = require('express');
+const router = express.Router();
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-// GET /api/clients - Tous les clients (avec inscriptions dynamiques)
+// GET /api/clients - Tous les clients du tenant
 router.get('/', async (req, res) => {
   try {
-    // 1. Récupérer tous les clients avec leurs users
-    const clientsFromTable = await prisma.client.findMany({
-      include: {
-        users: true
-      },
+    const tenantId = req.tenantId;
+    
+    // Récupérer les clients du tenant
+    const clients = await prisma.client.findMany({
+      where: { tenantId },
       orderBy: { createdAt: 'desc' }
-    })
+    });
 
-    // 2. Récupérer TOUTES les inscriptions (pour compter par client via userId)
-    const allInscriptions = await prisma.inscription.findMany({
-      include: {
-        campagne: { select: { id: true, title: true, prix: true } }
+    // Récupérer les utilisateurs du tenant (comme clients)
+    const users = await prisma.user.findMany({
+      where: { tenantId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        status: true,
+        createdAt: true
       }
-    })
+    });
 
-    // 3. Récupérer les Users sans Client
-    const usersWithInscriptions = await prisma.user.findMany({
-      where: {
-        clientId: null,
-        inscription: { some: {} }
-      },
-      include: {
-        inscription: {
-          include: {
-            campagne: { select: { id: true, title: true, prix: true } }
-          }
-        }
-      }
-    })
+    // Fusionner
+    const allClients = [
+      ...clients.map(c => ({ ...c, source: 'client_table' })),
+      ...users.map(u => ({ 
+        ...u, 
+        name: u.name || 'Utilisateur',
+        type: 'utilisateur',
+        source: 'user_table' 
+      }))
+    ];
 
-    // 4. Fusionner et compter
-    const allClients = []
-
-    clientsFromTable.forEach(client => {
-      // Récupérer les IDs des users de ce client
-      const userIds = client.users?.map(u => u.id) || []
-      
-      // Filtrer les inscriptions qui ont userId dans cette liste
-      const clientInscriptions = allInscriptions.filter(i => 
-        userIds.includes(i.userId)
-      )
-      
-      const inscriptionsCount = clientInscriptions.length
-      const revenusTotal = clientInscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0)
-
-      allClients.push({
-        id: client.id,
-        name: client.name,
-        email: client.email,
-        phone: client.phone,
-        type: client.type || 'particulier',
-        sector: client.sector,
-        status: client.status || 'active',
-        createdAt: client.createdAt,
-        updatedAt: client.updatedAt,
-        inscriptionsCount: inscriptionsCount,
-        usersCount: client.users?.length || 0,
-        revenusTotal: revenusTotal,
-        users: client.users || [],
-        source: 'client_table'
-      })
-    })
-
-    // Ajouter les users sans client
-    usersWithInscriptions.forEach(user => {
-      const userInscriptions = user.inscription || []
-      allClients.push({
-        id: user.id,
-        name: user.name || 'Utilisateur',
-        email: user.email,
-        phone: user.phone || '',
-        type: user.type || 'particulier',
-        sector: user.sector || '',
-        status: user.status || 'active',
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-        inscriptionsCount: userInscriptions.length,
-        usersCount: 1,
-        revenusTotal: userInscriptions.reduce((sum, i) => sum + (i.prixTotal || 0), 0),
-        users: [{ id: user.id, name: user.name, email: user.email }],
-        source: 'user_table'
-      })
-    })
-
-    console.log(`[CLIENTS] ${allClients.length} clients retournés`)
-    res.json(allClients)
+    res.json(allClients);
   } catch (err) {
-    console.error('[CLIENTS ERROR]', err)
-    res.status(500).json({ error: err.message })
+    console.error('[CLIENTS ERROR]', err);
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
-// GET /api/clients/:id - Détail d'un client
+// GET /api/clients/:id
 router.get('/:id', async (req, res) => {
   try {
-    const id = parseInt(req.params.id)
+    const tenantId = req.tenantId;
+    const id = req.params.id;
 
-    let client = await prisma.client.findUnique({
-      where: { id },
-      include: {
-        users: true,
-        inscription: {
-          include: {
-            campagne: { select: { id: true, title: true, image: true, prix: true } }
-          }
-        }
-      }
-    })
+    let client = await prisma.client.findFirst({
+      where: { id, tenantId }
+    });
 
     if (!client) {
-      const user = await prisma.user.findUnique({
-        where: { id },
-        include: {
-          inscription: {
-            include: {
-              campagne: { select: { id: true, title: true, image: true, prix: true } }
-            }
-          }
+      const user = await prisma.user.findFirst({
+        where: { id, tenantId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          status: true,
+          createdAt: true
         }
-      })
-
+      });
       if (user) {
-        const userInscriptions = user.inscription || []
-        client = {
-          id: user.id,
-          name: user.name || 'Utilisateur',
-          email: user.email,
-          phone: user.phone || '',
-          type: user.type || 'particulier',
-          sector: user.sector || '',
-          status: user.status || 'active',
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
-          inscription: userInscriptions,
-          inscriptionsCount: userInscriptions.length,
-          users: [{ id: user.id, name: user.name, email: user.email }],
-          source: 'user_table'
-        }
+        client = { ...user, type: 'utilisateur', source: 'user_table' };
       }
     }
 
     if (!client) {
-      return res.status(404).json({ error: 'Client non trouvé' })
+      return res.status(404).json({ error: 'Client non trouvé' });
     }
 
-    res.json(client)
+    res.json(client);
   } catch (err) {
-    console.error('[CLIENT DETAIL ERROR]', err)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
-// POST /api/clients - Créer un client
+// POST /api/clients
 router.post('/', async (req, res) => {
   try {
-    const { name, email, phone, type, sector } = req.body
+    const tenantId = req.tenantId;
+    const { name, email, phone, type } = req.body;
+    
     const client = await prisma.client.create({
       data: {
         name,
         email,
         phone: phone || '',
         type: type || 'particulier',
-        sector: sector || '',
-        status: 'active'
+        tenantId,
+        status: 'ACTIVE'
       }
-    })
-    res.status(201).json(client)
+    });
+    res.status(201).json(client);
   } catch (err) {
-    console.error('[CREATE CLIENT ERROR]', err)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
-// PUT /api/clients/:id - Modifier un client
+// PUT /api/clients/:id
 router.put('/:id', async (req, res) => {
   try {
-    const id = parseInt(req.params.id)
-    const { name, email, phone, type, sector, status } = req.body
-    const client = await prisma.client.update({
-      where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(email !== undefined && { email }),
-        ...(phone !== undefined && { phone }),
-        ...(type !== undefined && { type }),
-        ...(sector !== undefined && { sector }),
-        ...(status !== undefined && { status })
-      }
-    })
-    res.json(client)
+    const tenantId = req.tenantId;
+    const { name, email, phone, type, status } = req.body;
+    
+    const client = await prisma.client.updateMany({
+      where: { id: req.params.id, tenantId },
+      data: { name, email, phone, type, status }
+    });
+    res.json(client);
   } catch (err) {
-    console.error('[UPDATE CLIENT ERROR]', err)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
-// DELETE /api/clients/:id - Supprimer un client
+// DELETE /api/clients/:id
 router.delete('/:id', async (req, res) => {
   try {
-    const id = parseInt(req.params.id)
-    await prisma.client.delete({ where: { id } })
-    res.json({ message: 'Client supprimé' })
+    const tenantId = req.tenantId;
+    await prisma.client.deleteMany({ 
+      where: { id: req.params.id, tenantId } 
+    });
+    res.json({ message: 'Client supprimé' });
   } catch (err) {
-    console.error('[DELETE CLIENT ERROR]', err)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
-module.exports = router
+module.exports = router;

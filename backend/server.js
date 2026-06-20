@@ -1,43 +1,81 @@
 require('dotenv').config({ override: true });
-const { authMiddleware} = require('./middleware/auth');
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 const path = require('path');
 const compression = require('compression');
 const fs = require('fs');
-
+const http = require('http');
+const { Server } = require('socket.io');
 // ============================================================
-// 1. IMPORTS DES SERVICES ET MIDDLEWARES
+// 1. IMPORTS
 // ============================================================
+const { authenticate } = require('./middleware/auth');
+const { tenantMiddleware, tenantAccessControl, planLimitMiddleware } = require('./middleware/tenant');
 const { helmetMiddleware, globalLimiter } = require('./middleware/security');
-const { verifierAlertesAutomatiques } = require('./services/notificationService');
 const metricsMiddleware = require('./middleware/metrics');
-const { activeUsers, inscriptionTotal, campagnesTotal } = require('./services/metrics');
 
-// ============================================================
-// 2. CRÉER APP ET PRISMA
-// ============================================================
 const app = express();
 const prisma = new PrismaClient();
-
+const server = http.createServer(app);
 app.set('trust proxy', 1);
-
 console.log('SERVER STARTING...');
 
+
+// Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    methods: ['GET', 'POST'],
+  },
+});
+global.io = io;
+
+// Authentification Socket.io
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth.token;
+    if (!token) return next(new Error('Token manquant'));
+
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    
+    socket.userId = decoded.userId || decoded.id;
+    socket.tenantId = decoded.tenantId;
+    
+    next();
+  } catch (err) {
+    next(new Error('Token invalide'));
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log('[SOCKET] User connecté:', socket.userId);
+  
+  // Rejoindre la room personnelle
+  socket.join(`user_${socket.userId}`);
+  
+  // Rejoindre la room du tenant
+  socket.join(`tenant_${socket.tenantId}`);
+
+  socket.on('disconnect', () => {
+    console.log('[SOCKET] User déconnecté:', socket.userId);
+  });
+});
+
 // ============================================================
-// 3. MIDDLEWARES GLOBAUX (avant les routes)
+// 2. MIDDLEWARES GLOBAUX
 // ============================================================
 app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:3001',
-    'http://localhost:8080',  // ← AJOUTER CECI (frontend Docker)
+    'http://localhost:8080',
     'https://digipip.vercel.app',
     'https://marketingcloudops-frontend.vercel.app'
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID', 'X-Requested-With'],
   credentials: true
 }));
 
@@ -47,60 +85,74 @@ app.use(helmetMiddleware);
 app.use(globalLimiter);
 app.use(compression());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// MÉTRIQUES PROMETHEUS (capture des requêtes)
 app.use(metricsMiddleware);
 
 // ============================================================
-// 4. ROUTES API (sans authentification ou avec)
+// 3. ROUTES PUBLIQUES (SANS AUTH, SANS TENANT)
+// ============================================================
+// ⚠️ AUTH DOIT ÊTRE AVANT tenantMiddleware ET authMiddleware
+app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/tenants', require('./routes/tenant.routes'));
+app.get('/api/health', (req, res) => res.json({ 
+  status: 'ok', 
+  tenant: req.tenant?.name || null 
+}));
+// ============================================================
+// 4. MIDDLEWARE TENANT (après routes publiques)
 // ============================================================
 
-// Routes publiques (pas d'authentification)
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/campagnes', require('./routes/campagnes'));
+// ============================================================
+// 5. ROUTES PUBLIQUES AVEC TENANT (campagnes, inscriptions...)
+// ============================================================
 app.use('/api/Formations', require('./routes/Formations'));
+app.use('/api/inscriptions', require('./routes/inscriptions'));
 app.use('/api/cloud', require('./routes/cloud'));
 app.use('/api/devops', require('./routes/devops'));
 app.use('/api/chat', require('./routes/chat'));
 
-// Routes protégées (authentification requise)
-app.use('/api/clients', authMiddleware, require('./routes/clients'));
-app.use('/api/contacts', authMiddleware, require('./routes/contacts'));
-app.use('/api/emails', authMiddleware, require('./routes/emails'));
-app.use('/api/segments', authMiddleware, require('./routes/segments'));
-app.use('/api/stats', authMiddleware, require('./routes/stats'));
-app.use('/api/users', authMiddleware, require('./routes/users'));
-app.use('/api/alertes', authMiddleware, require('./routes/alertes'));
-app.use('/api/sms', authMiddleware, require('./routes/sms'));
-app.use('/api/analytics', authMiddleware, require('./routes/analytics'));
-app.use('/api/export', authMiddleware, require('./routes/export'));
-app.use('/api/certificats', authMiddleware, require('./routes/certificats'));
+// ============================================================
+// 6. AUTHENTIFICATION (après routes publiques)
+// ============================================================
+app.use(authenticate);
+
+app.use(tenantMiddleware);
+
+// ============================================================
+// 7. CONTRÔLE D'ACCÈS TENANT (après auth)
+// ============================================================
+app.use(tenantAccessControl);
+app.use(planLimitMiddleware);
+
+// ============================================================
+// 8. ROUTES PROTÉGÉES (auth + tenant requis)
+// ============================================================
+app.use('/api/clients', require('./routes/clients'));
+app.use('/api/contacts', require('./routes/contacts'));
+app.use('/api/emails', require('./routes/emails'));
+app.use('/api/segments', require('./routes/segments'));
+app.use('/api/stats', require('./routes/stats'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/alertes', require('./routes/alertes'));
+app.use('/api/sms', require('./routes/sms'));
+app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/export', require('./routes/export'));
+app.use('/api/certificats', require('./routes/certificats'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/paiements', require('./routes/paiements'));
-app.use('/api/feedbacks', authMiddleware, require('./routes/feedbacks'));
-// Routes inscriptions (publiques pour inscription, protégées pour admin)
-app.use('/api/inscriptions', require('./routes/inscriptions'));
+app.use('/api/feedbacks', require('./routes/feedbacks'));
+app.use('/api/kpis', require ('./routes/kpis'));
+app.use('/api/campagnes', require('./routes/campagnes'));
 
 
 // ============================================================
-// 5. MÉTRIQUES PROMETHEUS (endpoint /metrics)
+// 9. MÉTRIQUES & HEALTH
 // ============================================================
 app.use('/metrics', require('./routes/metrics'));
-app.use('/api/feedbacks', require('./routes/feedbacks'));
-app.use('/api/notifications', require('./routes/notifications'));
-// ============================================================
-// 6. HEALTH CHECK
-// ============================================================
-app.get('/api/health', (req, res) => res.json({ 
-  status: 'ok', 
-  timestamp: new Date(),
-  service: 'DigiPip Backend'
-}));
 
 app.get('/', (req, res) => res.send('DigiPip API OK'));
 
 // ============================================================
-// 7. CRÉATION DOSSIER UPLOADS
+// 10. UPLOADS
 // ============================================================
 const uploadDir = path.join(__dirname, 'uploads', 'campagnes');
 if (!fs.existsSync(uploadDir)) {
@@ -108,10 +160,9 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // ============================================================
-// 8. DÉMARRAGE
+// 11. DÉMARRAGE
 // ============================================================
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log('✅ Backend sur http://localhost:' + PORT);
-  console.log('📊 Metrics Prometheus: http://localhost:' + PORT + '/metrics');
+server.listen(PORT, () => {
+  console.log(`✅ Backend sur http://localhost:${PORT}`);
 });

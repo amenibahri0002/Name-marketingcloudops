@@ -5,8 +5,8 @@ import axios from 'axios';
 const isDocker = window.location.hostname === 'localhost' && window.location.port === '8080';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
-  timeout: 30000, // 30 secondes
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+  timeout: 120000, // 30 secondes
   headers: {
     'Content-Type': 'application/json'
   }
@@ -17,6 +17,14 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+    const tenant = localStorage.getItem('digipip_tenant');
+  if (tenant) {
+    const parsed = JSON.parse(tenant);
+    config.headers['X-Tenant-ID'] = parsed.id;
+  } else {
+    // Tenant par défaut (remplacer par votre ID)
+    config.headers['X-Tenant-ID'] = 'cmqlsn2yu0000ybn5t0unlx8u';
   }
   return config;
 });

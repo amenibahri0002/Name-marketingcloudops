@@ -2,11 +2,17 @@
 const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
 const prisma = new PrismaClient();
+const notificationService = require('../services/notificationService');
 
-// GET /api/inscriptions - Liste toutes les inscriptions
+// ← IMPORT CORRECT
+const { authenticate } = require('../middleware/auth');
+
+// GET /api/inscriptions - Liste du tenant
 router.get('/', async (req, res) => {
   try {
+    const tenantId = req.tenantId;
     const inscriptions = await prisma.inscription.findMany({
+      where: { tenantId },
       include: {
         campagne: { select: { id: true, title: true } },
         user: { select: { id: true, name: true, email: true } }
@@ -19,97 +25,53 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/inscriptions/mes-inscriptions
-router.get('/mes-inscriptions', async (req, res) => {
+// POST /api/inscriptions - Créer une inscription
+router.post('/', authenticate, async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Non authentifié' });
+    const userId = req.user.id || req.user.userId;
+    const tenantId = req.tenantId;
+    const { campagneId } = req.body;
 
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'techevent_secret_2026');
-
-    const inscriptions = await prisma.inscription.findMany({
-      where: { userId: decoded.userId },
-      include: { campagne: true },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    res.json(inscriptions);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /api/inscriptions - Créer une inscription + paiement automatique
-router.post('/', async (req, res) => {
-  try {
-    const { name, email, phone, campagneId, userId, formule, paymentType, prixTotal } = req.body;
-
-    // Créer l'inscription
     const inscription = await prisma.inscription.create({
       data: {
-        name,
-        email,
-        phone,
-        campagneId: parseInt(campagneId),
-        userId: userId ? parseInt(userId) : null,
-        formule: formule || 'standard',
-        paymentType: paymentType || 'carte',
-        prixTotal: prixTotal ? parseFloat(prixTotal) : null,
-        status: 'en_attente'
-      }
-    });
-
-    // ✅ Créer un paiement automatique selon le type
-    const isImmediatePayment = ['carte', 'virement', 'd17'].includes(paymentType);
-    
-    const paiement = await prisma.paiement.create({
-      data: {
-        montant: prixTotal ? parseFloat(prixTotal) : 0,
-        mode: paymentType || 'carte',
-        status: isImmediatePayment ? 'paye' : 'en_attente', // ← carte/virement/d17 = paye, especes = en_attente
-        reference: (isImmediatePayment ? 'PAY-' : 'ATT-') + Date.now(),
-        userId: userId ? parseInt(userId) : null,
-        inscriptionId: inscription.id
-      }
-    });
-
-    // Si paiement immédiat, mettre à jour l'inscription
-    if (isImmediatePayment) {
-      await prisma.inscription.update({
-        where: { id: inscription.id },
-        data: { status: 'paye' }
-      });
-    }
-
-    res.status(201).json({
-      success: true,
-      inscription: {
-        ...inscription,
-        status: isImmediatePayment ? 'paye' : 'en_attente'
+        userId,
+        campagneId,
+        tenantId,
+        status: 'EN_ATTENTE',
       },
-      paiement,
-      message: isImmediatePayment ? 'Paiement effectué avec succès !' : 'Inscription enregistrée. Paiement en attente.'
+      include: {
+        campagne: true,
+      },
     });
 
-  } catch (err) {
-    console.error('[INSCRIPTION ERROR]', err);
-    res.status(500).json({ error: err.message });
+    // NOTIFIER LE CLIENT
+    notificationService.notifyInscription(userId, {
+      id: inscription.id,
+      formation: inscription.campagne.title,
+      date: inscription.campagne.dateDebut,
+      lieu: inscription.campagne.lieu,
+      numero: `INS-${String(inscription.id).padStart(4, '0')}`,
+    }).catch(err => console.error('[NOTIFY INSCRIPTION ERROR]', err));
+
+    res.json(inscription);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
 // PATCH /api/inscriptions/:id/status
-router.patch('/:id/status', async (req, res) => {
+router.patch('/:id/status', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
+    const tenantId = req.tenantId;
 
-    if (!status || !['en_attente', 'accepte', 'refuse', 'paye'].includes(status)) {
+    if (!status || !['EN_ATTENTE', 'CONFIRMEE', 'TERMINEE', 'ANNULEE'].includes(status)) {
       return res.status(400).json({ error: 'Statut invalide' });
     }
 
-    const inscription = await prisma.inscription.update({
-      where: { id: parseInt(id) },
+    const inscription = await prisma.inscription.updateMany({
+      where: { id: parseInt(id), tenantId },
       data: { status }
     });
 
@@ -121,9 +83,12 @@ router.patch('/:id/status', async (req, res) => {
 });
 
 // DELETE /api/inscriptions/:id
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
-    await prisma.inscription.delete({ where: { id: parseInt(req.params.id) } });
+    const tenantId = req.tenantId;
+    await prisma.inscription.deleteMany({ 
+      where: { id: parseInt(req.params.id), tenantId } 
+    });
     res.json({ message: 'Inscription supprimée' });
   } catch (err) {
     res.status(500).json({ error: err.message });

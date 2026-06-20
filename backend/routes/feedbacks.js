@@ -1,38 +1,40 @@
 ﻿const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-const { authMiddleware } = require('../middleware/auth');
+const { authenticate :authMiddleware } = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// POST /api/feedbacks - Client donne son avis
+// POST /api/feedbacks
 router.post('/', authMiddleware, async (req, res) => {
   try {
+    const tenantId = req.tenantId;
     const { campagneId, rating, comment } = req.body;
     const userId = req.user.id || req.user.userId;
 
-    // Verifier que l'utilisateur est inscrit et a paye
+    // Vérifier inscription payée
     const inscription = await prisma.inscription.findFirst({
       where: {
         campagneId: parseInt(campagneId),
         userId: userId,
-        status: 'paye'
+        status: 'paye',
+        tenantId
       }
     });
 
     if (!inscription) {
       return res.status(403).json({
-        error: 'Vous devez etre inscrit et avoir paye pour donner votre avis'
+        error: 'Vous devez être inscrit et avoir payé pour donner votre avis'
       });
     }
 
-    // Verifier si deja donne un feedback
+    // Vérifier si déjà donné
     const existing = await prisma.feedback.findFirst({
-      where: { campagneId: parseInt(campagneId), userId: userId }
+      where: { campagneId: parseInt(campagneId), userId, tenantId }
     });
 
     if (existing) {
       return res.status(409).json({
-        error: 'Vous avez deja donne votre avis pour cette formation'
+        error: 'Vous avez déjà donné votre avis pour cette formation'
       });
     }
 
@@ -41,7 +43,8 @@ router.post('/', authMiddleware, async (req, res) => {
         rating: parseInt(rating),
         comment: comment || '',
         campagneId: parseInt(campagneId),
-        userId: userId
+        userId: userId,
+        tenantId
       },
       include: {
         user: { select: { name: true } },
@@ -61,17 +64,18 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/feedbacks/campagne/:campagneId - Voir les avis d'une campagne (Admin/Responsable)
+// GET /api/feedbacks/campagne/:campagneId
 router.get('/campagne/:campagneId', authMiddleware, async (req, res) => {
   try {
+    const tenantId = req.tenantId;
     const { campagneId } = req.params;
 
     if (req.user.role !== 'ADMIN' && req.user.role !== 'RESPONSABLE_MARKETING') {
-      return res.status(403).json({ error: 'Acces reserve' });
+      return res.status(403).json({ error: 'Accès réservé' });
     }
 
     const feedbacks = await prisma.feedback.findMany({
-      where: { campagneId: parseInt(campagneId) },
+      where: { campagneId: parseInt(campagneId), tenantId },
       include: {
         user: { select: { name: true, email: true } }
       },
@@ -102,11 +106,12 @@ router.get('/campagne/:campagneId', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/feedbacks/mes-feedbacks - Mes avis (client)
+// GET /api/feedbacks/mes-feedbacks
 router.get('/mes-feedbacks', authMiddleware, async (req, res) => {
   try {
+    const tenantId = req.tenantId;
     const feedbacks = await prisma.feedback.findMany({
-      where: { userId: req.user.id || req.user.userId },
+      where: { userId: req.user.id || req.user.userId, tenantId },
       include: {
         campagne: { select: { title: true, image: true } }
       },

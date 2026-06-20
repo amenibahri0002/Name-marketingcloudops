@@ -3,21 +3,218 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// ============================================================
-// ENUMS
-// ============================================================
+// ============================================
+// TENANT
+// ============================================
+model Tenant {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  description String?
+  logo        String?
+  status      TenantStatus @default(ACTIVE)
+  plan        PlanType     @default(FREE)
+
+  domain    String? @unique
+  subdomain String? @unique
+  settings  Json?   @default("{}")
+
+  maxUsers        Int @default(5)
+  maxCampagnes    Int @default(10)
+  maxInscriptions Int @default(100)
+
+  users         User[]
+  clients       Client[]
+  campagnes     Campagne[]
+  inscriptions  Inscription[]
+  paiements     Paiement[]
+  notifications Notification[]
+  feedbacks     Feedback[]
+  contacts      Contact[]
+  segments      Segment[]
+  alertes       Alerte[]
+  apiKeys       ApiKey[]
+
+  pushSubscriptions       PushSubscription[]
+  notificationPreferences UserNotificationPreference[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([status])
+  @@index([plan])
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+  CANCELLED
+}
+
+enum PlanType {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+// ============================================
+// USER
+// ============================================
+model User {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name     String
+  email    String
+  password String
+  role     UserRole   @default(CLIENT)
+  status   UserStatus @default(ACTIVE)
+
+  phone    String?
+  avatar   String?
+  fcmToken String?
+
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  inscriptions  Inscription[]
+  paiements     Paiement[]
+  notifications Notification[]
+  feedbacks     Feedback[]
+
+  // Relations notifications (UN SEUL BLOC)
+  pushTokens              PushToken[]
+  notificationRecipients  NotificationRecipient[]
+  notificationPreferences UserNotificationPreference?
+  pushSubscriptions       PushSubscription[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([tenantId, role])
+  @@index([tenantId, status])
+}
+
+enum UserRole {
+  CLIENT
+  ADMIN
+  RESPONSABLE_MARKETING
+  SUPPORT
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+// ============================================
+// CLIENT
+// ============================================
+model Client {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name     String
+  email    String
+  phone    String?
+  password String?
+
+  type    ClientType @default(PARTICULIER)
+  sector  String?
+  company String?
+
+  status   ClientStatus @default(ACTIVE)
+  fcmToken String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inscriptions Inscription[]
+  feedbacks    Feedback[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([tenantId, type])
+  @@index([tenantId, status])
+}
+
+enum ClientType {
+  PARTICULIER
+  ENTREPRISE
+  ASSOCIATION
+  INSTITUTION
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+  PROSPECT
+  ARCHIVED
+}
+
+// ============================================
+// CAMPAGNE
+// ============================================
+model Campagne {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  title       String
+  slug        String
+  description String? @db.Text
+
+  type      CampagneType   @default(FORMATION)
+  status    CampagneStatus @default(DRAFT)
+  published Boolean        @default(false)
+
+  image           String?
+  prix            Int?
+  prixOriginal    Int?
+  placesTotal     Int     @default(20)
+  placesRestantes Int     @default(20)
+
+  dateScheduled DateTime?
+  dateAffichee  String?
+  duree         String?
+  format        String?
+  dureeHeures   Int?
+  lieu          String?
+  contact       String?
+
+  inscriptions  Inscription[]
+  feedbacks     Feedback[]
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, type])
+  @@index([tenantId, published])
+}
+
 enum CampagneType {
   FORMATION
   PRODUIT
   EVENEMENT
   WEBINAIRE
   NEWSLETTER
-  MARKETING 
+  MARKETING
 }
 
 enum CampagneStatus {
@@ -28,261 +225,419 @@ enum CampagneStatus {
   CANCELLED
 }
 
-// ============================================================
-// CAMPAGNE
-// ============================================================
-model Campagne {
-  id              Int            @id @default(autoincrement())
-  title           String         @db.VarChar(255)
-  slug            String         @unique @db.VarChar(255)
-  type            CampagneType   @default(MARKETING)
-  status          CampagneStatus @default(DRAFT)
-  isPublic        Boolean        @default(false)
-  published       Boolean        @default(false)
-  description     String?        @db.Text
-  image           String?        @db.VarChar(500)
-  url             String?        @db.VarChar(500)
-  duration        String?        @db.VarChar(100)
-  format          String?        @db.VarChar(100)
-  date            String?        @db.VarChar(100)
-  dateScheduled   DateTime?      @db.Timestamp(6)
-  location        String?        @db.VarChar(255)
-  contact         String?        @db.VarChar(50)
-  prix            Int?
-  prixOriginal    Int?
-  placesTotal     Int?           @default(0)
-  placesRestantes Int?           @default(0)
-  dureeHeures     Int?           @default(0)
-  iconName        String?        @default("Sparkles") @db.VarChar(50)
-  couleur         String?        @default("#F5A623") @db.VarChar(20)
-  prerequis       String?        @db.Text
-  tools           String[]       @default([])
-  tags            String[]       @default([])
-  inclus          String[]       @default([])
-  clientId        Int?
-  client          Client?        @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  createdAt       DateTime?      @default(now()) @db.Timestamp(6)
-  sentAt          DateTime?      @db.Timestamp(6)
-  updatedAt       DateTime?      @default(now()) @updatedAt @db.Timestamp(6)
-  stats           CampagneStats?
-  inscription     Inscription[]
-  notifications   Notification[]
-  alertes         Alerte[]
-  feedbacks       Feedback[]     // ← AJOUTÉ : relation inverse
-}
-
-// ============================================================
+// ============================================
 // INSCRIPTION
-// ============================================================
+// ============================================
 model Inscription {
-  id          Int        @id @default(autoincrement())
-  name        String     @db.VarChar(255)
-  email       String     @db.VarChar(255)
-  phone       String     @db.VarChar(50)
-  entreprise  String?    @db.VarChar(255)
-  notes       String?    @db.Text
-  formule     String     @default("standard") @db.VarChar(50)
-  paymentType String     @default("carte") @db.VarChar(50)
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name  String
+  email String
+  phone String?
+
+  campagneId String
+  campagne   Campagne @relation(fields: [campagneId], references: [id], onDelete: Cascade)
+
+  formule     String?
+  paymentType String?
   prixTotal   Int?
-  status      String     @default("en_attente") @db.VarChar(50)
-  campagneId  Int?
-  campagne    Campagne?  @relation(fields: [campagneId], references: [id])
-  userId      Int?
-  user        User?      @relation(fields: [userId], references: [id])
-  createdAt   DateTime?  @default(now()) @db.Timestamp(6)
-  clientId    Int?
-  client      Client?    @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  paiements   Paiement[]
+  status      InscriptionStatus @default(EN_ATTENTE)
   paymentData Json?
-}
 
-// ============================================================
-// PAIEMENT
-// ============================================================
-model Paiement {
-  id            Int          @id @default(autoincrement())
-  montant       Int?
-  mode          String       @db.VarChar(50)
-  status        String       @default("en_attente") @db.VarChar(50)
-  inscriptionId Int?
-  inscription   Inscription? @relation(fields: [inscriptionId], references: [id])
-  userId        Int?
-  user          User?        @relation(fields: [userId], references: [id])
-  createdAt     DateTime?    @default(now()) @db.Timestamp(6)
-  updatedAt     DateTime?    @default(now()) @updatedAt @db.Timestamp(6)
-  reference     String?      @db.VarChar(255)
-}
+  userId    String?
+  user      User?      @relation(fields: [userId], references: [id])
+  clientId  String?
+  client    Client?    @relation(fields: [clientId], references: [id])
+  paiements Paiement[]
 
-// ============================================================
-// CLIENT
-// ============================================================
-model Client {
-  id            Int            @id @default(autoincrement())
-  name          String         @db.VarChar(255)
-  email         String         @unique @db.VarChar(255)
-  phone         String?        @db.VarChar(50)
-  password      String?        @db.VarChar(255)
-  type          String?        @default("particulier") @db.VarChar(50)
-  fcmToken      String?
-  sector        String?        @db.VarChar(255)
-  status        String?        @default("active") @db.VarChar(50)
-  role          String?        @default("CLIENT") @db.VarChar(50)
-  createdAt     DateTime?      @default(now()) @db.Timestamp(6)
-  updatedAt     DateTime?      @updatedAt
-  campagnes     Campagne[]
-  contacts      Contact[]
-  segments      Segment[]
-  users         User[]
-  notifications Notification[] // ← CORRIGÉ : relation avec champ opposé
-  alertes       Alerte[]
-  inscription   Inscription[]
-}
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-// ============================================================
-// CONTACT
-// ============================================================
-model Contact {
-  id         Int              @id @default(autoincrement())
-  name       String           @db.VarChar(255)
-  email      String           @unique @db.VarChar(255)
-  phone      String?          @db.VarChar(50)
-  clientId   Int?
-  createdAt  DateTime?        @default(now()) @db.Timestamp(6)
-  client     Client?          @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  segments   ContactSegment[]
-}
-
-// ============================================================
-// USER
-// ============================================================
-model User {
-  id               Int                @id @default(autoincrement())
-  name             String             @db.VarChar(255)
-  email            String             @unique @db.VarChar(255)
-  password         String             @db.VarChar(255)
-  role             String?            @default("CLIENT")
-  fcmToken         String?
-  createdAt        DateTime?          @default(now()) @db.Timestamp(6)
-  updatedAt        DateTime?          @updatedAt
-  clientId         Int?
-  status           String             @default("active") @db.VarChar(50)
-  lastLogin        DateTime?
-  PushSubscription PushSubscription[]
-  client           Client?            @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  inscription      Inscription[]
-  paiements        Paiement[]
-  notifications    Notification[]     // ← AJOUTÉ : relation inverse
-  feedbacks        Feedback[]         // ← AJOUTÉ : relation inverse
-}
-
-// ============================================================
-// SEGMENT
-// ============================================================
-model Segment {
-  id            Int              @id @default(autoincrement())
-  name          String
-  criteria      String
-  clientId      Int?
-  createdAt     DateTime?        @default(now()) @db.Timestamp(6)
-  contacts      ContactSegment[]
-  client        Client?          @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  notifications Notification[]   // ← CORRIGÉ : relation avec champ opposé
-}
-
-// ============================================================
-// CONTACT SEGMENT
-// ============================================================
-model ContactSegment {
-  id        Int      @id @default(autoincrement())
-  contactId Int?
-  segmentId Int?
-  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  segment   Segment? @relation(fields: [segmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-}
-
-// ============================================================
-// CAMPAGNE STATS
-// ============================================================
-model CampagneStats {
-  id          Int       @id @default(autoincrement())
-  campagneId  Int?      @unique
-  emailsSent  Int?      @default(0)
-  opens       Int?      @default(0)
-  clicks      Int?      @default(0)
-  conversions Int?      @default(0)
-  createdAt   DateTime? @default(now()) @db.Timestamp(6)
-  updatedAt   DateTime? @default(now()) @updatedAt @db.Timestamp(6)
-  campagne    Campagne? @relation(fields: [campagneId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-}
-
-// ============================================================
-// PUSH SUBSCRIPTION
-// ============================================================
-model PushSubscription {
-  id        Int       @id @default(autoincrement())
-  endpoint  String
-  p256dh    String
-  auth      String
-  userId    Int?
-  createdAt DateTime? @default(now()) @db.Timestamp(6)
-  User      User?     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-}
-
-// ============================================================
-// NOTIFICATION (corrigé)
-// ============================================================
-model Notification {
-  id          Int       @id @default(autoincrement())
-  title       String
-  message     String
-  type        String
-  canal       String
-  userId      Int?      // ← Optionnel (?)
-  user        User?     @relation(fields: [userId], references: [id])
-  clientId    Int?
-  client      Client?   @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  segmentId   Int?
-  segment     Segment?  @relation(fields: [segmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  campagneId  Int?
-  campagne    Campagne? @relation(fields: [campagneId], references: [id])
-  isRead      Boolean   @default(false)
-  data        Json?
-  sentAt      DateTime? @default(now())  // ← Optionnel (?)
-  createdAt   DateTime  @default(now())
-  
-  @@index([userId, isRead])
-  @@index([createdAt])
-}
-
-// ============================================================
-// FEEDBACK
-// ============================================================
-model Feedback {
-  id          Int       @id @default(autoincrement())
-  rating      Int
-  comment     String?
-  userId      Int
-  user        User      @relation(fields: [userId], references: [id])
-  campagneId  Int
-  campagne    Campagne  @relation(fields: [campagneId], references: [id])
-  createdAt   DateTime  @default(now())
-  
-  @@unique([userId, campagneId])
+  @@index([tenantId])
+  @@index([tenantId, status])
   @@index([campagneId])
+  @@index([userId])
+  @@index([clientId])
 }
 
-// ============================================================
-// ALERTE
-// ============================================================
-model Alerte {
-  id         Int       @id @default(autoincrement())
-  type       String    @db.VarChar(50)
-  message    String    @db.Text
-  campagneId Int?
+enum InscriptionStatus {
+  EN_ATTENTE
+  CONFIRMEE
+  PAYEE
+  ANNULEE
+  TERMINEE
+}
+
+// ============================================
+// PAIEMENT
+// ============================================
+model Paiement {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  montant   Int
+  mode      PaymentMode   @default(CARTE)
+  status    PaymentStatus @default(EN_ATTENTE)
+  reference String?       @unique
+
+  inscriptionId String?
+  inscription   Inscription? @relation(fields: [inscriptionId], references: [id])
+  userId        String?
+  user          User?        @relation(fields: [userId], references: [id])
+
+  stripePaymentIntentId String?
+  stripeCustomerId      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([inscriptionId])
+}
+
+enum PaymentMode {
+  CARTE
+  VIREMENT
+  ESPECES
+  CHEQUE
+  EN_LIGNE
+}
+
+enum PaymentStatus {
+  EN_ATTENTE
+  PAYE
+  ECHOUE
+  REMBOURSE
+  ANNULE
+}
+
+// ============================================
+// NOTIFICATION (VERSION CORRIGÉE)
+// ============================================
+
+enum NotificationType {
+  CAMPAGNE_NOUVELLE
+  CAMPAGNE_PROMO
+  EVENEMENT
+  INSCRIPTION_CONFIRMATION
+  PAIEMENT_RECU
+  PAIEMENT_ECHEC
+  CERTIFICAT_DISPONIBLE
+  RAPPEL
+  SYSTEM
+}
+
+enum NotificationCanal {
+  EMAIL
+  SMS
+  PUSH
+  WHATSAPP
+  SOCIAL
+  IN_APP
+}
+
+enum ChannelType {
+  EMAIL
+  SMS
+  PUSH
+  IN_APP
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  RETRYING
+}
+
+// Notification maître
+model Notification {
+  id       String           @id @default(cuid())
+  tenantId String
+  type     NotificationType
+  title    String
+  message  String           @db.Text
+  data     Json?
+  priority Int              @default(0)
+  read     Boolean          @default(false)
+
+  campagneId String?
   campagne   Campagne? @relation(fields: [campagneId], references: [id])
-  clientId   Int?
-  client     Client?   @relation(fields: [clientId], references: [id])
-  status     String    @default("active") @db.VarChar(50)
-  createdAt  DateTime  @default(now()) @db.Timestamp(6)
-  resolvedAt DateTime? @db.Timestamp(6)
+
+  recipients NotificationRecipient[]
+  deliveries NotificationDelivery[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  User   User?   @relation(fields: [userId], references: [id])
+  userId String?
+
+  @@index([tenantId, type])
+  @@index([createdAt])
+  @@index([campagneId])
+  @@index([read])
+}
+
+// Destinataires
+model NotificationRecipient {
+  id             String @id @default(cuid())
+  notificationId String
+  userId         String
+
+  channels ChannelType[]
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([notificationId, userId])
+  @@index([userId])
+}
+
+// Livraison par canal
+model NotificationDelivery {
+  id             String         @id @default(cuid())
+  notificationId String
+  recipientId    String
+  channels       String         @default("email")
+  status         DeliveryStatus @default(PENDING)
+  errorMessage   String?
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  retryCount     Int            @default(0)
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId, recipientId])
+  @@index([status])
+}
+
+// Préférences utilisateur
+model UserNotificationPreference {
+  id       String @id @default(cuid())
+  userId   String @unique
+  tenantId String
+
+  emailEnabled Boolean @default(true)
+  smsEnabled   Boolean @default(false)
+  pushEnabled  Boolean @default(true)
+  inAppEnabled Boolean @default(true)
+
+  campagneNouvelle Boolean @default(true)
+  campagnePromo    Boolean @default(true)
+  evenement        Boolean @default(true)
+  inscription      Boolean @default(true)
+  paiement         Boolean @default(true)
+  certificat       Boolean @default(true)
+  rappel           Boolean @default(true)
+  system           Boolean @default(true)
+
+  quietHoursStart Int?
+  quietHoursEnd   Int?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+// Subscription Push
+model PushSubscription {
+  id       String  @id @default(cuid())
+  userId   String
+  tenantId String
+  token    String
+  device   String?
+  active   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([userId, token])
+  @@index([tenantId])
+}
+
+// ============================================
+// PUSH TOKEN (pour FCM)
+// ============================================
+model PushToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  device    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// FEEDBACK
+// ============================================
+model Feedback {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  rating  Int     @default(5)
+  comment String? @db.Text
+
+  campagneId String
+  campagne   Campagne @relation(fields: [campagneId], references: [id], onDelete: Cascade)
+
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id])
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, campagneId])
+  @@index([tenantId, rating])
+}
+
+// ============================================
+// CONTACT
+// ============================================
+model Contact {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name  String
+  email String
+  phone String?
+
+  niveau  NiveauType  @default(DEBUTANT)
+  type    ContactType @default(PARTICULIER)
+  secteur String?
+  region  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  segments ContactSegment[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([tenantId, niveau])
+  @@index([tenantId, type])
+}
+
+enum NiveauType {
+  DEBUTANT
+  ETUDIANT
+  PROFESSIONNEL
+  EXPERT
+}
+
+enum ContactType {
+  PARTICULIER
+  ENTREPRISE
+  ASSOCIATION
+}
+
+// ============================================
+// SEGMENT
+// ============================================
+model Segment {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name     String
+  criteria String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts ContactSegment[]
+
+  @@index([tenantId])
+}
+
+model ContactSegment {
+  id        String  @id @default(cuid())
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  segmentId String
+  segment   Segment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([contactId, segmentId])
+  @@index([segmentId])
+}
+
+// ============================================
+// ALERTE
+// ============================================
+model Alerte {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  type     AlerteType
+  message  String       @db.Text
+  status   AlerteStatus @default(ACTIVE)
+  severity Severity     @default(MEDIUM)
+
+  resolvedAt DateTime?
+  resolvedBy String?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, severity])
+}
+
+enum AlerteType {
+  CAPACITE
+  PAIEMENT
+  INSCRIPTION
+  SYSTEME
+  SECURITE
+}
+
+enum AlerteStatus {
+  ACTIVE
+  RESOLUE
+  IGNOREE
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// ============================================
+// API KEY
+// ============================================
+model ApiKey {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name      String
+  key       String    @unique
+  scopes    String[]  @default(["read"])
+  lastUsed  DateTime?
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([key])
 }

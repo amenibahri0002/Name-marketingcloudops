@@ -5,7 +5,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'techevent_secret_2026';
 function authMiddleware(req, res, next) {
   const authHeader = req.headers['authorization'];
   if (!authHeader) return res.status(401).json({ message: 'Token manquant' });
-  
   const token = authHeader.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Format invalide' });
   
@@ -44,7 +43,7 @@ const ROLES = {
 };
 
 module.exports = {
-  authMiddleware,
+  authenticate : authMiddleware,
   requireRole,
   ROLES
 };

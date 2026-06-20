@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../api'; 
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Login() {
@@ -15,10 +15,15 @@ export default function Login() {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      const res = await axios.post(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/login`,
-        { email, password }
-      );
+      // Récupérer le tenantId depuis le localStorage ou utiliser celui par défaut
+      const tenant = localStorage.getItem('digipip_tenant');
+      const tenantId = tenant ? JSON.parse(tenant).id : 'cmqlsn2yu0000ybn5t0unlx8u';
+      
+      const res = await api.post('/api/auth/login', {
+        email,
+        password,
+        tenantId  // ← AJOUTÉ : envoi du tenantId dans le body
+      });
 
       // Stocker les données utilisateur
       localStorage.setItem('token',     res.data.token);
@@ -26,7 +31,16 @@ export default function Login() {
       localStorage.setItem('userName',  res.data.user?.name  || '');
       localStorage.setItem('userEmail', res.data.user?.email || '');
       localStorage.setItem('userRole',  res.data.user?.role  || '');
-
+      
+      // Stocker le tenantId pour les futures requêtes
+      if (res.data.user?.tenantId) {
+        localStorage.setItem('digipip_tenant', JSON.stringify({
+          id: res.data.user.tenantId,
+          name: 'DigiLab Solutions',
+          slug: 'digilab-solutions'
+        }));
+      }
+      
       // Redirection selon le rôle
       const role = res.data.user?.role;
       if (role === 'ADMIN' || role === 'RESPONSABLE_MARKETING') {
@@ -70,7 +84,6 @@ export default function Login() {
         {/* ── HEADER LOGO ── */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-            {/* Logo nuage */}
             <div style={{
               width: 42, height: 42,
               background: 'linear-gradient(135deg, #f5a623, #d97706)',
@@ -88,7 +101,6 @@ export default function Login() {
                 borderRadius: '50%', filter: 'blur(2px)',
               }} />
             </div>
-            {/* Texte DigiPip */}
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
                 Digi<span style={{ color: '#f5a623' }}>Pip</span>

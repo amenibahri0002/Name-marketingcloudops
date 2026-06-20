@@ -45,6 +45,10 @@ export default function Register() {
 
     setLoading(true);
     try {
+
+const tenant = localStorage.getItem('digipip_tenant');
+    const tenantId = tenant ? JSON.parse(tenant).id : 'cmqlsn2yu0000ybn5t0unlx8u';
+
       const res = await axios.post(
         `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/register`,
         {
@@ -53,7 +57,9 @@ export default function Register() {
           password: formData.password,
           phone: formData.phone,
           type: formData.type,
-          sector: formData.sector
+          sector: formData.sector,
+          tenantId: tenantId,  // ← AJOUTÉ
+          role: 'CLIENT'
         }
       );
 

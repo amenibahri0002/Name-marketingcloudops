@@ -1,25 +1,49 @@
 // frontend/src/firebase.js
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+import api from './api';
 
-// Configuration Firebase
+// Configuration Firebase - DigiPip
 const firebaseConfig = {
-  apiKey: "AIzaSyD7VHpmGCkQoLGfSCFAn4iXJyoiA987N1g",
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: "digipip-c0d46.firebaseapp.com",
   projectId: "digipip-c0d46",
-  storageBucket: "digipip-c0d46.firebasestorage.app",
+  storageBucket: "digipip-c0d46.appspot.com",
   messagingSenderId: "1097813700730",
-  appId: "1:1097813700730:web:af3f6df9b1ec1ec1968bc3",
-  measurementId: "G-N0ES6X84W3"
+  appId: "1:1097813700730:web:af3f6df9b1ec1ec1968bc",
 };
+
+// Clé VAPID publique pour Web Push
+const VAPID_KEY = process.env.REACT_APP_FIREBASE_VAPID_KEY;
 
 // Initialiser Firebase
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-// ============================================================
-// DEMANDER LA PERMISSION ET RÉCUPÉRER LE TOKEN FCM
-// ============================================================
+/**
+ * Sauvegarder une notification reçue en base de données
+ */
+async function saveNotification(payload) {
+  try {
+    const notificationData = {
+      title: payload.notification?.title || 'DigiPip',
+      message: payload.notification?.body || '',
+      type: payload.data?.type || 'CAMPAGNE_PROMO',
+      campagneId: payload.data?.campagneId || null,
+      priority: 1,
+    };
+
+    await api.post('/api/notifications/receive', notificationData);
+    console.log('✅ Notification sauvegardée en base');
+  } catch (err) {
+    console.error('❌ Erreur sauvegarde notification:', err);
+  }
+}
+
+/**
+ * Demander la permission de notifications et obtenir le token FCM
+ * Envoie automatiquement le token au backend
+ */
 export async function requestNotificationPermission() {
   try {
     if (!('Notification' in window)) {
@@ -33,27 +57,50 @@ export async function requestNotificationPermission() {
       return null;
     }
 
+    // Enregistrer le service worker
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    console.log('Service Worker enregistré:', registration);
+
+    // Obtenir le token FCM
     const token = await getToken(messaging, {
-      vapidKey: "BCjzqK4FtbHdMZ3qbgfJWvQtdoLhguDuh88kexG7YtifLxTEkzbL-91LqjvkbRxU_D55NhjY95fWGXxVaEUNPW0"
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: registration,
     });
 
     if (token) {
-      console.log('FCM Token:', token);
+      console.log('FCM Token obtenu:', token);
+
+      // Envoyer le token au backend
+      try {
+        await api.post('/api/users/fcm-token', { fcmToken: token });
+        console.log('Token FCM envoyé au backend');
+      } catch (err) {
+        console.error('Erreur envoi token au backend:', err);
+      }
+
       return token;
+    } else {
+      console.log('Aucun token FCM disponible');
+      return null;
     }
-    return null;
-  } catch (err) {
-    console.error('Erreur permission notification:', err);
+  } catch (error) {
+    console.error('Erreur lors de la récupération du token:', error);
     return null;
   }
 }
 
-// ============================================================
-// ÉCOUTER LES MESSAGES EN PREMIER PLAN
-// ============================================================
+/**
+ * Écouter les messages en premier plan (app ouverte)
+ * Sauvegarde automatiquement la notification en base
+ */
 export function onForegroundMessage(callback) {
-  onMessage(messaging, (payload) => {
+  onMessage(messaging, async (payload) => {
     console.log('Message reçu en premier plan:', payload);
+
+    // Sauvegarder la notification en base
+    await saveNotification(payload);
+
+    // Appeler le callback pour afficher le toast
     callback(payload);
   });
 }

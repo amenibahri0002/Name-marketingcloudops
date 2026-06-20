@@ -1,130 +1,55 @@
-// ============================================
-// FIREBASE MESSAGING SERVICE WORKER
-// ============================================
+// public/firebase-messaging-sw.js
 importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
 
-const firebaseConfig = {
+// Configuration Firebase - DigiPip
+firebase.initializeApp({
   apiKey: "AIzaSyD7VHpmGCkQoLGfSCFAn4iXJyoiA987N1g",
   authDomain: "digipip-c0d46.firebaseapp.com",
   projectId: "digipip-c0d46",
-  storageBucket: "digipip-c0d46.firebasestorage.app",
+  storageBucket: "digipip-c0d46.appspot.com",
   messagingSenderId: "1097813700730",
-  appId: "1:1097813700730:web:af3f6df9b1ec1ec1968bc3",
-  measurementId: "G-N0ES6X84W3"
-};
+  appId: "1:1097813700730:web:af3f6df9b1ec1ec1968bc",
+});
 
-firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// ============================================
-// MESSAGES EN ARRIÈRE-PLAN (Firebase)
-// ============================================
-messaging.onBackgroundMessage((payload) => {
-  console.log('[SW] Message Firebase reçu:', payload);
+// Gérer les messages en arrière-plan (app fermée)
+messaging.onBackgroundMessage(async (payload) => {
+  console.log('Message en arrière-plan reçu:', payload);
 
-  const { title, body } = payload.notification || {};
-  const data = payload.data || {};
-
+  const notificationTitle = payload.notification?.title || 'DigiPip';
   const notificationOptions = {
-    body: body || 'Nouvelle notification',
+    body: payload.notification?.body || 'Nouvelle notification',
     icon: '/logo192.png',
-    badge: '/badge.png',
-    data: {
-      url: data.url || '/notifications',
-      type: data.type || 'system',
-      ...data
-    },
-    actions: [
-      { action: 'open', title: '🔍 Voir' },
-      { action: 'close', title: '❌ Fermer' }
-    ],
+    badge: '/logo192.png',
+    data: payload.data,
+    tag: 'digipip-notification',
     requireInteraction: true,
-    vibrate: [200, 100, 200]
   };
 
-  return self.registration.showNotification(title || 'DigiPip', notificationOptions);
+  // Afficher la notification
+  self.registration.showNotification(notificationTitle, notificationOptions);
+
+  // Sauvegarder la notification en base via l'API
+  // Note: En arrière-plan, on ne peut pas faire de fetch authentifié facilement
+  // La notification sera sauvegardée quand l'app sera ouverte
 });
 
-// ============================================
-// PUSH API STANDARD (Web Push VAPID)
-// ============================================
-self.addEventListener('push', (event) => {
-  console.log('[SW] Push standard reçu:', event);
-
-  let data = {};
-  try {
-    data = event.data ? event.data.json() : {};
-  } catch (err) {
-    console.error('[SW] Erreur parsing push data:', err);
-  }
-
-  const title = data.title || data.notification?.title || '🔔 DigiPip';
-  const body = data.body || data.notification?.body || 'Nouvelle notification';
-  const url = data.url || data.data?.url || '/notifications';
-
-  const options = {
-    body,
-    icon: '/logo192.png',
-    badge: '/badge.png',
-    data: { url, type: data.type || 'push' },
-    actions: [
-      { action: 'open', title: '🔍 Voir' },
-      { action: 'close', title: '❌ Fermer' }
-    ],
-    requireInteraction: true,
-    vibrate: [200, 100, 200]
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  );
-});
-
-// ============================================
-// CLIC SUR NOTIFICATION
-// ============================================
+// Gérer le clic sur la notification
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Clic notification:', event);
   event.notification.close();
 
-  const url = event.notification.data?.url || '/notifications';
-
-  if (event.action === 'close') {
-    return;
-  }
-
-  // Ouvrir ou focus la fenêtre existante
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    clients.matchAll({ type: 'window' }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url.includes(url) && 'focus' in client) {
+        if (client.url === '/' && 'focus' in client) {
           return client.focus();
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow(url);
+        return clients.openWindow('/notifications');
       }
     })
   );
-});
-
-// ============================================
-// FERMETURE NOTIFICATION
-// ============================================
-self.addEventListener('notificationclose', (event) => {
-  console.log('[SW] Notification fermée:', event.notification);
-});
-
-// ============================================
-// INSTALLATION DU SW
-// ============================================
-self.addEventListener('install', (event) => {
-  console.log('[SW] Installé');
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Activé');
-  event.waitUntil(clients.claim());
 });

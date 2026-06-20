@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+enum CampagneType {
+  FORMATION
+  PRODUIT
+  EVENEMENT
+  WEBINAIRE
+  NEWSLETTER
+  MARKETING 
+}
+
+enum CampagneStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+// ============================================================
+// CAMPAGNE
+// ============================================================
+model Campagne {
+  id              Int            @id @default(autoincrement())
+  title           String         @db.VarChar(255)
+  slug            String         @unique @db.VarChar(255)
+  type            CampagneType   @default(MARKETING)
+  status          CampagneStatus @default(DRAFT)
+  isPublic        Boolean        @default(false)
+  published       Boolean        @default(false)
+  description     String?        @db.Text
+  image           String?        @db.VarChar(500)
+  url             String?        @db.VarChar(500)
+  duration        String?        @db.VarChar(100)
+  format          String?        @db.VarChar(100)
+  date            String?        @db.VarChar(100)
+  dateScheduled   DateTime?      @db.Timestamp(6)
+  location        String?        @db.VarChar(255)
+  contact         String?        @db.VarChar(50)
+  prix            Int?
+  prixOriginal    Int?
+  placesTotal     Int?           @default(0)
+  placesRestantes Int?           @default(0)
+  dureeHeures     Int?           @default(0)
+  iconName        String?        @default("Sparkles") @db.VarChar(50)
+  couleur         String?        @default("#F5A623") @db.VarChar(20)
+  prerequis       String?        @db.Text
+  tools           String[]       @default([])
+  tags            String[]       @default([])
+  inclus          String[]       @default([])
+  clientId        Int?
+  client          Client?        @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdAt       DateTime?      @default(now()) @db.Timestamp(6)
+  sentAt          DateTime?      @db.Timestamp(6)
+  updatedAt       DateTime?      @default(now()) @updatedAt @db.Timestamp(6)
+  stats           CampagneStats?
+  inscription     Inscription[]
+  notifications   Notification[]
+  alertes         Alerte[]
+  feedbacks       Feedback[]     // ← AJOUTÉ : relation inverse
+}
+
+// ============================================================
+// INSCRIPTION
+// ============================================================
+model Inscription {
+  id          Int        @id @default(autoincrement())
+  name        String     @db.VarChar(255)
+  email       String     @db.VarChar(255)
+  phone       String     @db.VarChar(50)
+  entreprise  String?    @db.VarChar(255)
+  notes       String?    @db.Text
+  formule     String     @default("standard") @db.VarChar(50)
+  paymentType String     @default("carte") @db.VarChar(50)
+  prixTotal   Int?
+  status      String     @default("en_attente") @db.VarChar(50)
+  campagneId  Int?
+  campagne    Campagne?  @relation(fields: [campagneId], references: [id])
+  userId      Int?
+  user        User?      @relation(fields: [userId], references: [id])
+  createdAt   DateTime?  @default(now()) @db.Timestamp(6)
+  clientId    Int?
+  client      Client?    @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  paiements   Paiement[]
+  paymentData Json?
+}
+
+// ============================================================
+// PAIEMENT
+// ============================================================
+model Paiement {
+  id            Int          @id @default(autoincrement())
+  montant       Int?
+  mode          String       @db.VarChar(50)
+  status        String       @default("en_attente") @db.VarChar(50)
+  inscriptionId Int?
+  inscription   Inscription? @relation(fields: [inscriptionId], references: [id])
+  userId        Int?
+  user          User?        @relation(fields: [userId], references: [id])
+  createdAt     DateTime?    @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime?    @default(now()) @updatedAt @db.Timestamp(6)
+  reference     String?      @db.VarChar(255)
+}
+
+// ============================================================
+// CLIENT
+// ============================================================
+model Client {
+  id            Int            @id @default(autoincrement())
+  name          String         @db.VarChar(255)
+  email         String         @unique @db.VarChar(255)
+  phone         String?        @db.VarChar(50)
+  password      String?        @db.VarChar(255)
+  type          String?        @default("particulier") @db.VarChar(50)
+  fcmToken      String?
+  sector        String?        @db.VarChar(255)
+  status        String?        @default("active") @db.VarChar(50)
+  role          String?        @default("CLIENT") @db.VarChar(50)
+  createdAt     DateTime?      @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime?      @updatedAt
+  campagnes     Campagne[]
+  contacts      Contact[]
+  segments      Segment[]
+  users         User[]
+  notifications Notification[] // ← CORRIGÉ : relation avec champ opposé
+  alertes       Alerte[]
+  inscription   Inscription[]
+}
+
+// ============================================================
+// CONTACT
+// ============================================================
+model Contact {
+  id         Int              @id @default(autoincrement())
+  name       String           @db.VarChar(255)
+  email      String           @unique @db.VarChar(255)
+  phone      String?          @db.VarChar(50)
+  clientId   Int?
+  createdAt  DateTime?        @default(now()) @db.Timestamp(6)
+  client     Client?          @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  segments   ContactSegment[]
+}
+
+// ============================================================
+// USER
+// ============================================================
+model User {
+  id               Int                @id @default(autoincrement())
+  name             String             @db.VarChar(255)
+  email            String             @unique @db.VarChar(255)
+  password         String             @db.VarChar(255)
+  role             String?            @default("CLIENT")
+  fcmToken         String?
+  createdAt        DateTime?          @default(now()) @db.Timestamp(6)
+  updatedAt        DateTime?          @updatedAt
+  clientId         Int?
+  status           String             @default("active") @db.VarChar(50)
+  lastLogin        DateTime?
+  PushSubscription PushSubscription[]
+  client           Client?            @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  inscription      Inscription[]
+  paiements        Paiement[]
+  notifications    Notification[]     // ← AJOUTÉ : relation inverse
+  feedbacks        Feedback[]         // ← AJOUTÉ : relation inverse
+}
+
+// ============================================================
+// SEGMENT
+// ============================================================
+model Segment {
+  id            Int              @id @default(autoincrement())
+  name          String
+  criteria      String
+  clientId      Int?
+  createdAt     DateTime?        @default(now()) @db.Timestamp(6)
+  contacts      ContactSegment[]
+  client        Client?          @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  notifications Notification[]   // ← CORRIGÉ : relation avec champ opposé
+}
+
+// ============================================================
+// CONTACT SEGMENT
+// ============================================================
+model ContactSegment {
+  id        Int      @id @default(autoincrement())
+  contactId Int?
+  segmentId Int?
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  segment   Segment? @relation(fields: [segmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+// ============================================================
+// CAMPAGNE STATS
+// ============================================================
+model CampagneStats {
+  id          Int       @id @default(autoincrement())
+  campagneId  Int?      @unique
+  emailsSent  Int?      @default(0)
+  opens       Int?      @default(0)
+  clicks      Int?      @default(0)
+  conversions Int?      @default(0)
+  createdAt   DateTime? @default(now()) @db.Timestamp(6)
+  updatedAt   DateTime? @default(now()) @updatedAt @db.Timestamp(6)
+  campagne    Campagne? @relation(fields: [campagneId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+// ============================================================
+// PUSH SUBSCRIPTION
+// ============================================================
+model PushSubscription {
+  id        Int       @id @default(autoincrement())
+  endpoint  String
+  p256dh    String
+  auth      String
+  userId    Int?
+  createdAt DateTime? @default(now()) @db.Timestamp(6)
+  User      User?     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+// ============================================================
+// NOTIFICATION (corrigé)
+// ============================================================
+model Notification {
+  id          Int       @id @default(autoincrement())
+  title       String
+  message     String
+  type        String
+  canal       String
+  userId      Int?      // ← Optionnel (?)
+  user        User?     @relation(fields: [userId], references: [id])
+  clientId    Int?
+  client      Client?   @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  segmentId   Int?
+  segment     Segment?  @relation(fields: [segmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  campagneId  Int?
+  campagne    Campagne? @relation(fields: [campagneId], references: [id])
+  isRead      Boolean   @default(false)
+  data        Json?
+  sentAt      DateTime? @default(now())  // ← Optionnel (?)
+  createdAt   DateTime  @default(now())
+  
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+// ============================================================
+// FEEDBACK
+// ============================================================
+model Feedback {
+  id          Int       @id @default(autoincrement())
+  rating      Int
+  comment     String?
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id])
+  campagneId  Int
+  campagne    Campagne  @relation(fields: [campagneId], references: [id])
+  createdAt   DateTime  @default(now())
+  
+  @@unique([userId, campagneId])
+  @@index([campagneId])
+}
+
+// ============================================================
+// ALERTE
+// ============================================================
+model Alerte {
+  id         Int       @id @default(autoincrement())
+  type       String    @db.VarChar(50)
+  message    String    @db.Text
+  campagneId Int?
+  campagne   Campagne? @relation(fields: [campagneId], references: [id])
+  clientId   Int?
+  client     Client?   @relation(fields: [clientId], references: [id])
+  status     String    @default("active") @db.VarChar(50)
+  createdAt  DateTime  @default(now()) @db.Timestamp(6)
+  resolvedAt DateTime? @db.Timestamp(6)
+}

@@ -67,13 +67,13 @@ const AnalyticsMarketing = () => {
     setError(null);
     try {
       const results = await Promise.allSettled([
-        api.get('/api/analytics/kpis'),
-        api.get(`/api/analytics/evolution?days=${timeFilter}`),
-        api.get('/api/analytics/performance'),
-        api.get('/api/analytics/canaux'),
-        api.get('/api/analytics/segments'),
-        api.get(`/api/analytics/inscriptions?days=${timeFilter}`),
-        api.get('/api/analytics/top-campagnes'),
+        api.get('/api/kpis'),
+        api.get(`/api/kpis/evolution?days=${timeFilter}`),
+        api.get('/api/kpis/performance'),
+        api.get('/api/kpis/canaux'),
+        api.get('/api/kpis/segments'),
+        api.get(`/api/kpis/inscriptions?days=${timeFilter}`),
+        api.get('/api/kpis/top-campagnes'),
       ]);
 
       if (results[0].status === 'fulfilled') setKpis(results[0].value.data);
@@ -173,7 +173,7 @@ const AnalyticsMarketing = () => {
               <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <div style={{
                   width: '100%', background: `linear-gradient(to top, ${THEME.info}, ${THEME.infoLight})`,
-                  borderRadius: '4px 4px 0 0', height: `${(d.inscriptions / maxInsc) * 180}px`,
+                  borderRadius: '4px 4px 0 0', height: `${(d.inscription / maxInsc) * 180}px`,
                   transition: 'height 0.5s', minHeight: 4,
                 }} />
                 <span style={{ fontSize: 10, color: THEME.textLight, transform: 'rotate(-45deg)', transformOrigin: 'top left', whiteSpace: 'nowrap' }}>
@@ -345,7 +345,7 @@ const AnalyticsMarketing = () => {
                 }} />
               </div>
               <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 12, color: THEME.textLight }}>
-                <span>📝 {s.inscriptions} inscriptions</span>
+                <span>📝 {s.inscription} inscriptions</span>
                 <span>💰 {s.revenuTotal?.toLocaleString()} TND</span>
                 <span>❤️ Fidelite: {s.fidelite}%</span>
               </div>
@@ -475,7 +475,7 @@ const AnalyticsMarketing = () => {
                       </div>
                     </div>
                   </td>
-                  <td style={{ textAlign: 'center', padding: '14px 16px', fontWeight: 600 }}>{c.inscriptions}</td>
+                  <td style={{ textAlign: 'center', padding: '14px 16px', fontWeight: 600 }}>{c.inscription}</td>
                   <td style={{ textAlign: 'center', padding: '14px 16px' }}>
                     <span style={{
                       padding: '4px 12px', borderRadius: 12, fontSize: 12, fontWeight: 600,
@@ -518,7 +518,7 @@ const AnalyticsMarketing = () => {
                   }}>{i < 3 ? '🥇' : '🚀'}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, color: THEME.text, fontSize: 14 }}>{c.title || c.nom}</div>
-                    <div style={{ fontSize: 12, color: THEME.textLight }}>{c.inscriptions} inscriptions</div>
+                    <div style={{ fontSize: 12, color: THEME.textLight }}>{c.inscription} inscriptions</div>
                   </div>
                   <div style={{ fontWeight: 700, color: THEME.gold, fontSize: 14 }}>{c.revenus?.toLocaleString()} TND</div>
                 </div>

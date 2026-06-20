@@ -34,7 +34,7 @@ const marketingMenu = [
     {path : '/FeedbacksCampagne', icon: '💬', label: 'Feedbacks'},
   ]},
   { section: 'Analytics', items: [
-    { path: '/analytics', icon: '📉', label: 'KPIs' },
+    { path: '/kpis', icon: '📉', label: 'KPIs' },
   ]},
 ];
 

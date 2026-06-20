@@ -1,7 +1,7 @@
 const express = require('express')
 const router  = express.Router()
 const axios   = require('axios')
-const { authMiddleware } = require('../middleware/auth')
+const { authenticate :authMiddleware } = require('../middleware/auth')
 
 const VERCEL_TOKEN    = process.env.VERCEL_TOKEN
 const VERCEL_PROJECT  = process.env.VERCEL_PROJECT_ID

@@ -1,91 +1,115 @@
-const express = require('express');
+﻿const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-const PDFDocument = require('pdfkit');
-const { authMiddleware: authenticate } = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
+const notificationService = require('../services/notificationService');
+const authenticate = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'Token manquant' });
+    
+    const token = authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Token invalide' });
 
-// GET /api/paiements/mes-paiements - Paiements du client connect?
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    
+    req.user = {
+      id: decoded.userId || decoded.id,
+      userId: decoded.userId || decoded.id,
+      email: decoded.email,
+      role: decoded.role,
+      tenantId: decoded.tenantId
+    };
+    
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Token invalide' });
+  }
+};
+
+// GET /api/paiements/mes-paiements
 router.get('/mes-paiements', authenticate, async (req, res) => {
   try {
+    const userId = req.user?.id || req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Utilisateur non identifié' });
+    }
+
     const paiements = await prisma.paiement.findMany({
-      where: { userId: req.user.userId },
+      where: { userId: userId },
       include: {
         inscription: {
           include: {
-            campagne: { select: { title: true } }
+            campagne: { 
+              select: { 
+                title: true, 
+                id: true,
+                dureeHeures: true
+                // PAS de dateDebut/dateFin
+              } 
+            }
           }
         }
       },
       orderBy: { createdAt: 'desc' }
     });
-    
-    // Formater les donn?es pour le frontend
+
     const formatted = paiements.map(p => ({
       id: p.id,
       formation: p.inscription?.campagne?.title || 'Formation inconnue',
-      date: p.createdAt ? new Date(p.createdAt).toLocaleDateString('fr-FR') : 'N/A',
+      formationId: p.inscription?.campagne?.id,
+      date: p.createdAt 
+        ? new Date(p.createdAt).toLocaleDateString('fr-FR') 
+        : 'N/A',
       mode: p.mode || 'Carte',
       montant: p.montant || 0,
       total: p.montant || 0,
       status: p.status || 'en_attente',
+      inscriptionId: p.inscriptionId
     }));
-    
+
     res.json(formatted);
+    
   } catch (error) {
-    console.error('Erreur paiements:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error('[PAIEMENTS ERROR]', error);
+    res.status(500).json({ error: 'Erreur serveur', details: error.message });
   }
 });
-
-// GET /api/paiements/:id/facture - T?l?charger facture
-router.get('/:id/facture', authenticate, async (req, res) => {
+// POST /api/paiements - Enregistrer un paiement
+router.post('/', authenticate, async (req, res) => {
   try {
-    const paiement = await prisma.paiement.findUnique({
-      where: { id: parseInt(req.params.id) },
-      include: { inscription: { include: { campagne: true, user: { select: { email: true, name: true} } } } }
+    const userId = req.user.id || req.user.userId;
+    const tenantId = req.tenantId;
+    const { inscriptionId, montant, mode } = req.body;
+
+    const paiement = await prisma.paiement.create({
+      data: {
+        userId,
+        inscriptionId,
+        montant,
+        mode,
+        tenantId,
+        status: 'CONFIRME',
+      },
+      include: {
+        inscription: { include: { campagne: true } },
+      },
     });
-    
-    if (!paiement) return res.status(404).json({ error: 'Paiement non trouv?' });
-    
 
+    // 🔔 NOTIFIER LE CLIENT
+    notificationService.notifyPaiement(userId, {
+      id: paiement.id,
+      montant: paiement.montant,
+      formation: paiement.inscription.campagne.title,
+      date: new Date().toLocaleDateString('fr-FR'),
+      mode: paiement.mode,
+    }).catch(err => console.error('[NOTIFY PAIEMENT ERROR]', err));
 
-// Cr?er un PDF
-    const doc = new PDFDocument();
-    
-    // Configurer les headers pour le t?l?chargement
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="Facture_${paiement.id}_${new Date().toISOString().split('T')[0]}.pdf"`);
-doc.pipe(res);
-// Contenu du PDF
-    doc.fontSize(25).text('DigiPip - Facture', 100, 80);
-    doc.fontSize(15).text(`Facture #${paiement.id}`, 100, 150);
-    doc.fontSize(12).text(`Date: ${new Date(paiement.createdAt).toLocaleDateString('fr-FR')}`, 100, 180);
-    doc.text(`Client: ${paiement.inscription?.user?.name || 'Client'}`, 100, 200);
-    doc.text(`Email: ${paiement.inscription?.user?.email || ''}`, 100, 220);
-    
-    doc.moveDown();
-    doc.fontSize(14).text('Formation:', 100, 260);
-    doc.fontSize(12).text(`${paiement.inscription?.campagne?.title || 'Formation'}`, 100, 280);
-    
-    doc.moveDown();
-    doc.fontSize(14).text('D?tails du paiement:', 100, 320);
-    doc.fontSize(12).text(`Mode: ${paiement.mode || 'Carte'}`, 100, 340);
-    doc.text(`Montant HT: ${paiement.montant?.toFixed(2)} TND`, 100, 360);
-    doc.text(`TVA (19%): ${(paiement.montant * 0.19).toFixed(2)} TND`, 100, 380);
-    doc.text(`Total TTC: ${(paiement.montant * 1.19).toFixed(2)} TND`, 100, 400);
-    
-    doc.moveDown();
-    doc.fontSize(10).text('DigiPip - Cloud Marketing', 100, 500);
-    doc.text('Sfax, Tunisie', 100, 515);
-    doc.text('contact@digipip.com', 100, 530);
-    
-    // Finaliser le PDF
-    doc.end();
-    
+    res.json(paiement);
   } catch (error) {
-    console.error('Erreur facture:', error);
-    res.status(500).json({ error: 'Erreur lors de la g?n?ration de la facture' });
+    res.status(500).json({ error: error.message });
   }
 });
 module.exports = router;

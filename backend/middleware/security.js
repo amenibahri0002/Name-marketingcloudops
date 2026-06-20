@@ -1,96 +1,44 @@
-const helmet = require('helmet')
-const rateLimit = require('express-rate-limit')
-const { body, validationResult } = require('express-validator')
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 
-// Protection headers HTTP
-const helmetMiddleware = helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' }
-})
-
-// Rate limiting global — 100 requêtes par 15 minutes
+// Rate limiter global - PLUS PERMISSIF pour le développement
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { message: 'Trop de requêtes, réessayez dans 15 minutes' },
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // ← AUGMENTÉ de 100 à 1000 requêtes
+  message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
-  legacyHeaders: false
-})
-
-// Rate limiting login — 5 tentatives par 15 minutes
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: { message: 'Trop de tentatives de connexion, réessayez dans 15 minutes' },
-  standardHeaders: true,
-  legacyHeaders: false
-})
-
-// Rate limiting inscription — 10 par heure
-const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 10,
-  message: { message: 'Trop d inscriptions, réessayez dans 1 heure' },
-  standardHeaders: true,
-  legacyHeaders: false
-})
-
-// Validation login
-const validateLogin = [
-  body('email')
-    .isEmail().withMessage('Email invalide')
-    .normalizeEmail(),
-  body('password')
-    .isLength({ min: 6 }).withMessage('Mot de passe trop court (min 6 caractères)')
-    .trim()
-]
-
-// Validation register
-const validateRegister = [
-  body('name')
-    .notEmpty().withMessage('Nom requis')
-    .isLength({ min: 2, max: 100 }).withMessage('Nom entre 2 et 100 caractères')
-    .trim()
-    .escape(),
-  body('email')
-    .isEmail().withMessage('Email invalide')
-    .normalizeEmail(),
-  body('password')
-    .isLength({ min: 6 }).withMessage('Mot de passe trop court (min 6 caractères)')
-    .trim()
-]
-
-// Validation contact
-const validateContact = [
-  body('name')
-    .notEmpty().withMessage('Nom requis')
-    .trim().escape(),
-  body('email')
-    .isEmail().withMessage('Email invalide')
-    .normalizeEmail(),
-  body('phone')
-    .optional()
-    .isMobilePhone().withMessage('Numéro de téléphone invalide')
-]
-
-// Middleware de vérification des erreurs de validation
-const checkValidation = (req, res, next) => {
-  const errors = validationResult(req)
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      message: 'Données invalides',
-      errors: errors.array().map(e => ({ field: e.path, message: e.msg }))
-    })
+  legacyHeaders: false,
+  // Ignorer les requêtes de localhost (développement)
+  skip: (req) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
   }
-  next()
-}
+});
+
+// Rate limiter pour auth (plus strict)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20, // 20 tentatives de login par 15 min
+  message: { error: 'Too many login attempts, please try again later.' },
+  skipSuccessfulRequests: true,
+});
+
+// Helmet avec config adaptée
+const helmetMiddleware = helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "http://localhost:5000", "https:"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+});
 
 module.exports = {
-  helmetMiddleware,
   globalLimiter,
-  loginLimiter,
-  registerLimiter,
-  validateLogin,
-  validateRegister,
-  validateContact,
-  checkValidation
-}
+  authLimiter,
+  helmetMiddleware,
+};

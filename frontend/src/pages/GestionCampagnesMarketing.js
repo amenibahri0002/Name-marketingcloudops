@@ -41,7 +41,7 @@ const STATUS_CONFIG = {
 
 const TYPE_COLORS = {
   'FORMATION': { bg: '#FFF8E7', color: '#D48A1A', border: gold, icon: '🔥' },
-  'MARKETING': { bg: '#EFF6FF', color: blue, border: blue, icon: '📢' },
+  'Promo': { bg: '#EFF6FF', color: blue, border: blue, icon: '📢' },
   'EVENT': { bg: '#ECFDF5', color: green, border: green, icon: '🎉' },
   'WEBINAR': { bg: '#F3E8FF', color: purple, border: purple, icon: '💻' }
 };
@@ -49,6 +49,7 @@ const TYPE_COLORS = {
 // ============================================================
 // MODAL DE NOTIFICATION MULTI-CANAL
 // ============================================================
+
 const NotificationModal = ({ show, onClose, campagne }) => {
   const [canauxSelectionnes, setCanauxSelectionnes] = useState([]);
   const [message, setMessage] = useState('');
@@ -57,11 +58,9 @@ const NotificationModal = ({ show, onClose, campagne }) => {
 
   if (!show || !campagne) return null;
 
-  const toggleCanal = (canalId) => {
+  const toggleCanal = (id) => {
     setCanauxSelectionnes(prev =>
-      prev.includes(canalId)
-        ? prev.filter(c => c !== canalId)
-        : [...prev, canalId]
+      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
     );
   };
 
@@ -70,24 +69,81 @@ const NotificationModal = ({ show, onClose, campagne }) => {
     setSending(true);
     setResultats([]);
 
-    const results = [];
-    for (const canalId of canauxSelectionnes) {
-      try {
-        await api.post('/api/notifications', {
-          title: `📢 ${campagne.title}`,
-          message: message || `Nouvelle formation disponible : ${campagne.title}. ${campagne.description?.substring(0, 100)}...`,
-          type: 'nouvelle_campagne',
-          canal: canalId,
-          campagneId: campagne.id
-        });
-        results.push({ canal: canalId, status: 'success' });
-      } catch (err) {
-        results.push({ canal: canalId, status: 'error', error: err.response?.data?.error });
-      }
-    }
+    try {
+      // Appel la route CORRECTE : /api/notifications/diffuse
+      const response = await api.post('/api/notifications/diffuse', {
+        campagneId: campagne.id,
+        channels: canauxSelectionnes,
+        title: campagne.title,
+        message: message || `Nouvelle formation : ${campagne.title} ! Inscrivez-vous dès maintenant...`,
+      });
 
-    setResultats(results);
-    setSending(false);
+      console.log('Réponse diffusion:', response.data);
+
+      // ✅ Gérer la réponse asynchrone
+      if (response.data.status === 'processing') {
+        setResultats(canauxSelectionnes.map(canalId => ({
+          canal: canalId,
+          status: 'success',
+          message: 'Diffusion lancée en arrière-plan'
+        })));
+
+        // Fermer le modal après 3 secondes
+        setTimeout(() => {
+          onClose();
+          setCanauxSelectionnes([]);
+          setResultats([]);
+        }, 3000);
+
+        return;
+      }
+
+      // Si la réponse contient des résultats (mode synchrone legacy)
+      const results = response.data.results;
+      if (!results) {
+        setResultats(canauxSelectionnes.map(canalId => ({
+          canal: canalId,
+          status: 'success',
+          message: 'Diffusion effectuée'
+        })));
+        return;
+      }
+
+      // Mapper les résultats du backend vers le format du frontend
+      const mappedResults = canauxSelectionnes.map(canalId => {
+        const canalLabel = CANAUX.find(c => c.id === canalId)?.label || canalId;
+
+        if (canalId === 'email') {
+          const emailRes = results.email;
+          if (emailRes && emailRes.failed > 0) {
+            return { canal: canalId, status: 'error', error: emailRes.errors[0] || 'Erreur email' };
+          }
+          return { canal: canalId, status: 'success' };
+        }
+
+        if (canalId === 'push') {
+          const pushRes = results.push;
+          if (pushRes && pushRes.failed > 0) {
+            return { canal: canalId, status: 'error', error: pushRes.errors[0] || 'Erreur Push' };
+          }
+          return { canal: canalId, status: 'success' };
+        }
+
+        return { canal: canalId, status: 'success' };
+      });
+
+      setResultats(mappedResults);
+    } catch (err) {
+      console.error('[DIFFUSION ERROR]', err);
+      const errorMsg = err.response?.data?.error || err.message || 'Erreur serveur';
+      setResultats(canauxSelectionnes.map(canalId => ({
+        canal: canalId,
+        status: 'error',
+        error: errorMsg
+      })));
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -795,6 +851,66 @@ export default function GestionCampagnesMarketing() {
     fetchCampagnes();
   }, []);
 
+const handleDiffuse = async () => {
+  try {
+    setLoading(true);
+
+    const response = await api.post('/notifications/diffuse', {
+      campagneId: selectedCampagne.id,
+      channels: selectedChannels,
+      title: selectedCampagne.title,
+      message: customMessage || `Nouvelle formation : ${selectedCampagne.title} ! Inscrivez-vous dès maintenant...`,
+    });
+
+    console.log('Réponse diffusion:', response.data);
+
+    // ✅ Gérer la réponse asynchrone
+    if (response.data.status === 'processing') {
+      toast.success('✅ Diffusion lancée en arrière-plan ! Les notifications seront envoyées.');
+
+      setTimeout(() => {
+        setShowDiffuseModal(false);
+        setSelectedChannels([]);
+      }, 2000);
+
+      return;
+    }
+
+    // Si la réponse contient des résultats (mode synchrone legacy)
+    if (response.data.results) {
+      const { email, push } = response.data.results;
+
+      if (email?.sent > 0) {
+        toast.success(`📧 ${email.sent} email(s) envoyé(s)`);
+      }
+      if (email?.failed > 0) {
+        toast.error(`📧 ${email.failed} email(s) échoué(s)`);
+      }
+
+      if (push?.sent > 0) {
+        toast.success(`🔔 ${push.sent} push envoyé(s)`);
+      }
+      if (push?.failed > 0) {
+        toast.error(`🔔 ${push.failed} push échoué(s)`);
+      }
+    }
+
+    setShowDiffuseModal(false);
+    setSelectedChannels([]);
+
+  } catch (error) {
+    console.error('[DIFFUSION ERROR]', error);
+
+    // Gérer l'erreur de timeout
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      toast.info('⏳ Diffusion en cours... Vérifiez vos notifications plus tard.');
+    } else {
+      toast.error('Erreur lors de la diffusion : ' + (error.response?.data?.error || error.message));
+    }
+  } finally {
+    setLoading(false);
+  }
+};
   // Créer une campagne
   const handleCreate = async (data) => {
     await api.post('/api/campagnes', data);
