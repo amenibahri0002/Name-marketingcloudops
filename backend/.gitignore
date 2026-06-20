@@ -6,3 +6,8 @@
 npm-debug.log
 .env.*
 serviceAccountKey.json
+prisma/migrations/
+firebase-service-account.json
+config/firebase-service-account.json
+.env.local
+backend/config/digipip-service-account.json

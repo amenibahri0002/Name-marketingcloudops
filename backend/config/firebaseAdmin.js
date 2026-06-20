@@ -1,7 +1,7 @@
 // backend/config/firebaseAdmin.js
 const admin = require('firebase-admin');
 const path = require('path');
-
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 // Charger le fichier de compte de service
 // Téléchargez-le depuis Firebase Console > Paramètres > Comptes de service
 const serviceAccount = require(path.join(__dirname, 'digipip-service-account.json'));
