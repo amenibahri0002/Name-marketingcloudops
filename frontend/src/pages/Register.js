@@ -221,7 +221,7 @@ const tenant = localStorage.getItem('digipip_tenant');
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0f0e0c',
+      background: '#ffffff',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -267,15 +267,15 @@ const tenant = localStorage.getItem('digipip_tenant');
               }} />
             </div>
             <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#000000', letterSpacing: '-0.02em' }}>
                 Digi<span style={{ color: '#f5a623' }}>Pip</span>
               </div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.06em' }}>
+              <div style={{ fontSize: 10, color: 'rgba(0, 0, 0, 0.3)', letterSpacing: '0.06em' }}>
                 by DigiLab Solutions
               </div>
             </div>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, marginTop: 6 }}>
+          <p style={{ color: 'rgba(0, 0, 0, 0.35)', fontSize: 13, marginTop: 6 }}>
             Créez votre compte et rejoignez DigiLab
           </p>
         </div>

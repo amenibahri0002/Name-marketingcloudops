@@ -20,7 +20,17 @@ const prisma = new PrismaClient();
 const server = http.createServer(app);
 app.set('trust proxy', 1);
 console.log('SERVER STARTING...');
-
+// ============================================
+// KEEP-ALIVE : Ping la base toutes les 4 min
+// ============================================
+setInterval(async () => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    console.log('[KEEP-ALIVE] Database pinged at', new Date().toISOString());
+  } catch (err) {
+    console.error('[KEEP-ALIVE] Ping failed:', err.message);
+  }
+}, 4 * 60 * 1000); // 4 minutes
 
 // Socket.io
 const io = new Server(server, {

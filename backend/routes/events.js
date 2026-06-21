@@ -61,4 +61,4 @@ router.delete('/:id', authMiddleware, requirePermission('GERER_EVENEMENTS'), asy
   }
 })
 
-module.exports = router
+module.exports = router;

@@ -933,17 +933,18 @@ const handleDiffuse = async () => {
   };
 
   // Toggle publish
-  const togglePublish = async (campagne) => {
-    try {
-      await api.put(`/api/campagnes/${campagne.id}/publish`, {
-        published: !campagne.published,
-        isPublic: !campagne.published
-      });
-      await fetchCampagnes();
-    } catch (err) {
-      alert('Erreur : ' + err.response?.data?.error);
+ const togglePublish = async (campagne) => {
+  try {
+    if (campagne.published) {
+      await api.put(`/api/campagnes/${campagne.id}/unpublish`);
+    } else {
+      await api.put(`/api/campagnes/${campagne.id}/publish`);
     }
-  };
+    await fetchCampagnes();
+  } catch (err) {
+    alert('Erreur : ' + (err.response?.data?.error || err.message));
+  }
+};
 
   // Filtrer les campagnes
   const filteredCampagnes = campagnes.filter(c => {

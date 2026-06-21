@@ -1,63 +1,65 @@
-// api.js avec retry
 import axios from 'axios';
-
-
-const isDocker = window.location.hostname === 'localhost' && window.location.port === '8080';
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
-  timeout: 120000, // 30 secondes
-  headers: {
-    'Content-Type': 'application/json'
-  }
+  timeout: 120000,
+  headers: { 'Content-Type': 'application/json' }
 });
 
-// Intercepteur request
+// Routes qui ne doivent JAMAIS rediriger vers login même en 401
+const PUBLIC_ENDPOINTS = [
+  '/api/campagnes/public',
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/contact',
+  '/api/health'
+];
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
+  
+  // N'envoyer le token que si ce n'est pas une route publique
+  // (ou envoyer-le toujours, mais ne pas rediriger sur 401 pour les publiques)
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-    const tenant = localStorage.getItem('digipip_tenant');
+  
+  const tenant = localStorage.getItem('digipip_tenant');
   if (tenant) {
-    const parsed = JSON.parse(tenant);
-    config.headers['X-Tenant-ID'] = parsed.id;
+    try {
+      const parsed = JSON.parse(tenant);
+      config.headers['X-Tenant-ID'] = parsed.id;
+    } catch (e) {
+      config.headers['X-Tenant-ID'] = 'cmqlsn2yu0000ybn5t0unlx8u';
+    }
   } else {
-    // Tenant par défaut (remplacer par votre ID)
     config.headers['X-Tenant-ID'] = 'cmqlsn2yu0000ybn5t0unlx8u';
   }
+  
   return config;
 });
 
-// Intercepteur response avec retry
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const { config } = error;
-    
-    // Si pas de config, rejeter
     if (!config) return Promise.reject(error);
     
-    // Log l'erreur
-    console.error('API Error:', error.message);
+    console.error('API Error:', error.message, 'URL:', config.url);
     
-    // Retry sur erreur réseau (max 3 fois)
-    if (!config.retryCount && error.message.includes('Network Error')) {
-      config.retryCount = 0;
-    }
-    
+    // Retry Network Error
+    if (!config.retryCount) config.retryCount = 0;
     if (config.retryCount < 3 && error.message.includes('Network Error')) {
       config.retryCount += 1;
-      console.log(`Retry ${config.retryCount}/3...`);
-      
-      // Attendre 2 secondes avant retry
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await new Promise(r => setTimeout(r, 2000 * config.retryCount));
       return api(config);
     }
     
-    // 401 → déconnexion
-    if (error.response?.status === 401) {
+    // 401 → déconnexion SEULEMENT si ce n'est pas une route publique
+    const isPublic = PUBLIC_ENDPOINTS.some(ep => config.url?.includes(ep));
+    
+    if (error.response?.status === 401 && !isPublic && !config._noRedirect) {
+      console.log('[API] 401 sur route protégée, déconnexion...');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';

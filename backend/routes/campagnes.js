@@ -4,7 +4,6 @@ const prisma = new PrismaClient();
 const router = express.Router();
 
 const { authenticate } = require('../middleware/auth');
-const { sendCampagneNotification } = require('../services/emailService');
 const notificationService = require('../services/notificationService');
 
 function generateSlug(title) {
@@ -31,7 +30,9 @@ async function generateUniqueSlug(title, tenantId, excludeId = null) {
 // ============================================
 router.get('/public', async (req, res) => {
   try {
-    const tenantId = req.tenantId;
+const DEFAULT_TENANT_ID = 'cmqlsn2yu0000ybn5t0unlx8u';
+    const tenantId = req.tenantId || DEFAULT_TENANT_ID;
+
     const campagnes = await prisma.campagne.findMany({
       where: { 
         tenantId,
@@ -40,8 +41,9 @@ router.get('/public', async (req, res) => {
       },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(campagnes);
+   res.json(campagnes);
   } catch (e) { 
+    console.error('[PUBLIC CAMPAGNES ERROR]', e);
     res.status(500).json({ message: e.message }); 
   }
 });
@@ -96,12 +98,26 @@ router.get('/:idOrSlug', async (req, res) => {
   try {
     const { idOrSlug } = req.params;
     const tenantId = req.tenantId;
+
+    // Vérifier si c'est un CUID (string) ou un ancien ID numérique
+    const isCuid = /^c[a-z0-9]{24}$/.test(idOrSlug);
     const isNumeric = /^\d+$/.test(idOrSlug);
 
     let campagne;
-    if (isNumeric) {
+    if (isCuid) {
+      // CUID = string direct
       campagne = await prisma.campagne.findFirst({
-        where: { id: Number(idOrSlug), tenantId },
+        where: { id: idOrSlug, tenantId },
+        include: { 
+          inscriptions: { 
+            select: { id: true, name: true, email: true, phone: true, status: true, createdAt: true } 
+          }
+        },
+      });
+    } else if (isNumeric) {
+      // Ancien ID numérique
+      campagne = await prisma.campagne.findFirst({
+        where: { id: idOrSlug, tenantId },
         include: { 
           inscriptions: { 
             select: { id: true, name: true, email: true, phone: true, status: true, createdAt: true } 
@@ -109,6 +125,7 @@ router.get('/:idOrSlug', async (req, res) => {
         },
       });
     } else {
+      // Slug
       campagne = await prisma.campagne.findUnique({
         where: { tenantId_slug: { tenantId, slug: idOrSlug } },
         include: { 
@@ -131,7 +148,6 @@ router.post('/', authenticate, async (req, res) => {
   try {
     const tenantId = req.tenantId;
 
-    // Extraire SEULEMENT les champs valides du schéma Prisma
     const {
       title,
       description,
@@ -149,18 +165,17 @@ router.post('/', authenticate, async (req, res) => {
       image,
       published,
       status,
-      // Ignorer tous les autres champs envoyés par le frontend
-      date,        // ← ignoré
-      duration,    // ← ignoré
-      location,    // ← ignoré
-      iconName,    // ← ignoré
-      couleur,     // ← ignoré
-      prerequis,   // ← ignoré
-      tools,       // ← ignoré
-      tags,        // ← ignoré
-      inclus,      // ← ignoré
-      isPublic,    // ← ignoré
-      ...ignored   // ← tout le reste est ignoré
+      date,
+      duration,
+      location,
+      iconName,
+      couleur,
+      prerequis,
+      tools,
+      tags,
+      inclus,
+      isPublic,
+      ...ignored
     } = req.body;
 
     const slug = await generateUniqueSlug(title, tenantId);
@@ -186,7 +201,6 @@ router.post('/', authenticate, async (req, res) => {
         published: published !== undefined ? published : true,
         status: status || 'ACTIVE',
         tenantId,
-        // PAS de ...rest ici !
       }
     });
 
@@ -199,7 +213,7 @@ router.post('/', authenticate, async (req, res) => {
       dateScheduled: campagne.dateScheduled,
       lieu: campagne.lieu,
       slug: campagne.slug,
-      tenantId: tenantId, // <-- AJOUTÉ
+      tenantId: tenantId,
     }).catch(err => console.error('[NOTIFY CAMPAGNE ERROR]', err));
 
     res.status(201).json({
@@ -219,22 +233,23 @@ router.post('/', authenticate, async (req, res) => {
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const tenantId = req.tenantId;
+    const campagneId = req.params.id; // String (CUID)
+
     const existing = await prisma.campagne.findFirst({ 
-      where: { id: Number(req.params.id), tenantId } 
+      where: { id: campagneId, tenantId } 
     });
 
     if (!existing) return res.status(404).json({ message: 'Campagne introuvable' });
 
     let slug = existing.slug;
     if (req.body.title && req.body.title !== existing.title) {
-      slug = await generateUniqueSlug(req.body.title, tenantId, Number(req.params.id));
+      slug = await generateUniqueSlug(req.body.title, tenantId, campagneId);
     }
 
-    // Filtrer les champs invalides pour l'update aussi
     const { date, duration, location, iconName, couleur, prerequis, tools, tags, inclus, isPublic, ...validData } = req.body;
 
     const campagne = await prisma.campagne.update({
-      where: { id: Number(req.params.id) },
+      where: { id: campagneId },
       data: { ...validData, slug }
     });
     res.json(campagne);
@@ -242,44 +257,163 @@ router.put('/:id', authenticate, async (req, res) => {
 });
 
 // ============================================
-// DELETE /api/campagnes/:id
+// DELETE /api/campagnes/:id - AVEC CASCADE MANUEL
 // ============================================
 router.delete('/:id', authenticate, async (req, res) => {
   try {
     const tenantId = req.tenantId;
-    await prisma.campagne.deleteMany({ 
-      where: { id: Number(req.params.id), tenantId } 
+    const campagneId = req.params.id; // String (CUID) - PAS Number() !
+
+    console.log(`[DELETE] Tentative suppression campagne ${campagneId} (tenant: ${tenantId})`);
+
+    // 1. Vérifier que la campagne existe et appartient au tenant
+    const campagne = await prisma.campagne.findFirst({
+      where: { id: campagneId, tenantId }
     });
-    res.json({ message: 'Campagne supprimée' });
-  } catch (e) { res.status(500).json({ message: e.message }); }
+
+    if (!campagne) {
+      return res.status(404).json({ message: 'Campagne introuvable' });
+    }
+
+    console.log(`[DELETE] Campagne trouvée: ${campagne.title}`);
+
+    // 2. Supprimer les relations en CASCADE manuel
+    // 2.1 Supprimer les inscriptions liées
+    try {
+      const deletedInscriptions = await prisma.inscription.deleteMany({
+        where: { campagneId }
+      });
+      console.log(`[DELETE] ${deletedInscriptions.count} inscriptions supprimées`);
+    } catch (err) {
+      console.log('[DELETE] Pas d\'inscriptions à supprimer:', err.message);
+    }
+
+    // 2.2 Supprimer les paiements liés
+    try {
+      const deletedPaiements = await prisma.paiement.deleteMany({
+        where: { campagneId }
+      });
+      console.log(`[DELETE] ${deletedPaiements.count} paiements supprimés`);
+    } catch (err) {
+      console.log('[DELETE] Pas de paiements à supprimer:', err.message);
+    }
+
+    // 2.3 Supprimer les notifications liées
+    try {
+      const deletedNotifications = await prisma.notification.deleteMany({
+        where: { campagneId }
+      });
+      console.log(`[DELETE] ${deletedNotifications.count} notifications supprimées`);
+    } catch (err) {
+      console.log('[DELETE] Pas de notifications à supprimer:', err.message);
+    }
+
+    // 2.4 Supprimer les feedbacks/avis liés
+    try {
+      const deletedFeedbacks = await prisma.feedback.deleteMany({
+        where: { campagneId }
+      });
+      console.log(`[DELETE] ${deletedFeedbacks.count} feedbacks supprimés`);
+    } catch (err) {
+      console.log('[DELETE] Pas de feedbacks à supprimer:', err.message);
+    }
+
+    // 2.5 Supprimer les segments liés
+    try {
+      const deletedSegments = await prisma.segment.deleteMany({
+        where: { campagneId }
+      });
+      console.log(`[DELETE] ${deletedSegments.count} segments supprimés`);
+    } catch (err) {
+      console.log('[DELETE] Pas de segments à supprimer:', err.message);
+    }
+
+    // 3. Supprimer la campagne
+    await prisma.campagne.delete({
+      where: { id: campagneId }
+    });
+
+    console.log(`[DELETE] ✅ Campagne ${campagneId} supprimée avec succès`);
+    res.json({ message: 'Campagne supprimée avec succès' });
+
+  } catch (e) { 
+    console.error('[DELETE CAMPAGNE ERROR]', e);
+    res.status(500).json({ message: e.message }); 
+  }
 });
 
 // ============================================
-// PUT /api/campagnes/:id/publish
+// PUT /api/campagnes/:id/publish - PUBLIER
 // ============================================
 router.put('/:id/publish', authenticate, async (req, res) => {
   try {
     const tenantId = req.tenantId;
-    const campagne = await prisma.campagne.updateMany({
-      where: { id: Number(req.params.id), tenantId },
+    const campagneId = req.params.id; // String (CUID) - PAS Number() !
+
+    console.log(`[PUBLISH] Tentative publication campagne ${campagneId}`);
+
+    // Vérifier que la campagne existe
+    const existing = await prisma.campagne.findFirst({
+      where: { id: campagneId, tenantId }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ message: 'Campagne introuvable' });
+    }
+
+    // Utiliser update (pas updateMany) pour retourner l'objet
+    const campagne = await prisma.campagne.update({
+      where: { id: campagneId },
       data: { published: true, status: 'ACTIVE' }
     });
-    res.json({ message: 'Campagne publiée', campagne });
-  } catch (e) { res.status(500).json({ message: e.message }); }
-});
 
+    console.log(`[PUBLISH] ✅ Campagne "${campagne.title}" publiée`);
+    res.json({ 
+      success: true,
+      message: 'Campagne publiée avec succès',
+      campagne 
+    });
+
+  } catch (e) { 
+    console.error('[PUBLISH ERROR]', e);
+    res.status(500).json({ message: e.message }); 
+  }
+});
 // ============================================
-// PUT /api/campagnes/:id/unpublish
+// PUT /api/campagnes/:id/unpublish - DÉPUBLIER
 // ============================================
 router.put('/:id/unpublish', authenticate, async (req, res) => {
   try {
     const tenantId = req.tenantId;
-    const campagne = await prisma.campagne.updateMany({
-      where: { id: Number(req.params.id), tenantId },
+    const campagneId = req.params.id; // String (CUID) - PAS Number() !
+
+    console.log(`[UNPUBLISH] Tentative dépublication campagne ${campagneId}`);
+
+    // Vérifier que la campagne existe
+    const existing = await prisma.campagne.findFirst({
+      where: { id: campagneId, tenantId }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ message: 'Campagne introuvable' });
+    }
+
+    // Utiliser update (pas updateMany) pour retourner l'objet
+    const campagne = await prisma.campagne.update({
+      where: { id: campagneId },
       data: { published: false, status: 'PAUSED' }
     });
-    res.json({ message: 'Campagne dépubliée', campagne });
-  } catch (e) { res.status(500).json({ message: e.message }); }
-});
 
+    console.log(`[UNPUBLISH] ✅ Campagne "${campagne.title}" dépubliée`);
+    res.json({ 
+      success: true,
+      message: 'Campagne dépubliée avec succès',
+      campagne 
+    });
+
+  } catch (e) { 
+    console.error('[UNPUBLISH ERROR]', e);
+    res.status(500).json({ message: e.message }); 
+  }
+});
 module.exports = router;

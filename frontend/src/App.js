@@ -140,8 +140,9 @@ function SocketIOConnector() {
       socketRef.current.disconnect();
     }
 
-    const newSocket = io('http://localhost:5000', {
-      auth: { token },
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const SOCKET_URL = API_URL.replace('/api', ''); // Enlève /api pour Socket.io
+const newSocket = io(SOCKET_URL, {      auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
