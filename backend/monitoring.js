@@ -3,7 +3,7 @@ const client = require('prom-client');
 const axios = require('axios');
 
 // Configuration Grafana Cloud
-const GRAFANA_URL = 'https://otlp-gateway-prod-eu-central-0.grafana.net/otlp/v1/metrics';
+const GRAFANA_URL = 'https://prometheus-prod-58-prod-eu-central-0.grafana.net/api/prom'
 const USERNAME = 'amenibahri0002';
 const API_KEY = 'votre-token-ici'; // ← Remplacez par votre token copié
 
