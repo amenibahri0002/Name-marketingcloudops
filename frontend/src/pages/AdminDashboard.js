@@ -13,7 +13,8 @@ const lightBorder = '#E5E5E5';
 const ROLE_COLORS = {
   'ADMIN': { bg: '#FEE2E2', color: '#DC2626', label: 'Administrateur' },
   'RESPONSABLE_MARKETING': { bg: '#FEF3C7', color: '#D97706', label: 'Resp. Marketing' },
-  'CLIENT': { bg: '#DBEAFE', color: '#2563EB', label: 'Client' }
+  'CLIENT': { bg: '#DBEAFE', color: '#2563EB', label: 'Client' },
+  'SUPER_ADMIN': { bg: '#F3E8FF', color: '#7C3AED', label: 'Super Admin' }
 };
 
 const STATUS_CONFIG = {
@@ -27,15 +28,312 @@ const STATUS_CONFIG = {
   'REJECTED': { color: '#EF4444', bg: '#FEE2E2', label: 'Refusée' }
 };
 
+// ═══════════════════════════════════════════════════════════════
+// COMPOSANTS ENFANTS (définis AVANT AdminDashboard)
+// ═══════════════════════════════════════════════════════════════
+
+// ─── Stat Card ───
+const StatCard = ({ title, value, subtitle, icon, color, trend, onClick }) => (
+  <div 
+    onClick={onClick}
+    style={{ 
+      background: white, 
+      borderRadius: 16, 
+      padding: '24px', 
+      border: `1px solid ${lightBorder}`, 
+      boxShadow: '0 1px 3px rgba(0,0,0,0.04)', 
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
+      cursor: onClick ? 'pointer' : 'default',
+      position: 'relative',
+      overflow: 'hidden'
+    }} 
+    onMouseEnter={e => { 
+      e.currentTarget.style.transform = 'translateY(-4px)'; 
+      e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.08)'; 
+    }} 
+    onMouseLeave={e => { 
+      e.currentTarget.style.transform = 'translateY(0)'; 
+      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; 
+    }}
+  >
+    <div style={{ 
+      position: 'absolute', 
+      top: 0, 
+      left: 0, 
+      right: 0, 
+      height: 3, 
+      background: color, 
+      borderRadius: '16px 16px 0 0' 
+    }} />
+
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, marginTop: 4 }}>
+      <div style={{ 
+        width: 48, 
+        height: 48, 
+        borderRadius: 12, 
+        background: color + '15', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        fontSize: '1.5rem' 
+      }}>
+        {icon}
+      </div>
+      {trend !== undefined && (
+        <span style={{ 
+          padding: '6px 10px', 
+          borderRadius: 20, 
+          background: trend > 0 ? '#ECFDF5' : '#FEE2E2', 
+          color: trend > 0 ? '#047857' : '#DC2626', 
+          fontSize: '0.8rem', 
+          fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4
+        }}>
+          {trend > 0 ? '↗' : '↘'} {trend > 0 ? '+' : ''}{trend}%
+        </span>
+      )}
+    </div>
+
+    <div style={{ fontSize: '2rem', fontWeight: 800, color: dark, marginBottom: 4, lineHeight: 1 }}>
+      {value}
+    </div>
+    <div style={{ fontSize: '0.9rem', color: textGray, fontWeight: 600, marginBottom: 2 }}>
+      {title}
+    </div>
+    {subtitle && (
+      <div style={{ fontSize: '0.8rem', color: '#9CA3AF', marginTop: 4, fontWeight: 500 }}>
+        {subtitle}
+      </div>
+    )}
+  </div>
+);
+
+// ─── Mini Bar Chart ───
+const MiniBarChart = ({ data, title }) => {
+  const max = Math.max(...data.map(d => d.value), 1);
+  const total = data.reduce((sum, d) => sum + d.value, 0);
+
+  return (
+    <div style={{ 
+      background: white, 
+      borderRadius: 16, 
+      padding: '24px', 
+      border: `1px solid ${lightBorder}`,
+      boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: dark, margin: 0 }}>{title}</h3>
+        <span style={{ fontSize: '0.8rem', color: '#9CA3AF', fontWeight: 600 }}>
+          Total: {total}
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {data.map((item, i) => (
+          <div key={i}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: '1rem' }}>{item.icon}</span>
+                <span style={{ fontSize: '0.875rem', color: dark, fontWeight: 600 }}>{item.label}</span>
+              </div>
+              <span style={{ fontSize: '0.875rem', color: textGray, fontWeight: 700 }}>
+                {item.value} ({total > 0 ? Math.round((item.value / total) * 100) : 0}%)
+              </span>
+            </div>
+            <div style={{ height: 8, background: '#F3F4F6', borderRadius: 4, overflow: 'hidden' }}>
+              <div 
+                style={{ 
+                  height: '100%', 
+                  width: `${(item.value / max) * 100}%`, 
+                  background: item.color, 
+                  borderRadius: 4, 
+                  transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative'
+                }} 
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {data.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '24px', color: '#9CA3AF' }}>
+          <div style={{ fontSize: '2rem', marginBottom: 8 }}>📊</div>
+          <div style={{ fontSize: '0.875rem' }}>Aucune donnée disponible</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Recent Activity ───
+const RecentActivity = ({ title, items, type, viewAllLink, navigate }) => {
+  const getTypeConfig = () => {
+    switch(type) {
+      case 'user': return { icon: '👤', bg: '#DBEAFE', color: '#2563EB' };
+      case 'campagne': return { icon: '📢', bg: '#FEF3C7', color: '#D97706' };
+      case 'inscriptions': return { icon: '📝', bg: '#ECFDF5', color: '#10B981' };
+      default: return { icon: '📌', bg: '#F3F4F6', color: '#6B7280' };
+    }
+  };
+
+  const typeConfig = getTypeConfig();
+
+  return (
+    <div style={{ 
+      background: white, 
+      borderRadius: 16, 
+      padding: '24px', 
+      border: `1px solid ${lightBorder}`,
+      boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: dark, margin: 0 }}>{title}</h3>
+        {viewAllLink && (
+          <button 
+            onClick={() => navigate(viewAllLink)}
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              color: gold, 
+              fontSize: '0.8rem', 
+              fontWeight: 600, 
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4
+            }}
+          >
+            Voir tout →
+          </button>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {items.slice(0, 5).map((item, i) => {
+          const statusConfig = STATUS_CONFIG[item.status] || STATUS_CONFIG[item.published ? 'active' : 'inactive'];
+
+          return (
+            <div 
+              key={i} 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 12, 
+                padding: '12px', 
+                background: gray, 
+                borderRadius: 12,
+                transition: 'background 0.2s',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#E5E7EB'}
+              onMouseLeave={e => e.currentTarget.style.background = gray}
+            >
+              <div style={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: '50%', 
+                background: typeConfig.bg, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                fontSize: '1rem',
+                flexShrink: 0
+              }}>
+                {typeConfig.icon}
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ 
+                  fontSize: '0.875rem', 
+                  fontWeight: 600, 
+                  color: dark,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {item.name || item.title || item.email || 'Sans nom'}
+                </div>
+                <div style={{ 
+                  fontSize: '0.75rem', 
+                  color: textGray, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 6,
+                  marginTop: 2
+                }}>
+                  {type === 'user' && (
+                    <span style={{ 
+                      padding: '2px 8px', 
+                      borderRadius: 10, 
+                      background: ROLE_COLORS[item.role]?.bg || '#F3F4F6', 
+                      color: ROLE_COLORS[item.role]?.color || '#6B7280',
+                      fontWeight: 600,
+                      fontSize: '0.7rem'
+                    }}>
+                      {ROLE_COLORS[item.role]?.label || item.role}
+                    </span>
+                  )}
+                  {type === 'campagne' && (
+                    <span style={{ 
+                      padding: '2px 8px', 
+                      borderRadius: 10, 
+                      background: item.published ? '#ECFDF5' : '#F3F4F6', 
+                      color: item.published ? '#047857' : '#6B7280',
+                      fontWeight: 600,
+                      fontSize: '0.7rem'
+                    }}>
+                      {item.published ? '✅ Publiée' : '📝 Brouillon'}
+                    </span>
+                  )}
+                  {type === 'inscriptions' && statusConfig && (
+                    <span style={{ 
+                      padding: '2px 8px', 
+                      borderRadius: 10, 
+                      background: statusConfig.bg, 
+                      color: statusConfig.color,
+                      fontWeight: 600,
+                      fontSize: '0.7rem'
+                    }}>
+                      {statusConfig.label}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.75rem', color: '#9CA3AF', fontWeight: 500, flexShrink: 0 }}>
+                {item.createdAt ? new Date(item.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : 'N/A'}
+              </div>
+            </div>
+          );
+        })}
+
+        {items.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '24px', color: '#9CA3AF' }}>
+            <div style={{ fontSize: '2rem', marginBottom: 8 }}>📭</div>
+            <div style={{ fontSize: '0.875rem' }}>Aucune activité récente</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// COMPOSANT PRINCIPAL
+// ═══════════════════════════════════════════════════════════════
+
 function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ 
-    totalUsers: 0, totalClients: 0, totalCampagnes: 0, totalinscriptions: 0, 
-    activeUsers: 0, inactiveUsers: 0, publishedCampagnes: 0, pendinginscriptions: 0 
+    totalUsers: 0, totalClients: 0, totalCampagnes: 0, totalInscriptions: 0, 
+    activeUsers: 0, inactiveUsers: 0, publishedCampagnes: 0, pendingInscriptions: 0 
   });
   const [users, setUsers] = useState([]);
   const [campagnes, setCampagnes] = useState([]);
-  const [inscriptions, setinscriptions] = useState([]);
+  const [inscriptions, setInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState('7j');
@@ -45,65 +343,102 @@ function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      setLoading(true); setError(null);
+      setLoading(true);
+      setError(null);
 
-      // Récupérer les données avec gestion d'erreur individuelle
       let usersData = [], campagnesData = [], inscriptionsData = [];
       let fetchErrors = [];
 
+      // ─── Récupérer les utilisateurs ───
       try {
-        const usersRes = await api.get('/api/auth/users');
+        const usersRes = await api.get('/api/users');
         usersData = usersRes.data || [];
+        console.log('[Dashboard] Users loaded:', usersData.length);
       } catch (err) {
         console.warn('Erreur chargement utilisateurs:', err.message);
         fetchErrors.push('utilisateurs');
       }
 
+      // ─── Récupérer les campagnes ───
       try {
         const campagnesRes = await api.get('/api/campagnes');
         campagnesData = campagnesRes.data || [];
+        console.log('[Dashboard] Campagnes loaded:', campagnesData.length);
       } catch (err) {
         console.warn('Erreur chargement campagnes:', err.message);
         fetchErrors.push('campagnes');
       }
 
+      // ─── Récupérer les inscriptions ───
       try {
-        const inscriptiosnRes = await api.get('/api/inscriptions');
+        const inscriptionsRes = await api.get('/api/inscriptions');
         inscriptionsData = inscriptionsRes.data || [];
+        console.log('[Dashboard] Inscriptions loaded:', inscriptionsData.length);
       } catch (err) {
-        console.warn('Erreur chargement inscriptions (route non disponible):', err.message);
+        console.warn('Erreur chargement inscriptions:', err.message);
         fetchErrors.push('inscriptions');
-        // inscription non disponible — on continue avec tableau vide
       }
 
-      const activeUsers = usersData.filter(u => u.status === 'active').length;
-      const inactiveUsers = usersData.filter(u => u.status === 'inactive').length;
-      const publishedCampagnes = campagnesData.filter(c => c.published).length;
-      const pendinginscriptions = inscriptionsData.filter(i => i.status === 'en_attente' || i.status === 'PENDING').length;
+      // ─── Filtrer par période ───
+      const now = new Date();
+      const daysMap = { '7j': 7, '30j': 30, '90j': 90, '1an': 365 };
+      const days = daysMap[timeRange] || 7;
+      const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+      const filterByDate = (items) => {
+        if (timeRange === '1an') return items;
+        return items.filter(item => {
+          const date = new Date(item.createdAt || item.date || item.created_at);
+          return date >= cutoffDate;
+        });
+      };
+
+      usersData = filterByDate(usersData);
+      campagnesData = filterByDate(campagnesData);
+      inscriptionsData = filterByDate(inscriptionsData);
+
+      // ─── Calculer les stats ───
+      const activeUsers = usersData.filter(u => 
+        u.status === 'active' || u.status === 'ACTIVE'
+      ).length;
+
+      const inactiveUsers = usersData.filter(u => 
+        u.status === 'inactive' || u.status === 'INACTIVE' || u.status === 'PENDING'
+      ).length;
+
+      const publishedCampagnes = campagnesData.filter(c => 
+        c.published === true || c.status === 'PUBLISHED' || c.status === 'published'
+      ).length;
+
+      const pendingInscriptions = inscriptionsData.filter(i => 
+        i.status === 'en_attente' || i.status === 'PENDING' || i.status === 'pending'
+      ).length;
 
       setStats({ 
         totalUsers: usersData.length, 
-        totalClients: usersData.filter(u => u.role === 'CLIENT').length, 
+        totalClients: usersData.filter(u => 
+          u.role === 'CLIENT' || (u.client && u.client.id)
+        ).length, 
         totalCampagnes: campagnesData.length, 
-        totalinscriptions: inscriptionsData.length, 
+        totalInscriptions: inscriptionsData.length, 
         activeUsers, 
         inactiveUsers, 
         publishedCampagnes, 
-        pendinginscriptions 
+        pendingInscriptions 
       });
 
       setUsers(usersData); 
       setCampagnes(campagnesData); 
-      setinscriptions(inscriptionsData);
+      setInscriptions(inscriptionsData);
 
-      // Afficher un message si certaines données sont manquantes
       if (fetchErrors.length > 0 && fetchErrors.length < 3) {
         setError(`Certaines données sont temporairement indisponibles (${fetchErrors.join(', ')}). Affichage partiel.`);
       } else if (fetchErrors.length === 3) {
-        setError('Erreur lors du chargement des données. Veuillez réessayer.');
+        setError('Erreur lors du chargement des données. Vérifiez que le backend est démarré.');
       }
 
     } catch (err) { 
+      console.error('[Dashboard ERROR]', err);
       setError('Erreur lors du chargement des données'); 
     } finally { 
       setLoading(false); 
@@ -116,314 +451,30 @@ function AdminDashboard() {
     fetchDashboardData();
   };
 
+  // ─── Données calculées pour les graphiques ───
   const roleDistribution = [
     { label: 'Clients', value: users.filter(u => u.role === 'CLIENT').length, color: '#2563EB', icon: '🏢' }, 
     { label: 'Resp. Marketing', value: users.filter(u => u.role === 'RESPONSABLE_MARKETING').length, color: '#D97706', icon: '📊' }, 
-    { label: 'Admins', value: users.filter(u => u.role === 'ADMIN').length, color: '#DC2626', icon: '🔐' }
+    { label: 'Admins', value: users.filter(u => u.role === 'ADMIN').length, color: '#DC2626', icon: '🔐' },
+    { label: 'Super Admins', value: users.filter(u => u.role === 'SUPER_ADMIN').length, color: '#7C3AED', icon: '👑' }
   ].filter(i => i.value > 0);
 
   const campagneStatus = [
     { label: 'Publiées', value: stats.publishedCampagnes, color: '#10B981', icon: '✅' }, 
-    { label: 'Brouillons', value: stats.totalCampagnes - stats.publishedCampagnes, color: '#6B7280', icon: '📝' }
+    { label: 'Brouillons', value: Math.max(0, stats.totalCampagnes - stats.publishedCampagnes), color: '#6B7280', icon: '📝' }
   ].filter(i => i.value > 0);
 
   const inscriptionsStatus = [
-    { label: 'En attente', value: inscriptions.filter(i => i.status === 'en_attente' || i.status === 'PENDING').length, color: '#F59E0B', icon: '⏳' }, 
-    { label: 'Acceptées', value: inscriptions.filter(i => i.status === 'acceptee' || i.status === 'ACCEPTED').length, color: '#10B981', icon: '✅' }, 
-    { label: 'Refusées', value: inscriptions.filter(i => i.status === 'refusee' || i.status === 'REJECTED').length, color: '#EF4444', icon: '❌' }
+    { label: 'En attente', value: inscriptions.filter(i => 
+      i.status === 'en_attente' || i.status === 'PENDING' || i.status === 'pending'
+    ).length, color: '#F59E0B', icon: '⏳' }, 
+    { label: 'Acceptées', value: inscriptions.filter(i => 
+      i.status === 'acceptee' || i.status === 'ACCEPTED' || i.status === 'accepted'
+    ).length, color: '#10B981', icon: '✅' }, 
+    { label: 'Refusées', value: inscriptions.filter(i => 
+      i.status === 'refusee' || i.status === 'REJECTED' || i.status === 'rejected'
+    ).length, color: '#EF4444', icon: '❌' }
   ].filter(i => i.value > 0);
-
-  // ─── Stat Card améliorée ───
-  const StatCard = ({ title, value, subtitle, icon, color, trend, onClick }) => (
-    <div 
-      onClick={onClick}
-      style={{ 
-        background: white, 
-        borderRadius: 16, 
-        padding: '24px', 
-        border: `1px solid ${lightBorder}`, 
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)', 
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
-        cursor: onClick ? 'pointer' : 'default',
-        position: 'relative',
-        overflow: 'hidden'
-      }} 
-      onMouseEnter={e => { 
-        e.currentTarget.style.transform = 'translateY(-4px)'; 
-        e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.08)'; 
-      }} 
-      onMouseLeave={e => { 
-        e.currentTarget.style.transform = 'translateY(0)'; 
-        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; 
-      }}
-    >
-      {/* Ligne décorative colorée en haut */}
-      <div style={{ 
-        position: 'absolute', 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        height: 3, 
-        background: color, 
-        borderRadius: '16px 16px 0 0' 
-      }} />
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, marginTop: 4 }}>
-        <div style={{ 
-          width: 48, 
-          height: 48, 
-          borderRadius: 12, 
-          background: color + '15', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          fontSize: '1.5rem' 
-        }}>
-          {icon}
-        </div>
-        {trend !== undefined && (
-          <span style={{ 
-            padding: '6px 10px', 
-            borderRadius: 20, 
-            background: trend > 0 ? '#ECFDF5' : '#FEE2E2', 
-            color: trend > 0 ? '#047857' : '#DC2626', 
-            fontSize: '0.8rem', 
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4
-          }}>
-            {trend > 0 ? '↗' : '↘'} {trend > 0 ? '+' : ''}{trend}%
-          </span>
-        )}
-      </div>
-
-      <div style={{ fontSize: '2rem', fontWeight: 800, color: dark, marginBottom: 4, lineHeight: 1 }}>
-        {value}
-      </div>
-      <div style={{ fontSize: '0.9rem', color: textGray, fontWeight: 600, marginBottom: 2 }}>
-        {title}
-      </div>
-      {subtitle && (
-        <div style={{ fontSize: '0.8rem', color: '#9CA3AF', marginTop: 4, fontWeight: 500 }}>
-          {subtitle}
-        </div>
-      )}
-    </div>
-  );
-
-  // ─── Mini Bar Chart amélioré ───
-  const MiniBarChart = ({ data, title }) => {
-    const max = Math.max(...data.map(d => d.value), 1);
-    const total = data.reduce((sum, d) => sum + d.value, 0);
-
-    return (
-      <div style={{ 
-        background: white, 
-        borderRadius: 16, 
-        padding: '24px', 
-        border: `1px solid ${lightBorder}`,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: dark, margin: 0 }}>{title}</h3>
-          <span style={{ fontSize: '0.8rem', color: '#9CA3AF', fontWeight: 600 }}>
-            Total: {total}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {data.map((item, i) => (
-            <div key={i}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: '1rem' }}>{item.icon}</span>
-                  <span style={{ fontSize: '0.875rem', color: dark, fontWeight: 600 }}>{item.label}</span>
-                </div>
-                <span style={{ fontSize: '0.875rem', color: textGray, fontWeight: 700 }}>
-                  {item.value} ({total > 0 ? Math.round((item.value / total) * 100) : 0}%)
-                </span>
-              </div>
-              <div style={{ height: 8, background: '#F3F4F6', borderRadius: 4, overflow: 'hidden' }}>
-                <div 
-                  style={{ 
-                    height: '100%', 
-                    width: `${(item.value / max) * 100}%`, 
-                    background: item.color, 
-                    borderRadius: 4, 
-                    transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative'
-                  }} 
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {data.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '24px', color: '#9CA3AF' }}>
-            <div style={{ fontSize: '2rem', marginBottom: 8 }}>📊</div>
-            <div style={{ fontSize: '0.875rem' }}>Aucune donnée disponible</div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // ─── Recent Activity améliorée ───
-  const RecentActivity = ({ title, items, type, viewAllLink }) => {
-    const getTypeConfig = () => {
-      switch(type) {
-        case 'user': return { icon: '👤', bg: '#DBEAFE', color: '#2563EB' };
-        case 'campagne': return { icon: '📢', bg: '#FEF3C7', color: '#D97706' };
-        case 'inscriptions': return { icon: '📝', bg: '#ECFDF5', color: '#10B981' };
-        default: return { icon: '📌', bg: '#F3F4F6', color: '#6B7280' };
-      }
-    };
-
-    const typeConfig = getTypeConfig();
-
-    return (
-      <div style={{ 
-        background: white, 
-        borderRadius: 16, 
-        padding: '24px', 
-        border: `1px solid ${lightBorder}`,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: dark, margin: 0 }}>{title}</h3>
-          {viewAllLink && (
-            <button 
-              onClick={() => navigate(viewAllLink)}
-              style={{ 
-                background: 'none', 
-                border: 'none', 
-                color: gold, 
-                fontSize: '0.8rem', 
-                fontWeight: 600, 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4
-              }}
-            >
-              Voir tout →
-            </button>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {items.slice(0, 5).map((item, i) => {
-            const statusConfig = STATUS_CONFIG[item.status] || STATUS_CONFIG[item.published ? 'active' : 'inactive'];
-
-            return (
-              <div 
-                key={i} 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 12, 
-                  padding: '12px', 
-                  background: gray, 
-                  borderRadius: 12,
-                  transition: 'background 0.2s',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = '#E5E7EB'}
-                onMouseLeave={e => e.currentTarget.style.background = gray}
-              >
-                <div style={{ 
-                  width: 40, 
-                  height: 40, 
-                  borderRadius: '50%', 
-                  background: typeConfig.bg, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  fontSize: '1rem',
-                  flexShrink: 0
-                }}>
-                  {typeConfig.icon}
-                </div>
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ 
-                    fontSize: '0.875rem', 
-                    fontWeight: 600, 
-                    color: dark,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {item.name || item.title || item.email || 'Sans nom'}
-                  </div>
-                  <div style={{ 
-                    fontSize: '0.75rem', 
-                    color: textGray, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 6,
-                    marginTop: 2
-                  }}>
-                    {type === 'user' && (
-                      <>
-                        <span style={{ 
-                          padding: '2px 8px', 
-                          borderRadius: 10, 
-                          background: ROLE_COLORS[item.role]?.bg || '#F3F4F6', 
-                          color: ROLE_COLORS[item.role]?.color || '#6B7280',
-                          fontWeight: 600,
-                          fontSize: '0.7rem'
-                        }}>
-                          {ROLE_COLORS[item.role]?.label || item.role}
-                        </span>
-                      </>
-                    )}
-                    {type === 'campagne' && (
-                      <span style={{ 
-                        padding: '2px 8px', 
-                        borderRadius: 10, 
-                        background: item.published ? '#ECFDF5' : '#F3F4F6', 
-                        color: item.published ? '#047857' : '#6B7280',
-                        fontWeight: 600,
-                        fontSize: '0.7rem'
-                      }}>
-                        {item.published ? '✅ Publiée' : '📝 Brouillon'}
-                      </span>
-                    )}
-                    {type === 'inscriptions' && statusConfig && (
-                      <span style={{ 
-                        padding: '2px 8px', 
-                        borderRadius: 10, 
-                        background: statusConfig.bg, 
-                        color: statusConfig.color,
-                        fontWeight: 600,
-                        fontSize: '0.7rem'
-                      }}>
-                        {statusConfig.label}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ fontSize: '0.75rem', color: '#9CA3AF', fontWeight: 500, flexShrink: 0 }}>
-                  {item.createdAt ? new Date(item.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : 'N/A'}
-                </div>
-              </div>
-            );
-          })}
-
-          {items.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '24px', color: '#9CA3AF' }}>
-              <div style={{ fontSize: '2rem', marginBottom: 8 }}>📭</div>
-              <div style={{ fontSize: '0.875rem' }}>Aucune activité récente</div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   // ─── Loading State ───
   if (loading) return (
@@ -460,7 +511,7 @@ function AdminDashboard() {
         fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" 
       }}>
 
-        {/* ═══ HEADER STICKY AMÉLIORÉ ═══ */}
+        {/* ═══ HEADER ═══ */}
         <div style={{ 
           background: white, 
           borderBottom: `1px solid ${lightBorder}`, 
@@ -478,7 +529,6 @@ function AdminDashboard() {
             flexWrap: 'wrap',
             gap: 16
           }}>
-            {/* Titre + Sous-titre */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
                 <div style={{ 
@@ -515,7 +565,6 @@ function AdminDashboard() {
               </div>
             </div>
 
-            {/* Filtres temps + Refresh */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {[
                 { key: '7j', label: '7 jours' },
@@ -632,16 +681,16 @@ function AdminDashboard() {
             <StatCard 
               title="Campagnes" 
               value={stats.totalCampagnes} 
-              subtitle={`${stats.publishedCampagnes} publiées · ${stats.totalCampagnes - stats.publishedCampagnes} brouillons`} 
+              subtitle={`${stats.publishedCampagnes} publiées · ${Math.max(0, stats.totalCampagnes - stats.publishedCampagnes)} brouillons`} 
               icon="📢" 
               color="#D97706" 
               trend={8} 
               onClick={() => navigate('/admin/campagnes')}
             />
             <StatCard 
-              title="inscriptions" 
-              value={stats.totalinscriptions} 
-              subtitle={`${stats.pendinginscriptions} en attente`} 
+              title="Inscriptions" 
+              value={stats.totalInscriptions} 
+              subtitle={`${stats.pendingInscriptions} en attente`} 
               icon="📝" 
               color="#10B981" 
               trend={-3} 
@@ -681,18 +730,21 @@ function AdminDashboard() {
               items={users} 
               type="user" 
               viewAllLink="/admin/users"
+              navigate={navigate}
             />
             <RecentActivity 
               title="📢 Campagnes récentes" 
               items={campagnes} 
               type="campagne" 
               viewAllLink="/admin/campagnes"
+              navigate={navigate}
             />
             <RecentActivity 
-              title="📝 inscriptions récentes" 
+              title="📝 Inscriptions récentes" 
               items={inscriptions} 
-              type="inscription" 
+              type="inscriptions" 
               viewAllLink="/admin/inscriptions"
+              navigate={navigate}
             />
           </div>
         </div>

@@ -6,7 +6,7 @@ import {
   Mail, MessageSquare, Bell, Smartphone,
   Globe, Share2, AlertTriangle, Search,
   Grid, List, CheckCircle, X, Calendar,
-  Clock, Users, Tag, DollarSign, ChevronDown,
+  Clock, Users, Tag, Wallet, ChevronDown,
   ChevronUp, Filter, RefreshCw, Loader2,
   Megaphone, Layers, TrendingUp, BarChart3,
   Inbox, CheckSquare, XSquare, ArrowRight
@@ -28,15 +28,15 @@ const CANAUX = [
   { id: 'sms', label: 'SMS', icon: Smartphone, color: green },
   { id: 'push', label: 'Push', icon: Bell, color: purple },
   { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare, color: green },
-  { id: 'social', label: 'Réseaux Sociaux', icon: Share2, color: '#EC4899' }
+  { id: 'social', label: 'Reseaux Sociaux', icon: Share2, color: '#EC4899' }
 ];
 
 const STATUS_CONFIG = {
   'ACTIVE': { bg: '#ECFDF5', color: '#047857', label: 'Active', badge: '●' },
   'DRAFT': { bg: '#FEF3C7', color: '#B45309', label: 'Brouillon', badge: '◐' },
   'PAUSED': { bg: '#EFF6FF', color: '#1D4ED8', label: 'En pause', badge: '◑' },
-  'COMPLETED': { bg: '#F3F4F6', color: '#6B7280', label: 'Terminée', badge: '✓' },
-  'CANCELLED': { bg: '#FEE2E2', color: '#991B1B', label: 'Annulée', badge: '✕' }
+  'COMPLETED': { bg: '#F3F4F6', color: '#6B7280', label: 'Terminee', badge: '✓' },
+  'CANCELLED': { bg: '#FEE2E2', color: '#991B1B', label: 'Annulee', badge: '✕' }
 };
 
 const TYPE_COLORS = {
@@ -70,25 +70,22 @@ const NotificationModal = ({ show, onClose, campagne }) => {
     setResultats([]);
 
     try {
-      // Appel la route CORRECTE : /api/notifications/diffuse
       const response = await api.post('/api/notifications/diffuse', {
         campagneId: campagne.id,
         channels: canauxSelectionnes,
         title: campagne.title,
-        message: message || `Nouvelle formation : ${campagne.title} ! Inscrivez-vous dès maintenant...`,
+        message: message || `Nouvelle formation : ${campagne.title} ! Inscrivez-vous des maintenant...`,
       });
 
-      console.log('Réponse diffusion:', response.data);
+      console.log('Reponse diffusion:', response.data);
 
-      // ✅ Gérer la réponse asynchrone
       if (response.data.status === 'processing') {
         setResultats(canauxSelectionnes.map(canalId => ({
           canal: canalId,
           status: 'success',
-          message: 'Diffusion lancée en arrière-plan'
+          message: 'Diffusion lancee en arriere-plan'
         })));
 
-        // Fermer le modal après 3 secondes
         setTimeout(() => {
           onClose();
           setCanauxSelectionnes([]);
@@ -98,21 +95,17 @@ const NotificationModal = ({ show, onClose, campagne }) => {
         return;
       }
 
-      // Si la réponse contient des résultats (mode synchrone legacy)
       const results = response.data.results;
       if (!results) {
         setResultats(canauxSelectionnes.map(canalId => ({
           canal: canalId,
           status: 'success',
-          message: 'Diffusion effectuée'
+          message: 'Diffusion effectuee'
         })));
         return;
       }
 
-      // Mapper les résultats du backend vers le format du frontend
       const mappedResults = canauxSelectionnes.map(canalId => {
-        const canalLabel = CANAUX.find(c => c.id === canalId)?.label || canalId;
-
         if (canalId === 'email') {
           const emailRes = results.email;
           if (emailRes && emailRes.failed > 0) {
@@ -179,7 +172,7 @@ const NotificationModal = ({ show, onClose, campagne }) => {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', marginBottom: 10, fontWeight: 600, color: dark, fontSize: '0.9rem' }}>
-            Sélectionnez les canaux
+            Selectionnez les canaux
           </label>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             {CANAUX.map(({ id, label, icon: Icon, color }) => (
@@ -204,12 +197,12 @@ const NotificationModal = ({ show, onClose, campagne }) => {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', marginBottom: 8, fontWeight: 600, color: dark, fontSize: '0.9rem' }}>
-            Message personnalisé (optionnel)
+            Message personnalise (optionnel)
           </label>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder={`🎉 Nouvelle formation : ${campagne.title} ! Inscrivez-vous dès maintenant...`}
+            placeholder={`🎉 Nouvelle formation : ${campagne.title} ! Inscrivez-vous des maintenant...`}
             rows={4}
             style={{
               width: '100%', padding: '14px', borderRadius: 12, border: '1px solid #E5E5E5',
@@ -229,7 +222,7 @@ const NotificationModal = ({ show, onClose, campagne }) => {
                 fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8
               }}>
                 {res.status === 'success' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
-                {CANAUX.find(c => c.id === res.canal)?.label} : {res.status === 'success' ? 'Envoyé ✓' : `Erreur - ${res.error}`}
+                {CANAUX.find(c => c.id === res.canal)?.label} : {res.status === 'success' ? 'Envoye ✓' : `Erreur - ${res.error}`}
               </div>
             ))}
           </div>
@@ -255,7 +248,7 @@ const NotificationModal = ({ show, onClose, campagne }) => {
 };
 
 // ============================================================
-// MODAL FORMULAIRE CAMPAGNE (CRÉER / MODIFIER)
+// MODAL FORMULAIRE CAMPAGNE (CREER / MODIFIER)
 // ============================================================
 const CampagneFormModal = ({ show, onClose, onSubmit, initialData = null, mode = 'create' }) => {
   const [formData, setFormData] = useState({
@@ -266,7 +259,7 @@ const CampagneFormModal = ({ show, onClose, onSubmit, initialData = null, mode =
     date: '',
     duration: '',
     format: '100% Pratique',
-    location: 'Route Bouzayen Km 5, Immeuble El Bachir, 4ème étage App 4-2 – Sfax, Tunisia',
+    location: 'Route Bouzayen Km 5, Immeuble El Bachir, 4eme etage App 4-2 – Sfax, Tunisia',
     contact: '+216 22 044 105',
     prix: '',
     prixOriginal: '',
@@ -274,7 +267,7 @@ const CampagneFormModal = ({ show, onClose, onSubmit, initialData = null, mode =
     dureeHeures: '',
     iconName: 'Sparkles',
     couleur: '#F5A623',
-    prerequis: 'Aucun prérequis',
+    prerequis: 'Aucun prerequis',
     tools: '',
     tags: '',
     inclus: '',
@@ -287,10 +280,20 @@ const CampagneFormModal = ({ show, onClose, onSubmit, initialData = null, mode =
 
   useEffect(() => {
     if (initialData) {
+      // === CORRECTION : gerer dateScheduled qui peut etre un objet Date ou une string ===
+      let dateStr = '';
+      if (initialData.dateScheduled) {
+        const d = new Date(initialData.dateScheduled);
+        if (!isNaN(d.getTime())) {
+          dateStr = d.toISOString().split('T')[0]; // YYYY-MM-DD
+        }
+      }
+
       setFormData({
         ...formData,
         ...initialData,
-        dateScheduled: initialData.dateScheduled ? initialData.dateScheduled.split('T')[0] : '',
+        dateScheduled: dateStr,
+        date: initialData.dateAffichee || '',
         tools: Array.isArray(initialData.tools) ? initialData.tools.join(', ') : initialData.tools || '',
         tags: Array.isArray(initialData.tags) ? initialData.tags.join(', ') : initialData.tags || '',
         inclus: Array.isArray(initialData.inclus) ? initialData.inclus.join(', ') : initialData.inclus || ''
@@ -316,7 +319,11 @@ const CampagneFormModal = ({ show, onClose, onSubmit, initialData = null, mode =
       tools: formData.tools.split(',').map(t => t.trim()).filter(Boolean),
       tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
       inclus: formData.inclus.split(',').map(t => t.trim()).filter(Boolean),
-      dateScheduled: formData.dateScheduled ? new Date(formData.dateScheduled).toISOString() : null
+      dateScheduled: formData.dateScheduled ? new Date(formData.dateScheduled).toISOString() : null,
+      dateAffichee: formData.date || '',
+      duree: formData.duration || '',
+      lieu: formData.location || '',
+      published: formData.isPublic,
     };
 
     try {
@@ -375,7 +382,7 @@ const CampagneFormModal = ({ show, onClose, onSubmit, initialData = null, mode =
             <div style={{ gridColumn: 'span 2' }}>
               <label style={labelStyle}>Description</label>
               <textarea rows={3} value={formData.description} onChange={e => handleChange('description', e.target.value)}
-                placeholder="Description détaillée..." style={{ ...inputStyle, resize: 'vertical' }} />
+                placeholder="Description detaillee..." style={{ ...inputStyle, resize: 'vertical' }} />
             </div>
 
             <div>
@@ -383,7 +390,7 @@ const CampagneFormModal = ({ show, onClose, onSubmit, initialData = null, mode =
               <select value={formData.type} onChange={e => handleChange('type', e.target.value)} style={inputStyle}>
                 <option value="FORMATION">Formation</option>
                 <option value="MARKETING">Marketing</option>
-                <option value="EVENT">Événement</option>
+                <option value="EVENT">Evenement</option>
                 <option value="WEBINAR">Webinaire</option>
               </select>
             </div>
@@ -398,18 +405,18 @@ const CampagneFormModal = ({ show, onClose, onSubmit, initialData = null, mode =
             </div>
 
             <div>
-              <label style={labelStyle}>Date programmée *</label>
+              <label style={labelStyle}>Date programmee *</label>
               <input type="date" required value={formData.dateScheduled} onChange={e => handleChange('dateScheduled', e.target.value)} style={inputStyle} />
             </div>
 
             <div>
-              <label style={labelStyle}>Date affichée (texte)</label>
+              <label style={labelStyle}>Date affichee (texte)</label>
               <input type="text" value={formData.date} onChange={e => handleChange('date', e.target.value)}
                 placeholder="Ex: 30 Avril 2026" style={inputStyle} />
             </div>
 
             <div>
-              <label style={labelStyle}>Durée (texte)</label>
+              <label style={labelStyle}>Duree (texte)</label>
               <input type="text" value={formData.duration} onChange={e => handleChange('duration', e.target.value)}
                 placeholder="Ex: 40 heures" style={inputStyle} />
             </div>
@@ -439,7 +446,7 @@ const CampagneFormModal = ({ show, onClose, onSubmit, initialData = null, mode =
             </div>
 
             <div>
-              <label style={labelStyle}>Durée en heures</label>
+              <label style={labelStyle}>Duree en heures</label>
               <input type="number" value={formData.dureeHeures} onChange={e => handleChange('dureeHeures', e.target.value)}
                 placeholder="40" style={inputStyle} />
             </div>
@@ -461,36 +468,36 @@ const CampagneFormModal = ({ show, onClose, onSubmit, initialData = null, mode =
             </div>
 
             <div style={{ gridColumn: 'span 2' }}>
-              <label style={labelStyle}>Outils (séparés par virgule)</label>
+              <label style={labelStyle}>Outils (separes par virgule)</label>
               <input type="text" value={formData.tools} onChange={e => handleChange('tools', e.target.value)}
                 placeholder="Meta, ChatGPT, WordPress, Google Analytics, Canva" style={inputStyle} />
             </div>
 
             <div style={{ gridColumn: 'span 2' }}>
-              <label style={labelStyle}>Tags (séparés par virgule)</label>
+              <label style={labelStyle}>Tags (separes par virgule)</label>
               <input type="text" value={formData.tags} onChange={e => handleChange('tags', e.target.value)}
                 placeholder="IA, Marketing Digital, Certifiant" style={inputStyle} />
             </div>
 
             <div style={{ gridColumn: 'span 2' }}>
-              <label style={labelStyle}>Inclus (séparés par virgule)</label>
+              <label style={labelStyle}>Inclus (separes par virgule)</label>
               <input type="text" value={formData.inclus} onChange={e => handleChange('inclus', e.target.value)}
-                placeholder="Certificat reconnu, Support de cours, Accès aux outils" style={inputStyle} />
+                placeholder="Certificat reconnu, Support de cours, Acces aux outils" style={inputStyle} />
             </div>
 
             <div style={{ gridColumn: 'span 2' }}>
-              <label style={labelStyle}>Prérequis</label>
+              <label style={labelStyle}>Prerequis</label>
               <input type="text" value={formData.prerequis} onChange={e => handleChange('prerequis', e.target.value)} style={inputStyle} />
             </div>
 
             <div style={{ gridColumn: 'span 2', display: 'flex', gap: 20, alignItems: 'center' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
                 <input type="checkbox" checked={formData.isPublic} onChange={e => handleChange('isPublic', e.target.checked)} />
-                Visible sur la page d'accueil
+                Visible sur la page d accueil
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
                 <input type="checkbox" checked={formData.published} onChange={e => handleChange('published', e.target.checked)} />
-                Publiée (visible clients)
+                Publiee (visible clients)
               </label>
             </div>
           </div>
@@ -501,7 +508,7 @@ const CampagneFormModal = ({ show, onClose, onSubmit, initialData = null, mode =
             fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontSize: '1rem',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
           }}>
-            {loading ? <><Loader2 size={18} className="spin" /> Enregistrement...</> : <><CheckCircle size={18} /> {mode === 'create' ? 'Créer la campagne' : 'Enregistrer les modifications'}</>}
+            {loading ? <><Loader2 size={18} className="spin" /> Enregistrement...</> : <><CheckCircle size={18} /> {mode === 'create' ? 'Creer la campagne' : 'Enregistrer les modifications'}</>}
           </button>
         </form>
       </motion.div>
@@ -536,8 +543,8 @@ const DeleteConfirmModal = ({ show, onClose, onConfirm, campagne }) => {
           Confirmer la suppression
         </h2>
         <p style={{ color: textGray, fontSize: '1rem', marginBottom: 28, lineHeight: 1.5 }}>
-          Êtes-vous sûr de vouloir supprimer <strong>"{campagne.title}"</strong> ?<br />
-          Cette action est irréversible.
+          Etes-vous sur de vouloir supprimer <strong>"{campagne.title}"</strong> ?<br />
+          Cette action est irreversible.
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
           <button onClick={onClose} style={{
@@ -550,7 +557,7 @@ const DeleteConfirmModal = ({ show, onClose, onConfirm, campagne }) => {
             padding: '12px 28px', borderRadius: 12, border: 'none',
             background: red, color: white, fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem'
           }}>
-            Supprimer définitivement
+            Supprimer definitivement
           </button>
         </div>
       </motion.div>
@@ -559,7 +566,7 @@ const DeleteConfirmModal = ({ show, onClose, onConfirm, campagne }) => {
 };
 
 // ============================================================
-// MODAL DÉTAILS CAMPAGNE
+// MODAL DETAILS CAMPAGNE
 // ============================================================
 const DetailsModal = ({ show, onClose, campagne }) => {
   if (!show || !campagne) return null;
@@ -567,6 +574,13 @@ const DetailsModal = ({ show, onClose, campagne }) => {
   const typeStyle = TYPE_COLORS[campagne.type] || TYPE_COLORS['FORMATION'];
   const statusStyle = STATUS_CONFIG[campagne.status] || STATUS_CONFIG['DRAFT'];
   const tauxRemplissage = campagne.placesTotal ? Math.round(((campagne.placesTotal - (campagne.placesRestantes || 0)) / campagne.placesTotal) * 100) : 0;
+
+  const fmtDate = (val) => {
+    if (!val) return '—';
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
 
   return (
     <div style={{
@@ -622,10 +636,10 @@ const DetailsModal = ({ show, onClose, campagne }) => {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
             {[
-              { icon: Calendar, label: 'Date', value: campagne.date || campagne.dateScheduled?.split('T')[0] },
-              { icon: Clock, label: 'Durée', value: campagne.duration || `${campagne.dureeHeures}h` },
+              { icon: Calendar, label: 'Date', value: campagne.dateAffichee || fmtDate(campagne.dateScheduled) },
+              { icon: Clock, label: 'Duree', value: campagne.duree || `${campagne.dureeHeures}h` },
               { icon: Users, label: 'Inscrits', value: `${campagne.placesTotal - (campagne.placesRestantes || 0)}/${campagne.placesTotal}` },
-              { icon: DollarSign, label: 'Prix', value: `${campagne.prix} TND` },
+              { icon: Wallet, label: 'Prix', value: `${campagne.prix} TND` },
             ].map((item, i) => (
               <div key={i} style={{ background: gray, padding: '16px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
                 <item.icon size={20} color={gold} />
@@ -637,7 +651,6 @@ const DetailsModal = ({ show, onClose, campagne }) => {
             ))}
           </div>
 
-          {/* Taux de remplissage */}
           <div style={{ marginBottom: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.9rem' }}>
               <span style={{ color: textGray }}>Taux de remplissage</span>
@@ -652,7 +665,6 @@ const DetailsModal = ({ show, onClose, campagne }) => {
             </div>
           </div>
 
-          {/* Tags */}
           {campagne.tags && campagne.tags.length > 0 && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: '0.85rem', fontWeight: 600, color: dark, marginBottom: 8 }}>Tags</div>
@@ -666,7 +678,6 @@ const DetailsModal = ({ show, onClose, campagne }) => {
             </div>
           )}
 
-          {/* Outils */}
           {campagne.tools && campagne.tools.length > 0 && (
             <div>
               <div style={{ fontSize: '0.85rem', fontWeight: 600, color: dark, marginBottom: 8 }}>Outils</div>
@@ -686,7 +697,7 @@ const DetailsModal = ({ show, onClose, campagne }) => {
 };
 
 // ============================================================
-// MODAL RÉSERVATIONS
+// MODAL RESERVATIONS
 // ============================================================
 const ReservationsModal = ({ show, onClose, campagne, onUpdate }) => {
   if (!show) return null;
@@ -721,7 +732,7 @@ const ReservationsModal = ({ show, onClose, campagne, onUpdate }) => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <div>
             <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: dark, margin: 0 }}>
-              📋 Réservations
+              📋 Reservations
             </h2>
             <p style={{ color: textGray, fontSize: '0.9rem', margin: '4px 0 0' }}>
               {campagne?.title}
@@ -735,7 +746,6 @@ const ReservationsModal = ({ show, onClose, campagne, onUpdate }) => {
           </button>
         </div>
 
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
           <div style={{
             padding: '8px 16px', borderRadius: 10, background: '#FFF8E7', color: gold,
@@ -747,7 +757,7 @@ const ReservationsModal = ({ show, onClose, campagne, onUpdate }) => {
             padding: '8px 16px', borderRadius: 10, background: '#ECFDF5', color: green,
             fontWeight: 600, fontSize: '0.85rem'
           }}>
-            ✅ Acceptées ({acceptes.length})
+            ✅ Acceptees ({acceptes.length})
           </div>
         </div>
 
@@ -798,7 +808,7 @@ const ReservationsModal = ({ show, onClose, campagne, onUpdate }) => {
                       background: inscription.status === 'accepte' ? '#ECFDF5' : '#FEE2E2',
                       color: inscription.status === 'accepte' ? '#047857' : '#991B1B'
                     }}>
-                      {inscription.status === 'accepte' ? '✅ Acceptée' : '❌ Refusée'}
+                      {inscription.status === 'accepte' ? '✅ Acceptee' : '❌ Refusee'}
                     </span>
                   )}
                 </div>
@@ -823,7 +833,6 @@ export default function GestionCampagnesMarketing() {
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState('grid');
 
-  // Modals
   const [showForm, setShowForm] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -832,7 +841,6 @@ export default function GestionCampagnesMarketing() {
   const [showNotification, setShowNotification] = useState(false);
   const [selectedCampagne, setSelectedCampagne] = useState(null);
 
-  // Charger les campagnes depuis l'API
   const fetchCampagnes = async () => {
     try {
       setLoading(true);
@@ -841,7 +849,7 @@ export default function GestionCampagnesMarketing() {
       setCampagnes(res.data);
     } catch (err) {
       console.error('[FETCH ERROR]', err);
-      setError('Impossible de charger les campagnes. Vérifiez que le backend est démarré.');
+      setError('Impossible de charger les campagnes. Verifiez que le backend est demarre.');
     } finally {
       setLoading(false);
     }
@@ -851,80 +859,17 @@ export default function GestionCampagnesMarketing() {
     fetchCampagnes();
   }, []);
 
-const handleDiffuse = async () => {
-  try {
-    setLoading(true);
-
-    const response = await api.post('/notifications/diffuse', {
-      campagneId: selectedCampagne.id,
-      channels: selectedChannels,
-      title: selectedCampagne.title,
-      message: customMessage || `Nouvelle formation : ${selectedCampagne.title} ! Inscrivez-vous dès maintenant...`,
-    });
-
-    console.log('Réponse diffusion:', response.data);
-
-    // ✅ Gérer la réponse asynchrone
-    if (response.data.status === 'processing') {
-      toast.success('✅ Diffusion lancée en arrière-plan ! Les notifications seront envoyées.');
-
-      setTimeout(() => {
-        setShowDiffuseModal(false);
-        setSelectedChannels([]);
-      }, 2000);
-
-      return;
-    }
-
-    // Si la réponse contient des résultats (mode synchrone legacy)
-    if (response.data.results) {
-      const { email, push } = response.data.results;
-
-      if (email?.sent > 0) {
-        toast.success(`📧 ${email.sent} email(s) envoyé(s)`);
-      }
-      if (email?.failed > 0) {
-        toast.error(`📧 ${email.failed} email(s) échoué(s)`);
-      }
-
-      if (push?.sent > 0) {
-        toast.success(`🔔 ${push.sent} push envoyé(s)`);
-      }
-      if (push?.failed > 0) {
-        toast.error(`🔔 ${push.failed} push échoué(s)`);
-      }
-    }
-
-    setShowDiffuseModal(false);
-    setSelectedChannels([]);
-
-  } catch (error) {
-    console.error('[DIFFUSION ERROR]', error);
-
-    // Gérer l'erreur de timeout
-    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-      toast.info('⏳ Diffusion en cours... Vérifiez vos notifications plus tard.');
-    } else {
-      toast.error('Erreur lors de la diffusion : ' + (error.response?.data?.error || error.message));
-    }
-  } finally {
-    setLoading(false);
-  }
-};
-  // Créer une campagne
   const handleCreate = async (data) => {
     await api.post('/api/campagnes', data);
     await fetchCampagnes();
   };
 
-  // Modifier une campagne
   const handleUpdate = async (data) => {
     await api.patch(`/api/campagnes/${selectedCampagne.id}`, data);
     await fetchCampagnes();
     setSelectedCampagne(null);
   };
 
-  // Supprimer une campagne
   const handleDelete = async () => {
     await api.delete(`/api/campagnes/${selectedCampagne.id}`);
     await fetchCampagnes();
@@ -932,21 +877,19 @@ const handleDiffuse = async () => {
     setSelectedCampagne(null);
   };
 
-  // Toggle publish
- const togglePublish = async (campagne) => {
-  try {
-    if (campagne.published) {
-      await api.put(`/api/campagnes/${campagne.id}/unpublish`);
-    } else {
-      await api.put(`/api/campagnes/${campagne.id}/publish`);
+  const togglePublish = async (campagne) => {
+    try {
+      if (campagne.published) {
+        await api.put(`/api/campagnes/${campagne.id}/unpublish`);
+      } else {
+        await api.put(`/api/campagnes/${campagne.id}/publish`);
+      }
+      await fetchCampagnes();
+    } catch (err) {
+      alert('Erreur : ' + (err.response?.data?.error || err.message));
     }
-    await fetchCampagnes();
-  } catch (err) {
-    alert('Erreur : ' + (err.response?.data?.error || err.message));
-  }
-};
+  };
 
-  // Filtrer les campagnes
   const filteredCampagnes = campagnes.filter(c => {
     if (filter !== 'toutes' && c.status !== filter) return false;
     if (search && !c.title?.toLowerCase().includes(search.toLowerCase())) return false;
@@ -975,7 +918,7 @@ const handleDiffuse = async () => {
             padding: '12px 24px', borderRadius: 12, border: 'none',
             background: gold, color: white, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8
           }}>
-            <RefreshCw size={16} /> Réessayer
+            <RefreshCw size={16} /> Reessayer
           </button>
         </div>
       </div>
@@ -984,7 +927,6 @@ const handleDiffuse = async () => {
 
   return (
     <div style={{ minHeight: '100vh', background: gray, fontFamily: "'Inter', sans-serif", padding: '40px 60px' }}>
-      {/* Header */}
       <div style={{ marginBottom: 40 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <div>
@@ -992,7 +934,7 @@ const handleDiffuse = async () => {
               Gestion des Campagnes
             </h1>
             <p style={{ color: textGray, fontSize: '1rem', margin: '8px 0 0' }}>
-              Créez, publiez et gérez vos formations marketing
+              Creez, publiez et gerez vos formations marketing
             </p>
           </div>
           <button
@@ -1012,7 +954,6 @@ const handleDiffuse = async () => {
         </div>
       </div>
 
-      {/* Filters */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {['toutes', 'ACTIVE', 'DRAFT', 'PAUSED', 'COMPLETED'].map(f => (
@@ -1025,7 +966,6 @@ const handleDiffuse = async () => {
                 background: filter === f ? gold : white,
                 color: filter === f ? 'white' : dark,
                 fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem',
-                textTransform: f === 'toutes' ? 'none' : 'none',
                 transition: 'all 0.2s'
               }}
             >
@@ -1070,12 +1010,10 @@ const handleDiffuse = async () => {
         </div>
       </div>
 
-      {/* Count */}
       <div style={{ marginBottom: 20, color: textGray, fontSize: '0.9rem' }}>
-        {filteredCampagnes.length} campagne{filteredCampagnes.length > 1 ? 's' : ''} trouvée{filteredCampagnes.length > 1 ? 's' : ''}
+        {filteredCampagnes.length} campagne{filteredCampagnes.length > 1 ? 's' : ''} trouvee{filteredCampagnes.length > 1 ? 's' : ''}
       </div>
 
-      {/* Grid/List */}
       <div style={viewMode === 'grid' ? {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
@@ -1088,6 +1026,13 @@ const handleDiffuse = async () => {
             const inscrits = (campagne.placesTotal || 0) - (campagne.placesRestantes || 0);
             const tauxRemplissage = campagne.placesTotal ? Math.round((inscrits / campagne.placesTotal) * 100) : 0;
             const reservationsCount = campagne.inscription?.length || 0;
+
+            const fmtDate = (val) => {
+              if (!val) return '—';
+              const d = new Date(val);
+              if (isNaN(d.getTime())) return '—';
+              return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+            };
 
             if (viewMode === 'list') {
               return (
@@ -1127,13 +1072,13 @@ const handleDiffuse = async () => {
                           padding: '3px 10px', borderRadius: 12, fontSize: '0.7rem', fontWeight: 700,
                           background: '#FEF3C7', color: '#B45309'
                         }}>
-                          Non publiée
+                          Non publiee
                         </span>
                       )}
                     </div>
                     <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: dark, margin: 0 }}>{campagne.title}</h3>
                     <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: '0.8rem', color: textGray }}>
-                      <span>📅 {campagne.date || campagne.dateScheduled?.split('T')[0]}</span>
+                      <span>📅 {campagne.dateAffichee || fmtDate(campagne.dateScheduled)}</span>
                       <span>👥 {inscrits}/{campagne.placesTotal}</span>
                       <span style={{ color: gold, fontWeight: 700 }}>{campagne.prix} TND</span>
                     </div>
@@ -1141,7 +1086,7 @@ const handleDiffuse = async () => {
                   <div style={{ display: 'flex', gap: 6 }}>
                     <ActionButton icon={Eye} onClick={() => { setSelectedCampagne(campagne); setShowDetails(true); }} title="Voir" />
                     <ActionButton icon={Edit} onClick={() => { setSelectedCampagne(campagne); setShowEdit(true); }} title="Modifier" />
-                    <ActionButton icon={campagne.published ? EyeOff : Eye} onClick={() => togglePublish(campagne)} title={campagne.published ? 'Dépublier' : 'Publier'} color={campagne.published ? '#9CA3AF' : green} />
+                    <ActionButton icon={campagne.published ? EyeOff : Eye} onClick={() => togglePublish(campagne)} title={campagne.published ? 'Depublier' : 'Publier'} color={campagne.published ? '#9CA3AF' : green} />
                     <ActionButton icon={Send} onClick={() => { setSelectedCampagne(campagne); setShowNotification(true); }} title="Diffuser" color={blue} />
                     <ActionButton icon={Trash2} onClick={() => { setSelectedCampagne(campagne); setShowDelete(true); }} title="Supprimer" color={red} />
                   </div>
@@ -1149,7 +1094,6 @@ const handleDiffuse = async () => {
               );
             }
 
-            // Grid view
             return (
               <motion.div
                 key={campagne.id}
@@ -1164,7 +1108,6 @@ const handleDiffuse = async () => {
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.1)'; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
               >
-                {/* Image */}
                 <div style={{ height: 180, overflow: 'hidden', position: 'relative' }}>
                   <img src={campagne.image || 'https://via.placeholder.com/400x180'} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: 8 }}>
@@ -1189,12 +1132,11 @@ const handleDiffuse = async () => {
                       padding: '5px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700,
                       background: 'rgba(0,0,0,0.7)', color: 'white'
                     }}>
-                      🔒 Non publiée
+                      🔒 Non publiee
                     </div>
                   )}
                 </div>
 
-                {/* Content */}
                 <div style={{ padding: '20px 24px' }}>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: dark, margin: '0 0 8px', lineHeight: 1.3 }}>
                     {campagne.title}
@@ -1204,12 +1146,11 @@ const handleDiffuse = async () => {
                   </p>
 
                   <div style={{ display: 'flex', gap: 14, marginBottom: 16, flexWrap: 'wrap', fontSize: '0.8rem', color: textGray }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={14} /> {campagne.date || campagne.dateScheduled?.split('T')[0]}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={14} /> {campagne.dateAffichee || fmtDate(campagne.dateScheduled)}</span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Users size={14} /> {inscrits}/{campagne.placesTotal}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: gold, fontWeight: 700 }}><DollarSign size={14} /> {campagne.prix} TND</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: gold, fontWeight: 700 }}><Wallet size={14} /> {campagne.prix} TND</span>
                   </div>
 
-                  {/* Progress */}
                   <div style={{ marginBottom: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.8rem' }}>
                       <span style={{ color: textGray }}>Remplissage</span>
@@ -1224,18 +1165,15 @@ const handleDiffuse = async () => {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     <ActionButton icon={Eye} label="Voir" onClick={() => { setSelectedCampagne(campagne); setShowDetails(true); }} small />
                     <ActionButton icon={Edit} label="Modifier" onClick={() => { setSelectedCampagne(campagne); setShowEdit(true); }} small />
-                    <ActionButton icon={campagne.published ? EyeOff : Eye} label={campagne.published ? 'Dépublier' : 'Publier'} onClick={() => togglePublish(campagne)} small color={campagne.published ? '#9CA3AF' : green} />
+                    <ActionButton icon={campagne.published ? EyeOff : Eye} label={campagne.published ? 'Depublier' : 'Publier'} onClick={() => togglePublish(campagne)} small color={campagne.published ? '#9CA3AF' : green} />
                     <ActionButton icon={Send} label="Diffuser" onClick={() => { setSelectedCampagne(campagne); setShowNotification(true); }} small color={blue} />
-
-                     {/* ✅ NOUVEAU BOUTON : Voir les avis */}
                     <ActionButton icon={MessageSquare} label="Avis" onClick={() => navigate(`/FeedbacksCampagne/${campagne.id}`)} small color={purple} />
 
                     {reservationsCount > 0 && (
-                      <ActionButton icon={Inbox} label={`${reservationsCount} rés.`} onClick={() => { setSelectedCampagne(campagne); setShowReservations(true); }} small color={purple} />
+                      <ActionButton icon={Inbox} label={`${reservationsCount} res.`} onClick={() => { setSelectedCampagne(campagne); setShowReservations(true); }} small color={purple} />
                     )}
                     <ActionButton icon={Trash2} label="Suppr." onClick={() => { setSelectedCampagne(campagne); setShowDelete(true); }} small color={red} />
                   </div>
@@ -1249,17 +1187,16 @@ const handleDiffuse = async () => {
       {filteredCampagnes.length === 0 && (
         <div style={{ textAlign: 'center', padding: '80px 20px' }}>
           <Megaphone size={48} style={{ color: '#E5E5E5', marginBottom: 16 }} />
-          <p style={{ color: textGray, fontSize: '1.1rem' }}>Aucune campagne trouvée</p>
+          <p style={{ color: textGray, fontSize: '1.1rem' }}>Aucune campagne trouvee</p>
           <button onClick={() => { setFilter('toutes'); setSearch(''); }} style={{
             marginTop: 16, padding: '10px 20px', borderRadius: 10, border: 'none',
             background: gold, color: 'white', fontWeight: 600, cursor: 'pointer'
           }}>
-            Réinitialiser les filtres
+            Reinitialiser les filtres
           </button>
         </div>
       )}
 
-      {/* Modals */}
       <CampagneFormModal
         show={showForm}
         onClose={() => setShowForm(false)}
@@ -1305,7 +1242,7 @@ const handleDiffuse = async () => {
 }
 
 // ============================================================
-// BOUTON ACTION RÉUTILISABLE
+// BOUTON ACTION REUTILISABLE
 // ============================================================
 function ActionButton({ icon: Icon, label, onClick, title, color = textGray, small = false }) {
   return (

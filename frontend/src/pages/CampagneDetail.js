@@ -133,7 +133,7 @@ const InscriptionForm = ({ campagne, onSuccess }) => {
         formule: formData.formule,
         paymentType: formData.paymentType,
         prixTotal: totalTTC,
-        campagneId: parseInt(campagne.id),
+        campagneId: campagne.id,        
         userId: user.id || null,
         paymentData: paymentData
       };
@@ -528,24 +528,57 @@ export default function CampagneDetail() {
   const [hasPaid, setHasPaid] = useState(false);
   const [isInscrit, setIsInscrit] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [hasGivenFeedback, setHasGivenFeedback] = useState(false);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [loadingPayment, setLoadingPayment] = useState(false);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalFeedbacks, setTotalFeedbacks] = useState(0);
 
-  // ✅ Fonction pour vérifier si la campagne est terminée
   const isCampagneTerminee = () => {
-    if (!campagne?.dateScheduled) return false;
+    if (!campagne) return false;
+    const dateFin = campagne.dateScheduled || campagne.dateFin || campagne.dateDebut || campagne.date;
+    if (!dateFin) return false;
     const now = new Date();
-    const campagneDate = new Date(campagne.dateScheduled);
-    return campagneDate < now;
+    const endDate = new Date(dateFin);
+    const endOfDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59);
+    return endOfDay < now;
   };
 
-  useEffect(() => {
-    fetchCampagne();
-    checkPaymentStatus();
-  }, [idOrSlug]);
+  const fetchFeedbacks = async () => {
+    try {
+      const campagneId = campagne?.id || idOrSlug;
+      const res = await api.get(`/api/feedbacks/campagne/${campagneId}`);
+      
+      const feedbacksList = res.data?.feedbacks || [];
+      setFeedbacks(feedbacksList);
+      
+      if (res.data?.stats) {
+        setAverageRating(parseFloat(res.data.stats.average) || 0);
+        setTotalFeedbacks(res.data.stats.total || 0);
+      } else {
+        const avg = feedbacksList.length > 0
+          ? (feedbacksList.reduce((sum, f) => sum + f.rating, 0) / feedbacksList.length).toFixed(1)
+          : 0;
+        setAverageRating(parseFloat(avg));
+        setTotalFeedbacks(feedbacksList.length);
+      }
+      
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userFeedback = feedbacksList.find(f => f.userId === user?.id);
+      setHasGivenFeedback(!!userFeedback);
+      
+    } catch (e) {
+      console.error('Erreur fetchFeedbacks:', e);
+      setFeedbacks([]);
+      setAverageRating(0);
+      setTotalFeedbacks(0);
+    }
+  };
 
   const fetchCampagne = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/campagnes/' + idOrSlug);
+      const response = await api.get('/campagnes/' + idOrSlug);
       setCampagne(response.data);
       try {
         const inscriptionsRes = await api.get('/api/inscriptions');
@@ -558,30 +591,54 @@ export default function CampagneDetail() {
   };
 
   const checkPaymentStatus = async () => {
+    const token = localStorage.getItem('token');
+    if (!token || !campagne) { setIsInscrit(false); setHasPaid(false); return; }
+    
+    setLoadingPayment(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
       const res = await api.get('/api/inscriptions/mes-inscriptions');
-
-      // Vérifier si déjà payé
-      const paidInscription = res.data.find(i => 
-        (i.campagneId === parseInt(idOrSlug) || i.campagne?.slug === idOrSlug) &&
-        i.status === 'paye'
-      );
-      if (paidInscription) setHasPaid(true);
-
-      // Vérifier si inscrit (même si pas payé)
-      const anyInscription = res.data.find(i => 
-        i.campagneId === parseInt(idOrSlug) || i.campagne?.slug === idOrSlug
-      );
-      if (anyInscription) setIsInscrit(true);
-    } catch (e) { /* ignore */ }
+      const inscriptions = res.data || [];
+      
+      const isMatch = (i) => {
+        const matchId = i.campagneId === campagne.id;
+        const matchSlug = i.campagne?.slug === campagne.slug;
+        const matchTitle = i.campagne?.title === campagne.title;
+        return matchId || matchSlug || matchTitle;
+      };
+      
+      const paidInscription = inscriptions.find(i => isMatch(i) && (i.status === 'PAYEE' || i.status === 'paye'));
+      const anyInscription = inscriptions.find(i => isMatch(i));
+      
+      setHasPaid(!!paidInscription);
+      setIsInscrit(!!anyInscription);
+      
+      console.log('Payment check:', { hasPaid: !!paidInscription, isInscrit: !!anyInscription, campagneId: campagne.id });
+    } catch (e) {
+      console.error('Erreur checkPaymentStatus:', e);
+      setIsInscrit(false); 
+      setHasPaid(false);
+    } finally {
+      setLoadingPayment(false);
+    }
   };
+
+  useEffect(() => {
+    fetchCampagne();
+  }, [idOrSlug]);
+
+  useEffect(() => {
+    if (campagne?.id) {
+      checkPaymentStatus();
+      fetchFeedbacks();
+    }
+  }, [campagne?.id]);
 
   const handleInscriptionSuccess = () => {
     setInscriptionsCount(prev => prev + 1);
     setCampagne(prev => ({ ...prev, placesRestantes: Math.max(0, prev.placesRestantes - 1) }));
     setHasPaid(true);
+    checkPaymentStatus();
+    fetchFeedbacks();
   };
 
   if (loading) return (
@@ -614,6 +671,7 @@ export default function CampagneDetail() {
   const remise = campagne.prixOriginal && campagne.prix ? Math.round(((campagne.prixOriginal - campagne.prix) / campagne.prixOriginal) * 100) : 0;
   const placesPourcentage = campagne.placesTotal ? ((campagne.placesTotal - campagne.placesRestantes) / campagne.placesTotal) * 100 : 0;
   const placesPrises = campagne.placesTotal - campagne.placesRestantes;
+  const terminee = isCampagneTerminee();
 
   return (
     <Layout>
@@ -631,14 +689,14 @@ export default function CampagneDetail() {
               </div>
               <div>
                 <span style={{ 
-                  background: isCampagneTerminee() ? '#ef4444' : THEME.gold, 
+                  background: terminee ? '#ef4444' : THEME.gold, 
                   color: '#fff', 
                   padding: '4px 12px', 
                   borderRadius: '20px', 
                   fontSize: '0.75rem', 
                   fontWeight: '600' 
                 }}>
-                  {isCampagneTerminee() ? 'Terminée' : (campagne.format || 'Formation')}
+                  {terminee ? 'Terminée' : (campagne.format || 'Formation')}
                 </span>               
                 <h1 style={{ fontSize: '1.8rem', fontWeight: '800', marginTop: '8px', color: '#fff' }}>{campagne.title}</h1>
               </div>
@@ -655,8 +713,7 @@ export default function CampagneDetail() {
                 {remise > 0 && (
                   <div style={{ position: 'absolute', top: '16px', left: '16px', background: THEME.danger, color: '#fff', padding: '6px 16px', borderRadius: '20px', fontWeight: '700' }}>-{remise}%</div>
                 )}
-                {/* ✅ Overlay "Terminée" sur l'image */}
-                {isCampagneTerminee() && (
+                {terminee && (
                   <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     background: 'rgba(0,0,0,0.7)', display: 'flex',
@@ -695,6 +752,66 @@ export default function CampagneDetail() {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Section Avis / Feedbacks */}
+              <div style={{ background: THEME.card, padding: '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid ' + THEME.border }}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '16px' }}>Avis des participants</h2>
+                
+                {totalFeedbacks > 0 ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                      <div style={{ 
+                        background: THEME.gold, 
+                        color: '#fff', 
+                        padding: '8px 16px', 
+                        borderRadius: '12px',
+                        fontSize: '1.5rem',
+                        fontWeight: 700 
+                      }}>
+                        {averageRating}
+                      </div>
+                      <div>
+                        <div style={{ color: '#f59e0b', fontSize: '1.2rem' }}>
+                          {'★'.repeat(Math.round(averageRating))}{'☆'.repeat(5 - Math.round(averageRating))}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                          {totalFeedbacks} avis
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {feedbacks.map(feedback => (
+                        <div key={feedback.id} style={{ 
+                          padding: '16px', 
+                          background: '#f8fafc', 
+                          borderRadius: '12px',
+                          borderLeft: '4px solid ' + THEME.gold 
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <span style={{ fontWeight: 600, color: THEME.dark }}>
+                              {feedback.user?.name || 'Anonyme'}
+                            </span>
+                            <span style={{ color: '#f59e0b' }}>
+                              {'★'.repeat(feedback.rating)}{'☆'.repeat(5 - feedback.rating)}
+                            </span>
+                          </div>
+                          <p style={{ color: '#475569', fontSize: '0.9rem', margin: 0 }}>
+                            {feedback.comment}
+                          </p>
+                          <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                            {new Date(feedback.createdAt).toLocaleDateString('fr-FR')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>
+                    Aucun avis pour le moment. Soyez le premier à donner votre avis !
+                  </p>
+                )}
               </div>
 
               {campagne.tools && campagne.tools.length > 0 && (
@@ -762,68 +879,65 @@ export default function CampagneDetail() {
                 )}
               </div>
 
-              {/* ✅ PRIORITÉ 1: Déjà payé */}
-              {hasPaid ? (
-                <div style={{ 
-                  background: '#d1fae5', 
-                  border: '2px solid #10b981', 
-                  padding: '24px', 
-                  borderRadius: '16px', 
-                  textAlign: 'center' 
-                }}>
-                  <CheckCircle size={48} style={{ color: '#10b981', marginBottom: '12px' }} />
-                  <p style={{ color: '#065f46', fontWeight: 700, fontSize: '1.2rem', marginBottom: '8px' }}>
-                    Vous avez déjà payé cette formation
-                  </p>
-                  <p style={{ color: '#059669', fontSize: '0.95rem', marginTop: '8px' }}>
-                    Votre inscription est confirmée
-                  </p>
-                  {/* Bouton Donner mon avis si formation terminée */}
-                  {isCampagneTerminee() && (
-                    <button 
-                      onClick={() => setShowFeedback(true)}
-                      style={{
-                        marginTop: '16px', padding: '12px 24px', background: THEME.gold,
-                        color: 'white', border: 'none', borderRadius: '10px',
-                        fontWeight: 700, cursor: 'pointer', display: 'flex',
-                        alignItems: 'center', gap: '8px', margin: '16px auto 0'
-                      }}
-                    >
-                      <MessageSquare size={18} /> Donner mon avis
-                    </button>
-                  )}
+              {loadingPayment ? (
+                <div style={{ textAlign: 'center', padding: '24px' }}>
+                  <Loader2 size={24} style={{ animation: 'spin 1s linear infinite', color: THEME.gold }} />
                 </div>
-              ) : isCampagneTerminee() ? (
-                /* ✅ PRIORITÉ 2: Formation terminée */
-                <div style={{ 
-                  background: '#fee2e2', 
-                  border: '2px solid #ef4444', 
-                  padding: '24px', 
-                  borderRadius: '16px', 
-                  textAlign: 'center' 
-                }}>
+              ) : terminee ? (
+                <div style={{ background: '#fef2f2', border: '2px solid #ef4444', padding: '24px', borderRadius: '16px', textAlign: 'center' }}>
                   <p style={{ color: '#991b1b', fontWeight: 700, fontSize: '1.2rem', marginBottom: '8px' }}>
                     Cette formation est terminée
                   </p>
-                  <p style={{ color: '#991b1b', fontSize: '0.95rem' }}>
-                    Les inscriptions sont closes
-                  </p>
-                  {/* Bouton Donner mon avis si inscrit */}
-                  {isInscrit && (
-                    <button 
-                      onClick={() => setShowFeedback(true)}
-                      style={{
-                        marginTop: '16px', padding: '12px 24px', background: THEME.gold,
-                        color: 'white', border: 'none', borderRadius: '10px',
-                        fontWeight: 700, cursor: 'pointer'
-                      }}
-                    >
-                      <MessageSquare size={18} /> Donner mon avis
-                    </button>
+                  {isInscrit ? (
+                    <>
+                      <p style={{ color: '#991b1b', fontSize: '0.95rem', marginBottom: '16px' }}>
+                        Vous étiez inscrit à cette formation. Partagez votre expérience !
+                      </p>
+                      {hasGivenFeedback ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#10b981', fontWeight: 600 }}>
+                          <CheckCircle size={18} /> Vous avez déjà donné votre avis
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => setShowFeedback(true)}
+                          style={{
+                            padding: '12px 24px', background: '#d4a574', color: 'white',
+                            border: 'none', borderRadius: '10px', fontWeight: 700,
+                            cursor: 'pointer', display: 'flex', alignItems: 'center',
+                            gap: '8px', margin: '0 auto'
+                          }}
+                        >
+                          <MessageSquare size={18} /> Donner mon avis
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <p style={{ color: '#991b1b', fontSize: '0.95rem' }}>
+                      Les inscriptions sont closes
+                    </p>
                   )}
                 </div>
+              ) : hasPaid ? (
+                <div style={{ background: '#d1fae5', border: '2px solid #10b981', padding: '24px', borderRadius: '16px', textAlign: 'center' }}>
+                  <CheckCircle size={48} style={{ color: '#10b981', marginBottom: '12px' }} />
+                  <p style={{ color: '#065f46', fontWeight: 700, fontSize: '1.2rem' }}>
+                    Vous avez déjà payé cette formation
+                  </p>
+                  <p style={{ color: '#059669', fontSize: '0.95rem' }}>
+                    Votre inscription est confirmée
+                  </p>
+                </div>
+              ) : isInscrit ? (
+                <div style={{ background: '#fef3c7', border: '2px solid #f59e0b', padding: '24px', borderRadius: '16px', textAlign: 'center' }}>
+                  <AlertCircle size={24} style={{ color: '#f59e0b', marginBottom: '8px' }} />
+                  <p style={{ color: '#92400e', fontWeight: 700, fontSize: '1.1rem' }}>
+                    Inscription en attente de paiement
+                  </p>
+                  <button onClick={() => navigate('/paiements')} style={{ marginTop: '12px', padding: '10px 20px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
+                    Procéder au paiement
+                  </button>
+                </div>
               ) : (
-                /* ✅ PRIORITÉ 3: Formulaire d'inscription */
                 <InscriptionForm campagne={campagne} onSuccess={handleInscriptionSuccess} />
               )}
             </div>
@@ -838,7 +952,8 @@ export default function CampagneDetail() {
             onClose={() => setShowFeedback(false)}
             onSuccess={() => {
               setShowFeedback(false);
-              alert('Merci pour votre avis !');
+              setHasGivenFeedback(true);
+              fetchFeedbacks();
             }}
           />
         )}

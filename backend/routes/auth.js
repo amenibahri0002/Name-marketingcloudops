@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../db'); // ← Singleton, pas new PrismaClient()
 
 const JWT_SECRET = process.env.JWT_SECRET || 'techevent_secret_2026';
 
@@ -26,10 +25,16 @@ const authenticate = (req, res, next) => {
   }
 };
 
-// backend/routes/auth.js - Register CORRIGÉ
+
+
+// ============================================================
+// INSCRIPTION CLIENT
+// POST /api/auth/register
+// ============================================================
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password, phone, type, sector } = req.body;
+    const tenantId = req.tenantId; // ← Depuis le tenant middleware
 
     // Validation
     if (!name || !email || !password) {
@@ -44,16 +49,11 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Vérifier email existant dans User ET Client
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    // Vérifier email existant dans User (unique global)
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
     if (existingUser) {
-      return res.status(400).json({ 
-        error: 'Cet email est déjà utilisé' 
-      });
-    }
-
-    const existingClient = await prisma.client.findUnique({ where: { email } });
-    if (existingClient) {
       return res.status(400).json({ 
         error: 'Cet email est déjà utilisé' 
       });
@@ -62,30 +62,32 @@ router.post('/register', async (req, res) => {
     // Hasher le password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 1. Créer le Client (CRM)
-    const client = await prisma.client.create({
-      data: {
-        name,
-        email,
-        phone: phone || '',
-        password: hashedPassword,  // ← Maintenant supporté dans le schéma
-        type: type || 'particulier',
-        sector: sector || '',
-        status: 'active',
-        role: 'CLIENT'
-      }
-    });
-
-    // 2. Créer le User (Auth) lié au Client
+    // 1. Créer le User (Auth) d'abord
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
+        phone: phone || '',
         role: 'CLIENT',
-        status: 'active',
-        clientId: client.id,  // ← Lien vers le Client
+        status: 'ACTIVE',
+        tenantId,
         lastLogin: new Date()
+      }
+    });
+
+    // 2. Créer le Client lié au User (userId dans Client)
+    const client = await prisma.client.create({
+      data: {
+        userId: user.id,  // ← LIEN : userId dans Client
+        name,
+        email,
+        phone: phone || '',
+        password: hashedPassword,
+        type: type?.toUpperCase() || 'PARTICULIER',
+        sector: sector || '',
+        tenantId,
+        status: 'ACTIVE'
       }
     });
 
@@ -95,7 +97,7 @@ router.post('/register', async (req, res) => {
         userId: user.id, 
         email: user.email, 
         role: user.role,
-        clientId: client.id 
+        tenantId: user.tenantId
       },
       JWT_SECRET,
       { expiresIn: '7d' }
@@ -109,6 +111,7 @@ router.post('/register', async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        tenantId: user.tenantId,
         clientId: client.id
       }
     });
@@ -136,14 +139,32 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email et mot de passe requis' });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+const tenantId = req.tenantId || req.body.tenantId || 'cmqlsn2yu0000ybn5t0unlx8u';
+
+// Essayer avec l'index composite d'abord
+let user = null;
+try {
+  user = await prisma.user.findUnique({
+    where: { 
+      tenantId_email: { 
+        tenantId: tenantId,
+        email: email 
+      } 
     }
+  });
+} catch (e) {
+  // Fallback sur findFirst si l'index composite échoue
+  user = await prisma.user.findFirst({ where: { email } });
+}
+
+if (!user) {
+  // Dernier essai sans tenant
+  user = await prisma.user.findFirst({ where: { email } });
+}
 
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+      return res.status(400).json({ error: 'Email ou mot de passe incorrect' });
     }
 
     await prisma.user.update({
@@ -151,8 +172,18 @@ router.post('/login', async (req, res) => {
       data: { lastLogin: new Date() }
     });
 
+    // Récupérer le client lié
+    const client = await prisma.client.findUnique({
+      where: { userId: user.id }
+    });
+
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role, clientId: user.clientId },
+      { 
+        userId: user.id, 
+        email: user.email, 
+        role: user.role,
+        tenantId: user.tenantId
+      },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -165,7 +196,8 @@ router.post('/login', async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        clientId: user.clientId
+        tenantId: user.tenantId,
+        clientId: client?.id || null
       }
     });
 
@@ -176,16 +208,27 @@ router.post('/login', async (req, res) => {
 });
 
 // ============================================================
-// CRÉER UN COMPTE CLIENT (Admin ou Responsable Marketing)
+// CRÉER UN COMPTE (Admin ou Responsable Marketing)
 // POST /api/auth/create-client
 // ============================================================
 router.post('/create-client', authenticate, async (req, res) => {
   try {
-    if (req.user.role !== 'ADMIN' && req.user.role !== 'RESPONSABLE_MARKETING') {
+    if (!['ADMIN', 'RESPONSABLE_MARKETING', 'SUPER_ADMIN'].includes(req.user.role)) {
       return res.status(403).json({ error: 'Accès réservé aux administrateurs' });
     }
 
-    const { name, email, password, phone, type = 'particulier', sector = '', role = 'CLIENT' } = req.body;
+    const { 
+      name, 
+      email, 
+      password, 
+      phone, 
+      type = 'PARTICULIER', 
+      sector = '', 
+      role = 'CLIENT',
+      tenantId: bodyTenantId
+    } = req.body;
+
+    const tenantId = bodyTenantId || req.user.tenantId;
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Nom, email et mot de passe requis' });
@@ -196,38 +239,39 @@ router.post('/create-client', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Cet email est déjà utilisé' });
     }
 
-    const existingClient = await prisma.client.findUnique({ where: { email } });
-    if (existingClient) {
-      return res.status(400).json({ error: 'Cet email est déjà utilisé' });
-    }
-
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    let client = null;
-    if (role === 'CLIENT') {
-      client = await prisma.client.create({
-        data: {
-          name,
-          email,
-          phone: phone || '',
-          type,
-          sector,
-          status: 'active'
-        }
-      });
-    }
-
+    // Créer le User
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
+        phone: phone || '',
         role: role,
-        clientId: client ? client.id : null,
-        status: 'active',
+        status: 'ACTIVE',
+        tenantId,
         lastLogin: null
       }
     });
+
+    // Créer le Client si c'est un CLIENT
+    let client = null;
+    if (role === 'CLIENT') {
+      client = await prisma.client.create({
+        data: {
+          userId: user.id,
+          name,
+          email,
+          phone: phone || '',
+          password: hashedPassword,
+          type: type.toUpperCase(),
+          sector,
+          tenantId,
+          status: 'ACTIVE'
+        }
+      });
+    }
 
     res.status(201).json({
       message: 'Compte créé avec succès',
@@ -236,12 +280,12 @@ router.post('/create-client', authenticate, async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        clientId: user.clientId,
+        tenantId: user.tenantId,
+        clientId: client?.id || null,
         status: user.status,
         createdAt: user.createdAt,
-        lastLogin: user.lastLogin,
-        type: client ? client.type : null,
-        sector: client ? client.sector : null
+        type: client?.type || null,
+        sector: client?.sector || null
       }
     });
 
@@ -252,17 +296,23 @@ router.post('/create-client', authenticate, async (req, res) => {
 });
 
 // ============================================================
-// LISTE DES UTILISATEURS - CORRIGÉ (sans select client)
+// LISTE DES UTILISATEURS (Admin/RM uniquement)
 // GET /api/auth/users
 // ============================================================
 router.get('/users', authenticate, async (req, res) => {
   try {
-    if (req.user.role !== 'ADMIN' && req.user.role !== 'RESPONSABLE_MARKETING') {
+    if (!['ADMIN', 'RESPONSABLE_MARKETING', 'SUPER_ADMIN'].includes(req.user.role)) {
       return res.status(403).json({ error: 'Accès réservé' });
     }
 
-    // Récupérer les utilisateurs sans include client (évite l'erreur)
+    const tenantId = req.user.tenantId;
+
+    // Récupérer les utilisateurs du tenant (pas les CLIENTS)
     const users = await prisma.user.findMany({
+      where: {
+        tenantId,
+        role: { in: ['ADMIN', 'RESPONSABLE_MARKETING', 'SUPPORT', 'SUPER_ADMIN'] }
+      },
       select: {
         id: true,
         name: true,
@@ -271,53 +321,65 @@ router.get('/users', authenticate, async (req, res) => {
         status: true,
         createdAt: true,
         lastLogin: true,
-        clientId: true
+        phone: true
       },
       orderBy: { createdAt: 'desc' }
     });
 
-    // Récupérer les clients associés manuellement avec try/catch
-    const usersWithClients = await Promise.all(
-      users.map(async (u) => {
-        let clientData = null;
-        if (u.clientId) {
-          try {
-            clientData = await prisma.client.findUnique({
-              where: { id: u.clientId },
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                type: true,
-                sector: true,
-                status: true
-              }
-            });
-          } catch (e) {
-            console.log('[CLIENT FETCH ERROR] user', u.id, ':', e.message);
-          }
-        }
-
-        return {
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          role: u.role,
-          status: u.status || 'active',
-          createdAt: u.createdAt,
-          lastLogin: u.lastLogin,
-          clientId: u.clientId,
-          type: clientData?.type || null,
-          secteur: clientData?.sector || null
-        };
-      })
-    );
-
-    console.log('[USERS LIST] ✅', usersWithClients.length, 'utilisateurs récupérés');
-    res.json(usersWithClients);
+    res.json(users);
 
   } catch (err) {
     console.error('[USERS LIST ERROR]', err);
+    res.status(500).json({ error: 'Erreur serveur', details: err.message });
+  }
+});
+
+// ============================================================
+// LISTE DES CLIENTS (Admin/RM uniquement)
+// GET /api/auth/clients
+// ============================================================
+router.get('/clients', authenticate, async (req, res) => {
+  try {
+    if (!['ADMIN', 'RESPONSABLE_MARKETING', 'SUPER_ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Accès réservé' });
+    }
+
+    const tenantId = req.user.tenantId;
+
+    // Récupérer les users avec role=CLIENT et leur client lié
+    const users = await prisma.user.findMany({
+      where: {
+        tenantId,
+        role: 'CLIENT'
+      },
+      include: {
+        client: true,
+        inscriptions: {
+          select: { id: true, campagneId: true, status: true }
+        },
+        _count: { select: { inscriptions: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const clients = users.map(u => ({
+      id: u.client?.id || u.id,
+      userId: u.id,
+      name: u.name,
+      email: u.email,
+      phone: u.phone,
+      type: u.client?.type?.toLowerCase() || 'particulier',
+      sector: u.client?.sector || 'Non spécifié',
+      status: u.status?.toLowerCase() || 'active',
+      createdAt: u.createdAt,
+      inscriptionsCount: u._count?.inscriptions || 0,
+      campagnesInscrites: u.inscriptions?.map(i => i.campagneId) || []
+    }));
+
+    res.json(clients);
+
+  } catch (err) {
+    console.error('[CLIENTS LIST ERROR]', err);
     res.status(500).json({ error: 'Erreur serveur', details: err.message });
   }
 });
@@ -328,14 +390,14 @@ router.get('/users', authenticate, async (req, res) => {
 // ============================================================
 router.put('/users/:id', authenticate, async (req, res) => {
   try {
-    if (req.user.role !== 'ADMIN' && req.user.role !== 'RESPONSABLE_MARKETING') {
+    if (!['ADMIN', 'RESPONSABLE_MARKETING', 'SUPER_ADMIN'].includes(req.user.role)) {
       return res.status(403).json({ error: 'Accès réservé' });
     }
 
-    const userId = parseInt(req.params.id);
+    const { id } = req.params;
     const { name, email, role, status } = req.body;
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({ where: { id } });
     if (!user) {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
@@ -347,11 +409,17 @@ router.put('/users/:id', authenticate, async (req, res) => {
     if (status) updateData.status = status;
 
     const updatedUser = await prisma.user.update({
-      where: { id: userId },
+      where: { id },
       data: updateData
     });
 
-    res.json(updatedUser);
+    res.json({
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      status: updatedUser.status
+    });
 
   } catch (err) {
     console.error('[UPDATE USER ERROR]', err);
@@ -365,26 +433,30 @@ router.put('/users/:id', authenticate, async (req, res) => {
 // ============================================================
 router.delete('/users/:id', authenticate, async (req, res) => {
   try {
-    if (req.user.role !== 'ADMIN') {
+    if (!['ADMIN', 'SUPER_ADMIN'].includes(req.user.role)) {
       return res.status(403).json({ error: 'Accès réservé aux administrateurs' });
     }
 
-    const userId = parseInt(req.params.id);
+    const { id } = req.params;
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: { client: true }
+    });
+    
     if (!user) {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
-    if (user.clientId) {
-      await prisma.inscription.deleteMany({ where: { clientId: user.clientId } }).catch(() => {});
+    // Supprimer les inscriptions du client si existe
+    if (user.client) {
+      await prisma.inscription.deleteMany({ 
+        where: { clientId: user.client.id } 
+      }).catch(() => {});
     }
 
-    await prisma.user.delete({ where: { id: userId } });
-
-    if (user.clientId) {
-      await prisma.client.delete({ where: { id: user.clientId } }).catch(() => {});
-    }
+    // Supprimer le User (cascade supprime le Client grâce à onDelete: Cascade)
+    await prisma.user.delete({ where: { id } });
 
     res.json({ message: 'Utilisateur supprimé avec succès' });
 
@@ -395,22 +467,15 @@ router.delete('/users/:id', authenticate, async (req, res) => {
 });
 
 // ============================================================
-// PROFIL UTILISATEUR CONNECTÉ - CORRIGÉ (sans select client)
+// PROFIL UTILISATEUR CONNECTÉ
 // GET /api/auth/me
 // ============================================================
 router.get('/me', authenticate, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
-        clientId: true,
-        createdAt: true,
-        lastLogin: true
+      include: {
+        client: true
       }
     });
 
@@ -418,28 +483,22 @@ router.get('/me', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
-    let clientData = null;
-    if (user.clientId) {
-      try {
-        clientData = await prisma.client.findUnique({
-          where: { id: user.clientId },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            type: true,
-            sector: true,
-            phone: true
-          }
-        });
-      } catch (e) {
-        console.log('[CLIENT FETCH ERROR] me:', e.message);
-      }
-    }
-
     res.json({
-      ...user,
-      client: clientData
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      tenantId: user.tenantId,
+      phone: user.phone,
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin,
+      client: user.client ? {
+        id: user.client.id,
+        type: user.client.type,
+        sector: user.client.sector,
+        phone: user.client.phone
+      } : null
     });
 
   } catch (err) {

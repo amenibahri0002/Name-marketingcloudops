@@ -1175,7 +1175,7 @@ DigiPip est la plateforme de DigiLab Solutions pour créer, planifier et suivre 
                           if (!token) {
                             openModal('/LoginRequiredModal');
                           } else {
-                            navigate(`/campagnes/${c.slug}`);
+                            navigate(`/api/campagnes/${c.slug}`);
                           }
                         }}
                         style={{ 

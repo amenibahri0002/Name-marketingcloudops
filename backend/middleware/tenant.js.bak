@@ -1,0 +1,247 @@
+const { PrismaClient } = require('@prisma/client');
+const { getTenantPrisma, getBypassPrisma } = require('../config/prisma');
+
+// Stockage async-local pour le tenant courant
+const { AsyncLocalStorage } = require('async_hooks');
+const tenantStorage = new AsyncLocalStorage();
+
+// Routes publiques qui ne necessitent PAS de tenant
+const PUBLIC_PATHS = [
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/refresh',
+  '/api/auth/forgot-password',
+  '/api/auth/reset-password',
+  '/api/health',
+  '/api/tenants/resolve',
+  '/api/tenants',
+  '/metrics'
+];
+
+// Configuration des limites par plan
+const PLAN_LIMITS = {
+  FREE: { users: 3, campagnes: 5, inscriptions: 50, storageMB: 100 },
+  STARTER: { users: 10, campagnes: 20, inscriptions: 500, storageMB: 1024 },
+  PRO: { users: 50, campagnes: 100, inscriptions: 5000, storageMB: 10240 },
+  ENTERPRISE: { users: Infinity, campagnes: Infinity, inscriptions: Infinity, storageMB: Infinity }
+};
+
+// Client Prisma de base pour les requetes publiques
+const prisma = new PrismaClient();
+
+/**
+ * Middleware principal de resolution tenant
+ * Extrait le tenant depuis: header x-tenant-id, x-tenant-slug, ou sous-domaine
+ */
+const tenantMiddleware = async (req, res, next) => {
+  // 1. Verifier si c'est une route publique
+  const isPublic = PUBLIC_PATHS.some(path => req.path.startsWith(path));
+  if (isPublic) {
+    return next();
+  }
+
+  // 2. Extraire le tenantId
+  let tenantId = req.headers['x-tenant-id'] || req.headers['X-Tenant-ID'];
+  let tenantSlug = req.headers['x-tenant-slug'] || req.headers['X-Tenant-Slug'];
+
+  // 3. Fallback: sous-domaine (ex: tenant1.digipip.com)
+  if (!tenantId && !tenantSlug && req.headers.host) {
+    const host = req.headers.host;
+    const subdomain = host.split('.')[0];
+    if (subdomain && subdomain !== 'localhost' && subdomain !== 'www' && subdomain !== 'digipip') {
+      tenantSlug = subdomain;
+    }
+  }
+
+  // 4. Si pas de tenant trouve, utiliser le tenant par defaut (dev local)
+  if (!tenantId && !tenantSlug) {
+    try {
+      const defaultTenant = await prisma.tenant.findFirst({
+        where: { status: 'ACTIVE' },
+        orderBy: { createdAt: 'asc' }
+      });
+
+      if (defaultTenant) {
+        req.tenant = defaultTenant;
+        req.tenantId = defaultTenant.id;
+        // Injecter le client Prisma avec RLS pour ce tenant
+        req.tenantPrisma = getTenantPrisma(defaultTenant.id);
+
+        tenantStorage.run({ tenantId: defaultTenant.id, tenant: defaultTenant }, () => {
+          next();
+        });
+        return;
+      } else {
+        return res.status(403).json({
+          error: 'Aucun tenant actif trouve',
+          code: 'NO_ACTIVE_TENANT'
+        });
+      }
+    } catch (err) {
+      console.error('[Tenant] Erreur resolution default:', err);
+      return res.status(500).json({ error: 'Erreur serveur tenant' });
+    }
+  }
+
+  // 5. Chercher le tenant par ID ou slug
+  try {
+    let tenant = null;
+
+    if (tenantId) {
+      tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    } else if (tenantSlug) {
+      tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
+    }
+
+    if (!tenant) {
+      return res.status(403).json({
+        error: 'Tenant invalide',
+        code: 'TENANT_INVALID'
+      });
+    }
+
+    if (tenant.status === 'SUSPENDED') {
+      return res.status(403).json({
+        error: 'Tenant suspendu',
+        code: 'TENANT_SUSPENDED',
+        tenantId: tenant.id
+      });
+    }
+
+    if (tenant.status === 'PENDING') {
+      return res.status(403).json({
+        error: 'Tenant en attente de validation',
+        code: 'TENANT_PENDING'
+      });
+    }
+
+    // Injecter le client Prisma avec RLS pour ce tenant
+    req.tenantPrisma = getTenantPrisma(tenant.id);
+
+    tenantStorage.run({ tenantId: tenant.id, tenant }, () => {
+      req.tenant = tenant;
+      req.tenantId = tenant.id;
+      next();
+    });
+
+  } catch (err) {
+    console.error('[Tenant] Erreur:', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+/**
+ * Middleware de controle d'acces tenant
+ * Verifie que l'utilisateur authentifie appartient au tenant courant
+ */
+const tenantAccessControl = async (req, res, next) => {
+  if (!req.tenantId || !req.user) return next();
+
+  // Super Admin bypass
+  if (req.user.role === 'SUPER_ADMIN') return next();
+
+  if (req.user.tenantId && req.user.tenantId !== req.tenantId) {
+    console.warn(`[TenantAccess] Tentative acces croise: user=${req.user.id} tenant=${req.user.tenantId} -> requested=${req.tenantId}`);
+    return res.status(403).json({
+      error: 'Acces interdit - Vous n\'appartenez pas a ce tenant',
+      code: 'TENANT_ACCESS_DENIED',
+      yourTenant: req.user.tenantId,
+      requestedTenant: req.tenantId
+    });
+  }
+
+  next();
+};
+
+/**
+ * Middleware de verification des limites de plan (FREEMIUM)
+ * Bloque la creation si les limites du plan sont atteintes
+ */
+const planLimitMiddleware = async (req, res, next) => {
+  if (!req.tenant || req.method === 'GET' || req.method === 'DELETE') return next();
+
+  const tenant = req.tenant;
+  const limits = PLAN_LIMITS[tenant.plan] || PLAN_LIMITS.FREE;
+
+  try {
+    // Utiliser le client Prisma avec RLS pour compter
+    const tenantPrisma = req.tenantPrisma || getTenantPrisma(tenant.id);
+    const path = req.path;
+    let currentCount = 0;
+    let limit = 0;
+    let resourceType = '';
+
+    // Limite UTILISATEURS
+    if (path.includes('/users') && req.method === 'POST') {
+      currentCount = await tenantPrisma.user.count({ 
+        where: { status: { not: 'INACTIVE' } } 
+      });
+      limit = limits.users;
+      resourceType = 'utilisateurs';
+    }
+
+    // Limite CAMPAGNES
+    else if (path.includes('/campagnes') && req.method === 'POST') {
+      currentCount = await tenantPrisma.campagne.count({ 
+        where: { status: { not: 'CANCELLED' } } 
+      });
+      limit = limits.campagnes;
+      resourceType = 'campagnes';
+    }
+
+    // Limite INSCRIPTIONS
+    else if (path.includes('/inscriptions') && req.method === 'POST') {
+      currentCount = await tenantPrisma.inscription.count({ 
+        where: { status: { not: 'ANNULEE' } } 
+      });
+      limit = limits.inscriptions;
+      resourceType = 'inscriptions';
+    }
+
+    // Verifier si la limite est atteinte
+    if (resourceType && currentCount >= limit) {
+      return res.status(403).json({
+        error: `Limite de ${resourceType} atteinte pour votre plan ${tenant.plan}`,
+        code: `PLAN_LIMIT_${resourceType.toUpperCase()}`,
+        plan: tenant.plan,
+        limit,
+        current: currentCount,
+        upgradeUrl: '/api/billing/upgrade'
+      });
+    }
+
+    next();
+  } catch (err) {
+    console.error('[PlanLimit] Erreur:', err);
+    return res.status(500).json({ error: 'Erreur verification limites' });
+  }
+};
+
+/**
+ * Helper pour recuperer le tenant courant depuis n'importe ou
+ */
+const getCurrentTenant = () => {
+  const store = tenantStorage.getStore();
+  if (!store) {
+    console.warn('[TenantStorage] Aucun contexte tenant trouve');
+    return null;
+  }
+  return store;
+};
+
+/**
+ * Wrapper pour executer du code dans un contexte tenant
+ */
+const withTenant = (tenantId, callback) => {
+  return tenantStorage.run({ tenantId }, callback);
+};
+
+module.exports = {
+  tenantMiddleware,
+  tenantAccessControl,
+  planLimitMiddleware,
+  tenantStorage,
+  getCurrentTenant,
+  withTenant,
+  PLAN_LIMITS
+};

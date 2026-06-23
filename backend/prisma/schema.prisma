@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================
@@ -75,12 +76,13 @@ model User {
   name     String
   email    String
   password String
-  role     UserRole   @default(CLIENT)
+  role     UserRole   // CLIENT, ADMIN, RESPONSABLE_MARKETING
   status   UserStatus @default(ACTIVE)
 
   phone    String?
   avatar   String?
   fcmToken String?
+  Client   Client?
 
   lastLogin DateTime?
   createdAt DateTime  @default(now())
@@ -125,6 +127,10 @@ model Client {
   id       String @id @default(cuid())
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // ← AJOUTER : Lien vers User
+  userId   String? @unique
+  user     User?   @relation(fields: [userId], references: [id])
 
   name     String
   email    String
@@ -153,8 +159,8 @@ model Client {
 enum ClientType {
   PARTICULIER
   ENTREPRISE
-  ASSOCIATION
-  INSTITUTION
+  AGENCE
+  ETABLISSEMENT
 }
 
 enum ClientStatus {
@@ -550,27 +556,27 @@ enum ContactType {
 // SEGMENT
 // ============================================
 model Segment {
-  id       String @id @default(cuid())
-  tenantId String
-  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  name     String
-  criteria String? @db.Text
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  contacts ContactSegment[]
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  niveau      String?
+  criteria    Json?    @default("{}")
+  campagneIds String[] @default([])  // ← AJOUTER CECI
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contacts    ContactSegment[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([tenantId])
+  @@index([niveau])
 }
-
 model ContactSegment {
   id        String  @id @default(cuid())
   contactId String
   contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
   segmentId String
   segment   Segment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  niveau    String? // ← AJOUTER (niveau au moment de l'ajout)
 
   createdAt DateTime @default(now())
 

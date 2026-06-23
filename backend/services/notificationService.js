@@ -304,10 +304,98 @@ async function notifyNewCampagne(campagne) {
   console.log(`[NOTIFY AUTO] ${clients.length} clients notifies`);
   return { notified: clients.length };
 }
+async function notifyInscription(userId, data) {
+  console.log('[NOTIFY INSCRIPTION] User:', userId, 'Data:', data);
+
+  const prismaInstance = getPrisma();
+
+  try {
+   if (!data.tenantId) {
+      console.error('[NOTIFY INSCRIPTION] ERREUR: tenantId manquant dans data');
+      return { success: false, error: 'tenantId manquant' };
+    }
+  
+
+
+    // Créer une notification en base
+    await prismaInstance.notification.create({
+      data: {
+        tenantId: data.tenantId || 'default',
+        type: 'INSCRIPTION_CONFIRMATION',
+        title: 'Inscription confirmée',
+        message: `Vous êtes inscrit à ${data.formation}`,
+        userId: userId,
+        data: JSON.stringify(data),
+        read: false,
+        priority: 1,
+      }
+    });
+
+    // Envoyer email si l'utilisateur a un email
+    const user = await prismaInstance.user.findUnique({
+      where: { id: userId },
+      select: { email: true, fcmToken: true, name: true }
+    });
+
+    if (user?.email) {
+      await sendEmail(
+        user.email,
+        'Inscription confirmée - DigiPip',
+        `<h2>Bonjour ${user.name || ''},</h2>
+         <p>Votre inscription à <strong>${data.formation}</strong> est confirmée.</p>
+         <p>Numéro : ${data.numero}</p>
+         <p>Date : ${data.date ? new Date(data.date).toLocaleDateString('fr-FR') : 'À préciser'}</p>
+         <p>Lieu : ${data.lieu || 'À préciser'}</p>`,
+        `Votre inscription à ${data.formation} est confirmée. Numéro: ${data.numero}`
+      );
+    }
+
+    // Envoyer push si FCM token existe
+    if (user?.fcmToken) {
+      await sendPush(user.fcmToken, 'Inscription confirmée !', 
+        `Vous êtes inscrit à ${data.formation}`, 
+        { type: 'INSCRIPTION_CONFIRMATION', inscriptionId: data.id }
+      );
+    }
+
+    console.log('[NOTIFY INSCRIPTION] OK pour user', userId);
+    return { success: true };
+
+  } catch (err) {
+    console.error('[NOTIFY INSCRIPTION ERROR]', err.message);
+    return { success: false, error: err.message };
+  }
+}
+async function notifyPaiement(userId, data) {
+  console.log('[NOTIFY PAIEMENT] User:', userId, 'Data:', data);
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, fcmToken: true, name: true }
+    });
+    
+    if (user?.email) {
+      await sendEmail(
+        user.email,
+        'Paiement confirmé - DigiPip',
+        `<h2>Bonjour ${user.name || ''},</h2>
+         <p>Votre paiement de <strong>${data.montant} TND</strong> pour <strong>${data.formation}</strong> est confirmé.</p>
+         <p>Mode : ${data.mode}</p>`,
+        `Paiement confirmé: ${data.montant} TND pour ${data.formation}`
+      );
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('[NOTIFY PAIEMENT ERROR]', err.message);
+    return { success: false };
+  }
+}
 
 module.exports = {
   sendEmail,
   sendPush,
   manualDiffusion,
   notifyNewCampagne,
+  notifyInscription,
+  notifyPaiement,
 };

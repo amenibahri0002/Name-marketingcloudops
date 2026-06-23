@@ -72,7 +72,7 @@ function Pill({ label, color, bg, border }) {
    ═══════════════════════════════════════════════════════════════ */
 function ClientDetailModal({ client, onClose, campagnes }) {
   const [activeTab, setActiveTab] = useState('participants');
-  const typeInfo = USER_TYPES[client.type];
+  const typeInfo = USER_TYPES[client.type] || USER_TYPES['particulier'] || { label: 'Non défini', color: '#6b7280', bg: 'rgba(107,114,128,0.10)', border: 'rgba(107,114,128,0.25)', icon: '❓' };
 
   const tabs = [
     ['participants', '👥 Participants', client.participants?.length || 0],
@@ -444,7 +444,7 @@ function ClientModal({ client, onClose, onSave }) {
 function ClientCard({ client, onEdit, onDelete, onView, idx }) {
   const [hov, setHov] = useState(false);
   const color = avatarColor(client.name);
-  const typeInfo = USER_TYPES[client.type];
+  const typeInfo = USER_TYPES[client.type] || USER_TYPES['particulier'] || { label: 'Non défini', color: '#6b7280', bg: 'rgba(107,114,128,0.10)', border: 'rgba(107,114,128,0.25)', icon: '❓' };
 
   return (
     <div
@@ -790,7 +790,7 @@ const stats = [
               <tbody>
                 {filtered.map((c, i) => {
                   const color = avatarColor(c.name);
-                  const typeInfo = USER_TYPES[c.type];
+                  const typeInfo = USER_TYPES[c.type] || USER_TYPES['particulier'] || { label: 'Non défini', color: '#6b7280', bg: 'rgba(107,114,128,0.10)', border: 'rgba(107,114,128,0.25)', icon: '❓' };
                   return (
                     <tr key={c.id} className="crow" style={{ borderBottom: `1px solid ${T.border}`, cursor: 'pointer' }}
                       onClick={() => setDetailClient(c)}>

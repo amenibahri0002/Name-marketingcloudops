@@ -1,22 +1,26 @@
 ﻿const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-const { authenticate :authMiddleware } = require('../middleware/auth');
+const { authenticate: authMiddleware } = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// POST /api/feedbacks
+// POST /api/feedbacks — Créer un avis (auth requise)
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const tenantId = req.tenantId;
+    const tenantId = req.tenantId || req.user?.tenantId;
     const { campagneId, rating, comment } = req.body;
     const userId = req.user.id || req.user.userId;
 
-    // Vérifier inscription payée
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Tenant ID manquant' });
+    }
+
+    // Vérifier inscription payée (PAYEE en majuscule selon le schéma)
     const inscription = await prisma.inscription.findFirst({
       where: {
-        campagneId: parseInt(campagneId),
+        campagneId: campagneId,  // ← CUID = string, PAS de parseInt
         userId: userId,
-        status: 'paye',
+        status: 'PAYEE',  // ← MAJUSCULE
         tenantId
       }
     });
@@ -29,7 +33,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
     // Vérifier si déjà donné
     const existing = await prisma.feedback.findFirst({
-      where: { campagneId: parseInt(campagneId), userId, tenantId }
+      where: { campagneId: campagneId, userId, tenantId }  // ← PAS de parseInt
     });
 
     if (existing) {
@@ -42,7 +46,7 @@ router.post('/', authMiddleware, async (req, res) => {
       data: {
         rating: parseInt(rating),
         comment: comment || '',
-        campagneId: parseInt(campagneId),
+        campagneId: campagneId,  // ← CUID = string
         userId: userId,
         tenantId
       },
@@ -64,20 +68,16 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/feedbacks/campagne/:campagneId
-router.get('/campagne/:campagneId', authMiddleware, async (req, res) => {
+// GET /api/feedbacks/campagne/:campagneId — PUBLIQUE (pas d'auth requise)
+router.get('/campagne/:campagneId', async (req, res) => {
   try {
-    const tenantId = req.tenantId;
     const { campagneId } = req.params;
 
-    if (req.user.role !== 'ADMIN' && req.user.role !== 'RESPONSABLE_MARKETING') {
-      return res.status(403).json({ error: 'Accès réservé' });
-    }
-
+    // Pas de vérification auth/tenant — les avis sont publics
     const feedbacks = await prisma.feedback.findMany({
-      where: { campagneId: parseInt(campagneId), tenantId },
+      where: { campagneId: campagneId },  // ← CUID = string
       include: {
-        user: { select: { name: true, email: true } }
+        user: { select: { id: true, name: true } }  // ← Ajouté id pour vérifier hasGivenFeedback
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -102,16 +102,23 @@ router.get('/campagne/:campagneId', authMiddleware, async (req, res) => {
     });
 
   } catch (err) {
+    console.error('[FEEDBACKS GET ERROR]', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/feedbacks/mes-feedbacks
+// GET /api/feedbacks/mes-feedbacks — Avis de l'utilisateur connecté
 router.get('/mes-feedbacks', authMiddleware, async (req, res) => {
   try {
-    const tenantId = req.tenantId;
+    const tenantId = req.tenantId || req.user?.tenantId;
+    const userId = req.user.id || req.user.userId;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Tenant ID manquant' });
+    }
+
     const feedbacks = await prisma.feedback.findMany({
-      where: { userId: req.user.id || req.user.userId, tenantId },
+      where: { userId: userId, tenantId },
       include: {
         campagne: { select: { title: true, image: true } }
       },
@@ -119,6 +126,7 @@ router.get('/mes-feedbacks', authMiddleware, async (req, res) => {
     });
     res.json(feedbacks);
   } catch (err) {
+    console.error('[MES-FEEDBACKS ERROR]', err);
     res.status(500).json({ error: err.message });
   }
 });

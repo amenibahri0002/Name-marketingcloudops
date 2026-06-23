@@ -81,7 +81,7 @@ export default function Reporting() {
     try {
       setLoading(true); setError(null);
       const [usersRes, campagnesRes, inscriptionsRes, notificationsRes] = await Promise.all([
-        api.get('/api/auth/users').catch(() => ({ data: [] })),
+        api.get('/api/users').catch(() => ({ data: [] })),
         api.get('/api/campagnes').catch(() => ({ data: [] })),
         api.get('/api/inscriptions').catch(() => ({ data: [] })),
         api.get('/api/notifications').catch(() => ({ data: [] }))

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import api from '../api'; 
+import api from '../api';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Login() {
@@ -15,24 +15,17 @@ export default function Login() {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      // Récupérer le tenantId depuis le localStorage ou utiliser celui par défaut
       const tenant = localStorage.getItem('digipip_tenant');
       const tenantId = tenant ? JSON.parse(tenant).id : 'cmqlsn2yu0000ybn5t0unlx8u';
-      
-      const res = await api.post('/api/auth/login', {
-        email,
-        password,
-        tenantId  // ← AJOUTÉ : envoi du tenantId dans le body
-      });
 
-      // Stocker les données utilisateur
+      const res = await api.post('/api/auth/login', { email, password, tenantId });
+
       localStorage.setItem('token',     res.data.token);
       localStorage.setItem('user',      JSON.stringify(res.data.user));
       localStorage.setItem('userName',  res.data.user?.name  || '');
       localStorage.setItem('userEmail', res.data.user?.email || '');
       localStorage.setItem('userRole',  res.data.user?.role  || '');
-      
-      // Stocker le tenantId pour les futures requêtes
+
       if (res.data.user?.tenantId) {
         localStorage.setItem('digipip_tenant', JSON.stringify({
           id: res.data.user.tenantId,
@@ -40,8 +33,7 @@ export default function Login() {
           slug: 'digilab-solutions'
         }));
       }
-      
-      // Redirection selon le rôle
+
       const role = res.data.user?.role;
       if (role === 'ADMIN' || role === 'RESPONSABLE_MARKETING') {
         navigate('/dashboard');
@@ -49,83 +41,110 @@ export default function Login() {
         navigate('/campagnes');
       }
     } catch (err) {
-      console.error('Erreur login:', err);
       setError(err.response?.data?.error || 'Email ou mot de passe incorrect.');
     }
     setLoading(false);
   };
 
+  // ─── PALETTE LIGHT (identique au Register) ───
+  const C = {
+    bg:       '#f5f3ef',
+    card:     '#ffffff',
+    border:   '#e5dfd6',
+    text:     '#1a1612',
+    muted:    '#7a7067',
+    subtle:   '#a39a90',
+    accent:   '#f5a623',
+    accentDk: '#c47d0e',
+    inputBg:  '#faf9f7',
+    errBg:    '#fff5f5',
+    errBorder:'#fca5a5',
+    errText:  '#dc2626',
+  };
+
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#ffffff',
+      background: C.bg,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: "'Inter', 'DM Sans', sans-serif",
+      fontFamily: "'Inter', sans-serif",
       padding: '24px',
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing: border-box; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
-        .login-card { animation: fadeIn 0.4s ease both; }
-        .login-input::placeholder { color: rgba(255,255,255,0.2); }
-        .login-input:focus { outline: none; border-color: #f5a623 !important; box-shadow: 0 0 0 3px rgba(245,166,35,0.10) !important; }
-        .login-btn:hover:not(:disabled) { background: #d4881a !important; }
-        .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .back-link { color: rgba(255,255,255,0.3); text-decoration: none; font-size: 13px; transition: color .2s; }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+        .login-card { animation: fadeUp .4s ease both; }
+        .login-input { outline: none; }
+        .login-input::placeholder { color: #c2bbb3 !important; }
+        .login-input:focus { border-color: #f5a623 !important; box-shadow: 0 0 0 3px rgba(245,166,35,0.12) !important; }
+        .login-btn { transition: all .2s !important; }
+        .login-btn:hover:not(:disabled) { background: linear-gradient(135deg,#e8980f,#b86e09) !important; box-shadow: 0 6px 20px rgba(245,166,35,0.35) !important; transform: translateY(-1px); }
+        .login-btn:active:not(:disabled) { transform: translateY(0); }
+        .login-btn:disabled { opacity: .6; cursor: not-allowed; }
+        .back-link { color: #a39a90; text-decoration: none; font-size: 13px; transition: color .2s; }
         .back-link:hover { color: #f5a623; }
+        .eye-btn { background: none; border: none; cursor: pointer; color: #a39a90; padding: 0; line-height: 1; transition: color .2s; }
+        .eye-btn:hover { color: #f5a623; }
       `}</style>
 
       <div className="login-card" style={{ width: '100%', maxWidth: 420 }}>
 
-        {/* ── HEADER LOGO ── */}
+        {/* ── LOGO ── */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
             <div style={{
-              width: 42, height: 42,
-              background: 'linear-gradient(135deg, #f5a623, #d97706)',
+              width: 44, height: 44,
+              background: 'linear-gradient(135deg, #f5a623, #c47d0e)',
               borderRadius: '50% 40% 65% 45%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 22, color: 'white',
-              boxShadow: '0 4px 15px rgba(245,166,35,0.4)',
-              flexShrink: 0, position: 'relative',
+              fontSize: 22,
+              boxShadow: '0 4px 16px rgba(245,166,35,0.35)',
+              position: 'relative', flexShrink: 0,
             }}>
               ☁️
               <div style={{
-                position: 'absolute', top: 6, left: 8,
-                width: 12, height: 12,
+                position: 'absolute', top: 7, left: 9,
+                width: 11, height: 11,
                 background: 'rgba(255,255,255,0.6)',
                 borderRadius: '50%', filter: 'blur(2px)',
               }} />
             </div>
             <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#000000', letterSpacing: '-0.02em' }}>
-                Digi<span style={{ color: '#f5a623' }}>Pip</span>
+              <div style={{ fontSize: 26, fontWeight: 800, color: C.text, letterSpacing: '-0.02em', lineHeight: 1 }}>
+                Digi<span style={{ color: C.accent }}>Pip</span>
               </div>
-              <div style={{ fontSize: 10, color: 'rgba(0, 0, 0, 0.3)', letterSpacing: '0.06em' }}>
+              <div style={{ fontSize: 10, color: C.muted, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 3 }}>
                 by DigiLab Solutions
               </div>
             </div>
           </div>
-          <p style={{ color: 'rgba(0, 0, 0, 0.35)', fontSize: 13, marginTop: 6 }}>
+          <p style={{ color: C.subtle, fontSize: 13, margin: 0 }}>
             Connectez-vous à votre espace
           </p>
         </div>
 
         {/* ── CARD ── */}
         <div style={{
-          background: '#1a1612',
-          border: '1px solid rgba(255,255,255,0.08)',
+          background: C.card,
+          border: `1px solid ${C.border}`,
           borderRadius: 18,
           padding: '36px 32px',
-          boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+          boxShadow: '0 8px 32px rgba(26,22,18,0.09), 0 2px 8px rgba(26,22,18,0.05)',
         }}>
 
+          {/* Erreur */}
           {error && (
-            <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '12px 16px', marginBottom: 24, color: '#ef4444', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              background: C.errBg,
+              border: `1px solid ${C.errBorder}`,
+              borderRadius: 10, padding: '12px 16px', marginBottom: 22,
+              color: C.errText, fontSize: 13, fontWeight: 500,
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
@@ -137,7 +156,13 @@ export default function Login() {
 
             {/* Email */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginBottom: 8, letterSpacing: '0.04em' }}>Email</label>
+              <label style={{
+                display: 'block', fontSize: 11, fontWeight: 700,
+                color: C.muted, marginBottom: 7,
+                letterSpacing: '0.07em', textTransform: 'uppercase',
+              }}>
+                Email
+              </label>
               <input
                 className="login-input"
                 type="email" required
@@ -147,19 +172,26 @@ export default function Login() {
                 onBlur={() => setFocused(null)}
                 placeholder="vous@exemple.com"
                 style={{
-                  width: '100%', padding: '13px 16px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: `1.5px solid ${focused === 'email' ? '#f5a623' : 'rgba(255,255,255,0.10)'}`,
+                  width: '100%', padding: '12px 16px',
+                  background: C.inputBg,
+                  border: `1.5px solid ${focused === 'email' ? C.accent : C.border}`,
                   borderRadius: 10, fontSize: 14,
-                  color: '#fff', fontFamily: 'inherit',
+                  color: C.text, fontFamily: 'inherit',
                   transition: 'border-color .2s, box-shadow .2s',
+                  caretColor: C.accent,
                 }}
               />
             </div>
 
-            {/* Password */}
+            {/* Mot de passe */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginBottom: 8, letterSpacing: '0.04em' }}>Mot de passe</label>
+              <label style={{
+                display: 'block', fontSize: 11, fontWeight: 700,
+                color: C.muted, marginBottom: 7,
+                letterSpacing: '0.07em', textTransform: 'uppercase',
+              }}>
+                Mot de passe
+              </label>
               <div style={{ position: 'relative' }}>
                 <input
                   className="login-input"
@@ -170,23 +202,29 @@ export default function Login() {
                   onBlur={() => setFocused(null)}
                   placeholder="••••••••"
                   style={{
-                    width: '100%', padding: '13px 44px 13px 16px',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: `1.5px solid ${focused === 'password' ? '#f5a623' : 'rgba(255,255,255,0.10)'}`,
+                    width: '100%', padding: '12px 44px 12px 16px',
+                    background: C.inputBg,
+                    border: `1.5px solid ${focused === 'password' ? C.accent : C.border}`,
                     borderRadius: 10, fontSize: 14,
-                    color: '#fff', fontFamily: 'inherit',
+                    color: C.text, fontFamily: 'inherit',
                     transition: 'border-color .2s, box-shadow .2s',
+                    caretColor: C.accent,
                   }}
                 />
-                <button type="button" onClick={() => setShowPass(p => !p)}
-                  style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', padding: 0, lineHeight: 1, transition: 'color .2s' }}
-                  onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+                <button type="button" className="eye-btn"
+                  onClick={() => setShowPass(p => !p)}
+                  style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)' }}
                 >
                   {showPass ? (
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
                   ) : (
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
                   )}
                 </button>
               </div>
@@ -194,11 +232,29 @@ export default function Login() {
 
             {/* Submit */}
             <button type="submit" disabled={loading} className="login-btn"
-              style={{ width: '100%', padding: '14px', background: '#f5a623', color: '#0f0e0c', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'background .2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 4 }}
+              style={{
+                width: '100%', padding: '14px',
+                background: 'linear-gradient(135deg, #f5a623, #c47d0e)',
+                color: '#fff',
+                border: 'none', borderRadius: 10,
+                fontSize: 14, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                marginTop: 4,
+                boxShadow: '0 4px 14px rgba(245,166,35,0.30)',
+                letterSpacing: '0.01em',
+              }}
             >
               {loading ? (
                 <>
-                  <span style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.25)', borderTop: '2px solid #0f0e0c', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+                  <span style={{
+                    width: 16, height: 16,
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTop: '2px solid #fff',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                    display: 'inline-block',
+                  }} />
                   Connexion...
                 </>
               ) : 'Se connecter →'}
@@ -206,19 +262,22 @@ export default function Login() {
           </form>
 
           {/* Lien register */}
-          <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'rgba(255,255,255,0.3)' }}>
+          <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: C.muted }}>
             Pas encore de compte ?{' '}
-            <Link to="/register" style={{ color: '#f5a623', textDecoration: 'none', fontWeight: 600 }}>
+            <Link to="/register" style={{ color: C.accent, textDecoration: 'none', fontWeight: 700 }}>
               S'inscrire
             </Link>
           </p>
         </div>
 
         {/* ── FOOTER ── */}
-        <div style={{ textAlign: 'center', marginTop: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+        <div style={{
+          textAlign: 'center', marginTop: 24,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14,
+        }}>
           <a href="/" className="back-link">← Retour à l'accueil</a>
-          <span style={{ color: 'rgba(255,255,255,0.1)' }}>·</span>
-          <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>DigiPip © 2026</span>
+          <span style={{ color: C.border }}>·</span>
+          <span style={{ color: C.subtle, fontSize: 12 }}>DigiPip © 2026</span>
         </div>
 
       </div>

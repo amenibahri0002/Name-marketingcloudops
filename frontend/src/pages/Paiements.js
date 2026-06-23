@@ -49,23 +49,25 @@ export default function Paiements() {
 
   const totalPaye = paiements.filter(p => p.status === 'paye').reduce((sum, p) => sum + (p.total || 0), 0);
   const totalEnAttente = paiements.filter(p => p.status === 'en_attente').reduce((sum, p) => sum + (p.total || 0), 0);
-
- const telechargerFacture = async (paiementId) => {
+    const telechargerFacture = async (paiementId) => {
   try {
     const token = localStorage.getItem('token');
     const response = await api.get(`/api/paiements/${paiementId}/facture`, {
-      responseType: 'blob', // Important pour recevoir un fichier binaire
+      responseType: 'blob',
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     
-    // Créer un URL pour le blob
-    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+    // Créer un blob PDF
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Facture_${paiementId}.pdf`;
+    a.download = `Facture_${paiementId.slice(-8)}.pdf`;
     document.body.appendChild(a);
     a.click();
     a.remove();
+    
     window.URL.revokeObjectURL(url);
   } catch (err) {
     console.error('Erreur téléchargement facture:', err);

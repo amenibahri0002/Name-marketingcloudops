@@ -5,6 +5,7 @@ const api = axios.create({
   timeout: 120000,
   headers: { 'Content-Type': 'application/json' }
 });
+console.log('[API] baseURL:', api.defaults.baseURL); //
 
 // Routes qui ne doivent JAMAIS rediriger vers login même en 401
 const PUBLIC_ENDPOINTS = [

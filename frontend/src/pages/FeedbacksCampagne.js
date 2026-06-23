@@ -1,4 +1,4 @@
-ï»¿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -42,11 +42,11 @@ const CampagnesList = ({ onSelectCampagne }) => {
   const fetchCampagnesWithFeedbacks = async () => {
     try {
       setLoading(true);
-      // RÃ©cupÃ©rer toutes les campagnes
+      // Récupérer toutes les campagnes
       const campagnesRes = await api.get('/api/campagnes');
       const campagnesData = campagnesRes.data;
 
-      // Pour chaque campagne, rÃ©cupÃ©rer les stats d'avis
+      // Pour chaque campagne, récupérer les stats d'avis
       const campagnesWithStats = await Promise.all(
         campagnesData.map(async (campagne) => {
           try {
@@ -213,7 +213,7 @@ const CampagnesList = ({ onSelectCampagne }) => {
           >
             <option value="avis">Plus d'avis</option>
             <option value="note">Meilleure note</option>
-            <option value="date">Plus rÃ©cent</option>
+            <option value="date">Plus récent</option>
           </select>
         </div>
       </div>
@@ -272,7 +272,7 @@ const CampagnesList = ({ onSelectCampagne }) => {
                       </h3>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: THEME.textLight, fontSize: '0.85rem' }}>
                         <Calendar size={14} />
-                        {campagne.dateScheduled ? new Date(campagne.dateScheduled).toLocaleDateString('fr-FR') : 'Date non prÃ©cisÃ©e'}
+                        {campagne.dateScheduled ? new Date(campagne.dateScheduled).toLocaleDateString('fr-FR') : 'Date non précisée'}
                       </div>
                     </div>
                     <div style={{ 
@@ -320,7 +320,7 @@ const CampagnesList = ({ onSelectCampagne }) => {
                                   borderRadius: '2px', transition: 'width 0.5s'
                                 }} />
                               </div>
-                              <span style={{ fontSize: '0.65rem', color: THEME.textLight }}>{note}â˜…</span>
+                              <span style={{ fontSize: '0.65rem', color: THEME.textLight }}>{note}?</span>
                             </div>
                           );
                         })}
@@ -352,7 +352,7 @@ const CampagnesList = ({ onSelectCampagne }) => {
         {filteredCampagnes.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px', color: THEME.textLight }}>
             <Search size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
-            <p>Aucune campagne ne correspond Ã  votre recherche</p>
+            <p>Aucune campagne ne correspond à votre recherche</p>
           </div>
         )}
       </div>
@@ -360,7 +360,7 @@ const CampagnesList = ({ onSelectCampagne }) => {
   );
 };
 
-// ==================== PAGE DÃ‰TAIL D'UNE CAMPAGNE ====================
+// ==================== PAGE DÉTAIL D'UNE CAMPAGNE ====================
 const CampagneDetailAvis = ({ campagneId, onBack }) => {
   const [feedbacks, setFeedbacks] = useState([]);
   const [stats, setStats] = useState(null);
@@ -408,7 +408,7 @@ const CampagneDetailAvis = ({ campagneId, onBack }) => {
   const getSentiment = (rating) => {
     if (rating >= 4) return { icon: ThumbsUp, color: THEME.success, text: 'Positif' };
     if (rating >= 3) return { icon: TrendingUp, color: '#f59e0b', text: 'Neutre' };
-    return { icon: ThumbsDown, color: THEME.danger, text: 'NÃ©gatif' };
+    return { icon: ThumbsDown, color: THEME.danger, text: 'Négatif' };
   };
 
   if (loading) {
@@ -438,7 +438,7 @@ const CampagneDetailAvis = ({ campagneId, onBack }) => {
             padding: '8px 0'
           }}
         >
-          <ArrowLeft size={18} /> Retour Ã  la liste
+          <ArrowLeft size={18} /> Retour à la liste
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -457,8 +457,8 @@ const CampagneDetailAvis = ({ campagneId, onBack }) => {
               {campagne?.title}
             </h1>
             <p style={{ color: THEME.textLight, fontSize: '0.9rem' }}>
-              {campagne?.dateScheduled ? new Date(campagne.dateScheduled).toLocaleDateString('fr-FR') : 'Date non prÃ©cisÃ©e'}
-              {' Â· '}
+              {campagne?.dateScheduled ? new Date(campagne.dateScheduled).toLocaleDateString('fr-FR') : 'Date non précisée'}
+              {' · '}
               {feedbacks.length} avis
             </p>
           </div>
@@ -530,7 +530,7 @@ const CampagneDetailAvis = ({ campagneId, onBack }) => {
           padding: '12px 16px', background: THEME.goldLight, borderRadius: '12px'
         }}>
           <span style={{ color: THEME.goldDark, fontWeight: 600 }}>
-            Filtre : {filterRating} Ã©toiles ({filteredFeedbacks.length} avis)
+            Filtre : {filterRating} étoiles ({filteredFeedbacks.length} avis)
           </span>
           <button 
             onClick={() => setFilterRating(null)}
@@ -539,7 +539,7 @@ const CampagneDetailAvis = ({ campagneId, onBack }) => {
               cursor: 'pointer', color: THEME.goldDark, display: 'flex', alignItems: 'center'
             }}
           >
-            <X size={16} /> RÃ©initialiser
+            <X size={16} /> Réinitialiser
           </button>
         </div>
       )}
@@ -627,7 +627,7 @@ const CampagneDetailAvis = ({ campagneId, onBack }) => {
         {filteredFeedbacks.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px', color: THEME.textLight }}>
             <MessageSquare size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
-            <p>{filterRating ? `Aucun avis avec ${filterRating} Ã©toiles` : 'Aucun avis pour cette formation'}</p>
+            <p>{filterRating ? `Aucun avis avec ${filterRating} étoiles` : 'Aucun avis pour cette formation'}</p>
           </div>
         )}
       </div>
@@ -641,7 +641,7 @@ export default function FeedbacksCampagne() {
   const navigate = useNavigate();
   const [selectedCampagne, setSelectedCampagne] = useState(null);
 
-  // Si campagneId est dans l'URL, afficher le dÃ©tail
+  // Si campagneId est dans l'URL, afficher le détail
   // Sinon, afficher la liste
   const showDetail = !!campagneId;
 

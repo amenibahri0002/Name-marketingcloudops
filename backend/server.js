@@ -7,6 +7,7 @@ const compression = require('compression');
 const fs = require('fs');
 const http = require('http');
 const { Server } = require('socket.io');
+
 // ============================================================
 // 1. IMPORTS
 // ============================================================
@@ -20,6 +21,41 @@ const prisma = new PrismaClient();
 const server = http.createServer(app);
 app.set('trust proxy', 1);
 console.log('SERVER STARTING...');
+// Ajoutez en haut du fichier
+const { 
+  register, 
+  httpRequestsTotal, 
+  httpRequestDuration,
+  activeUsers 
+} = require('./monitoring');
+
+// Middleware pour capturer les métriques HTTP
+app.use((req, res, next) => {
+  const start = Date.now();
+  
+  res.on('finish', () => {
+    const duration = (Date.now() - start) / 1000;
+    
+    httpRequestsTotal.inc({
+      method: req.method,
+      route: req.route?.path || req.path,
+      status: res.statusCode
+    });
+    
+    httpRequestDuration.observe(
+      { method: req.method, route: req.route?.path || req.path },
+      duration
+    );
+  });
+  
+  next();
+});
+
+// Endpoint pour Prometheus (local)
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
 // ============================================
 // KEEP-ALIVE : Ping la base toutes les 4 min
 // ============================================
@@ -30,7 +66,7 @@ setInterval(async () => {
   } catch (err) {
     console.error('[KEEP-ALIVE] Ping failed:', err.message);
   }
-}, 4 * 60 * 1000); // 4 minutes
+}, 4 * 60 * 1000);
 
 // Socket.io
 const io = new Server(server, {
@@ -41,7 +77,6 @@ const io = new Server(server, {
 });
 global.io = io;
 
-// Authentification Socket.io
 io.use(async (socket, next) => {
   try {
     const token = socket.handshake.auth.token;
@@ -61,13 +96,8 @@ io.use(async (socket, next) => {
 
 io.on('connection', (socket) => {
   console.log('[SOCKET] User connecté:', socket.userId);
-  
-  // Rejoindre la room personnelle
   socket.join(`user_${socket.userId}`);
-  
-  // Rejoindre la room du tenant
   socket.join(`tenant_${socket.tenantId}`);
-
   socket.on('disconnect', () => {
     console.log('[SOCKET] User déconnecté:', socket.userId);
   });
@@ -100,32 +130,53 @@ app.use(metricsMiddleware);
 // ============================================================
 // 3. ROUTES PUBLIQUES (SANS AUTH, SANS TENANT)
 // ============================================================
-// ⚠️ AUTH DOIT ÊTRE AVANT tenantMiddleware ET authMiddleware
-app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/tenants', require('./routes/tenant.routes'));
 app.get('/api/health', (req, res) => res.json({ 
   status: 'ok', 
   tenant: req.tenant?.name || null 
 }));
-// ============================================================
-// 4. MIDDLEWARE TENANT (après routes publiques)
-// ============================================================
 
 // ============================================================
-// 5. ROUTES PUBLIQUES AVEC TENANT (campagnes, inscriptions...)
+// 4. MIDDLEWARE TENANT (pour routes publiques avec tenant)
 // ============================================================
+app.use(tenantMiddleware);
+
+// ============================================================
+// 5. ROUTES PUBLIQUES AVEC TENANT
+// ============================================================
+app.get('/api/campagnes/public', async (req, res) => {
+  try {
+    const DEFAULT_TENANT_ID = 'cmqpeaa3o000013c526wukadg';
+    const tenantId = req.tenantId || DEFAULT_TENANT_ID;
+
+    const campagnes = await prisma.campagne.findMany({
+      where: { 
+        tenantId,
+        published: true, 
+        status: 'ACTIVE' 
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    console.log('[PUBLIC CAMPAGNES]', campagnes.length, 'campagnes trouvées');
+    res.json(campagnes);
+  } catch (e) { 
+    console.error('[PUBLIC CAMPAGNES ERROR]', e);
+    res.status(500).json({ message: e.message }); 
+  }
+});
+
+// Routes publiques avec tenant (pas besoin d'auth)
 app.use('/api/Formations', require('./routes/Formations'));
-app.use('/api/inscriptions', require('./routes/inscriptions'));
 app.use('/api/cloud', require('./routes/cloud'));
 app.use('/api/devops', require('./routes/devops'));
 app.use('/api/chat', require('./routes/chat'));
 
 // ============================================================
-// 6. AUTHENTIFICATION (après routes publiques)
+// 6. AUTHENTIFICATION (pour routes protégées)
 // ============================================================
 app.use(authenticate);
-
-app.use(tenantMiddleware);
 
 // ============================================================
 // 7. CONTRÔLE D'ACCÈS TENANT (après auth)
@@ -136,8 +187,10 @@ app.use(planLimitMiddleware);
 // ============================================================
 // 8. ROUTES PROTÉGÉES (auth + tenant requis)
 // ============================================================
-app.use('/api/clients', require('./routes/clients'));
+app.use('/api/campagnes', require('./routes/campagnes'));
+app.use('/api/inscriptions', require('./routes/inscriptions'));
 app.use('/api/contacts', require('./routes/contacts'));
+app.use('/api/clients', require('./routes/clients'));
 app.use('/api/emails', require('./routes/emails'));
 app.use('/api/segments', require('./routes/segments'));
 app.use('/api/stats', require('./routes/stats'));
@@ -150,9 +203,7 @@ app.use('/api/certificats', require('./routes/certificats'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/paiements', require('./routes/paiements'));
 app.use('/api/feedbacks', require('./routes/feedbacks'));
-app.use('/api/kpis', require ('./routes/kpis'));
-app.use('/api/campagnes', require('./routes/campagnes'));
-
+app.use('/api/kpis', require('./routes/kpis'));
 
 // ============================================================
 // 9. MÉTRIQUES & HEALTH

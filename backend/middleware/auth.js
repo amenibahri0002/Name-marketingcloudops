@@ -1,4 +1,3 @@
-// middleware/auth.js
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'techevent_secret_2026';
 
@@ -10,18 +9,29 @@ function authMiddleware(req, res, next) {
   
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    // LOG TEMPORAIRE
+    console.log('=== TOKEN DECODED ===');
+    console.log('Keys:', Object.keys(decoded));
+    console.log('tenantId:', decoded.tenantId);
+    console.log('=====================');
+    
     req.user = {
-      id: decoded.userId,  // ← Ajouter id
+      id: decoded.userId,
       userId: decoded.userId,
       email: decoded.email,
       role: decoded.role,
-      clientId: decoded.clientId
+      clientId: decoded.clientId,
+      tenantId: decoded.tenantId  // ← AJOUTER CECI
     };
+    
+    req.tenantId = decoded.tenantId;  // ← AJOUTER CECI AUSSI
+    
     next();
   } catch (err) {
     return res.status(403).json({ message: 'Token invalide' });
   }
 }
+
 function requireRole(...roles) {
   return function(req, res, next) {
     if (!req.user) return res.status(401).json({ message: 'Non authentifié' });
@@ -43,7 +53,7 @@ const ROLES = {
 };
 
 module.exports = {
-  authenticate : authMiddleware,
+  authenticate: authMiddleware,
   requireRole,
   ROLES
 };
