@@ -15,21 +15,14 @@ const { authenticate } = require('./middleware/auth');
 const { tenantMiddleware, tenantAccessControl, planLimitMiddleware } = require('./middleware/tenant');
 const { helmetMiddleware, globalLimiter } = require('./middleware/security');
 const metricsMiddleware = require('./middleware/metrics');
-
+const { register, httpRequestsTotal, httpRequestDuration } = require('./monitoring');
 const app = express();
 const prisma = new PrismaClient();
 const server = http.createServer(app);
 app.set('trust proxy', 1);
 console.log('SERVER STARTING...');
 // Ajoutez en haut du fichier
-const { 
-  register, 
-  httpRequestsTotal, 
-  httpRequestDuration,
-  activeUsers 
-} = require('./monitoring');
-
-// Middleware pour capturer les métriques HTTP
+// Middleware métriques
 app.use((req, res, next) => {
   const start = Date.now();
   
@@ -51,14 +44,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Endpoint pour Prometheus (local)
+// Endpoint /metrics — Prometheus viendra scraper ici
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());
 });
-// ============================================
-// KEEP-ALIVE : Ping la base toutes les 4 min
-// ============================================
+
 setInterval(async () => {
   try {
     await prisma.$queryRaw`SELECT 1`;
