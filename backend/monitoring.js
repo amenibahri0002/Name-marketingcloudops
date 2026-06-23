@@ -3,7 +3,7 @@ const client = require('prom-client');
 const axios = require('axios');
 
 // Configuration Grafana Cloud
-const GRAFANA_URL = 'https://prometheus-prod-58-prod-eu-central-0.grafana.net/api/prom'
+const GRAFANA_URL = 'https://prometheus-prod-58-prod-eu-central-0.grafana.net';
 const USERNAME = 'amenibahri0002';
 const API_KEY = '3c0d102d-1e98-4150-86e7-34dd21d8187e'; // ← Remplacez par votre token copié
 
