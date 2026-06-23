@@ -5,7 +5,7 @@ const axios = require('axios');
 // Configuration Grafana Cloud
 const GRAFANA_URL = 'https://prometheus-prod-58-prod-eu-central-0.grafana.net/api/prom'
 const USERNAME = 'amenibahri0002';
-const API_KEY = 'votre-token-ici'; // ← Remplacez par votre token copié
+const API_KEY = '3c0d102d-1e98-4150-86e7-34dd21d8187e'; // ← Remplacez par votre token copié
 
 // Créer un registre
 const register = new client.Registry();
