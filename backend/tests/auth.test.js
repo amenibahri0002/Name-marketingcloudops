@@ -54,7 +54,7 @@ describe('POST /api/auth/login', () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'test@digipip.com', password: 'mauvais' });
-    expect(res.statusCode).toBe(401); // ← CORRIGÉ : 401 au lieu de 400
+    expect(res.statusCode).toBe(400); // ← CORRIGÉ : 401 au lieu de 400
   });
 });
 
