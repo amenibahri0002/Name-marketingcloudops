@@ -13,16 +13,16 @@ jest.mock('@prisma/client', () => {
           {
             id: 1,
             title: 'Test',
-            inscription: [],
-            _count: { inscription: 0 }, // ← AJOUTER
+            inscriptions: [],
+          _count: { inscriptions: 0 },  // ← AJOUTER
             client: { name: 'Test' }
           }
         ]),
         findUnique: jest.fn().mockResolvedValue({
           id: 1,
           title: 'Test',
-          inscription: [],
-          _count: {inscription: 0},
+          inscriptions: [],
+          _count: { inscriptions: 0 },  // ← AJOUTER
           client: { name: 'Test' }
         }),
       },
