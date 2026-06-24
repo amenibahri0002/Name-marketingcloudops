@@ -93,6 +93,8 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     continue-on-error: true
+    permissions:
+       security-events: write
     steps:
       - uses: actions/checkout@v4
       - uses: aquasecurity/trivy-action@master
