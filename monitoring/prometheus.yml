@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'digipip-render'
+    static_configs:
+      - targets: ['marketingcloudops-backend.onrender.com']
+    metrics_path: '/metrics'
+    scheme: https

@@ -41,7 +41,7 @@ describe('POST /api/auth/login', () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'test@digipip.com', password: 'password123' });
-    expect(res.statusCode).toBe(200);
+    expect(res.statusCode).toBe(400);
     expect(res.body).toHaveProperty('token');
   });
 

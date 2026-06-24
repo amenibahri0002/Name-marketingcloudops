@@ -47,7 +47,7 @@ describe('GET /api/campagnes', () => {
     const res = await request(app)
       .get('/api/campagnes')
       .set('Authorization', 'Bearer ' + adminToken);
-    expect([200, 403]).toContain(res.statusCode);
+   expect(res.statusCode).toBe(200);
   });
 });
 
