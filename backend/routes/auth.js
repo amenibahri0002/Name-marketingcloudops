@@ -164,7 +164,7 @@ if (!user) {
 
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      return res.status(400).json({ error: 'Email ou mot de passe incorrect' });
+      return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
     await prisma.user.update({
