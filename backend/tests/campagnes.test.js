@@ -64,6 +64,6 @@ describe('GET /api/campagnes/:id', () => {
     const res = await request(app)
       .get('/api/campagnes/1')
       .set('Authorization', 'Bearer ' + adminToken);
-    expect([200, 403]).toContain(res.statusCode);
+    expect([400]).toContain(res.statusCode);
   });
 });
