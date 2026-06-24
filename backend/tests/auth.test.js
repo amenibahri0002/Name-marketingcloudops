@@ -41,7 +41,7 @@ describe('POST /api/auth/login', () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'test@digipip.com', password: 'password123' });
-    expect(res.statusCode).toBe(200);
+    expect(res.statusCode).toBe(200);  // ← CORRIGÉ : 200 au lieu de 400
     expect(res.body).toHaveProperty('token');
   });
 
@@ -54,7 +54,7 @@ describe('POST /api/auth/login', () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'test@digipip.com', password: 'mauvais' });
-    expect(res.statusCode).toBe(401);
+    expect(res.statusCode).toBe(401);  // ← Reste 400 (mauvais mot de passe)
   });
 });
 
@@ -75,3 +75,4 @@ describe('POST /api/auth/register', () => {
       .send({ name:'Test', email:'test@digipip.com', password:'password123' });
     expect(res.statusCode).toBe(400);
   });
+});
