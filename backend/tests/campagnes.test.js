@@ -14,7 +14,7 @@ jest.mock('@prisma/client', () => {
             id: 1,
             title: 'Test',
             inscription: [],
-            _count: { inscription: 0 }, // ← AJOUTER
+            _count: { inscription: 0 }, // ← AJOUTER CECI
             client: { name: 'Test' }
           }
         ]),
@@ -22,6 +22,7 @@ jest.mock('@prisma/client', () => {
           id: 1,
           title: 'Test',
           inscription: [],
+          _count: { inscription: 0 }, // ← AJOUTER CECI
           client: { name: 'Test' }
         }),
       },
