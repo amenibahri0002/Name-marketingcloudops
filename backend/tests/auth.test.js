@@ -41,7 +41,7 @@ describe('POST /api/auth/login', () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'test@digipip.com', password: 'password123' });
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(200);  // ← CORRIGÉ : 200 au lieu de 400
     expect(res.body).toHaveProperty('token');
   });
 
@@ -54,7 +54,7 @@ describe('POST /api/auth/login', () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'test@digipip.com', password: 'mauvais' });
-    expect(res.statusCode).toBe(400); // ← CORRIGÉ : 401 au lieu de 400
+    expect(res.statusCode).toBe(400);  // ← Reste 400 (mauvais mot de passe)
   });
 });
 
@@ -62,7 +62,7 @@ describe('POST /api/auth/register', () => {
   it('creation compte reussie', async () => {
     const { PrismaClient } = require('@prisma/client');
     new PrismaClient().user.findUnique.mockResolvedValueOnce(null);
-    new PrismaClient().client.findUnique.mockResolvedValueOnce(null); // ← AJOUTÉ
+    new PrismaClient().client.findUnique.mockResolvedValueOnce(null);
     const res = await request(app)
       .post('/api/auth/register')
       .send({ name:'New', email:'new@digipip.com', password:'password123' });
