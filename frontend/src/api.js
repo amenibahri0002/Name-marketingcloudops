@@ -29,12 +29,12 @@ api.interceptors.request.use((config) => {
   if (tenant) {
     try {
       const parsed = JSON.parse(tenant);
-      config.headers['X-Tenant-ID'] = parsed.id;
+      config.headers['x-tenant-id'] = parsed.id;
     } catch (e) {
-      config.headers['X-Tenant-ID'] = 'cmqlsn2yu0000ybn5t0unlx8u';
+      config.headers['x-tenant-id'] = 'cmqlsn2yu0000ybn5t0unlx8u';
     }
   } else {
-    config.headers['X-Tenant-ID'] = 'cmqlsn2yu0000ybn5t0unlx8u';
+    config.headers['x-tenant-id'] = 'cmqlsn2yu0000ybn5t0unlx8u';
   }
   
   return config;
