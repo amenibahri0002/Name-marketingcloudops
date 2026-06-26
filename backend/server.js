@@ -15,37 +15,17 @@ const { authenticate } = require('./middleware/auth');
 const { tenantMiddleware, tenantAccessControl, planLimitMiddleware } = require('./middleware/tenant');
 const { helmetMiddleware, globalLimiter } = require('./middleware/security');
 const metricsMiddleware = require('./middleware/metrics');
-const { register, httpRequestsTotal, httpRequestDuration } = require('./monitoring');
 const app = express();
 const prisma = new PrismaClient();
 const server = http.createServer(app);
 app.set('trust proxy', 1);
 console.log('SERVER STARTING...');
-// Ajoutez en haut du fichier
-// Middleware métriques
-app.use((req, res, next) => {
-  const start = Date.now();
-  
-  res.on('finish', () => {
-    const duration = (Date.now() - start) / 1000;
-    
-    httpRequestsTotal.inc({
-      method: req.method,
-      route: req.route?.path || req.path,
-      status: res.statusCode
-    });
-    
-    httpRequestDuration.observe(
-      { method: req.method, route: req.route?.path || req.path },
-      duration
-    );
-  });
-  
-  next();
-});
 
 // Endpoint /metrics — Prometheus viendra scraper ici
 app.get('/metrics', async (req, res) => {
+  const client = require('prom-client');
+  const register = new client.Registry();
+  client.collectDefaultMetrics({ register });
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());
 });
@@ -75,10 +55,10 @@ io.use(async (socket, next) => {
 
     const jwt = require('jsonwebtoken');
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-    
+
     socket.userId = decoded.userId || decoded.id;
     socket.tenantId = decoded.tenantId;
-    
+
     next();
   } catch (err) {
     next(new Error('Token invalide'));
@@ -149,7 +129,7 @@ app.get('/api/campagnes/public', async (req, res) => {
       },
       orderBy: { createdAt: 'desc' }
     });
-    
+
     console.log('[PUBLIC CAMPAGNES]', campagnes.length, 'campagnes trouvées');
     res.json(campagnes);
   } catch (e) { 
